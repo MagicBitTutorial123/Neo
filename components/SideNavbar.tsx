@@ -67,12 +67,34 @@ export default function SideNavbar({
       className={`flex flex-col justify-between items-center h-screen ${
         collapsed ? "w-[80px]" : "w-[260px]"
       } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl border border-[#E0E6ED] relative transition-all duration-300`}
+      style={{
+        position: "relative",
+      }}
     >
+      {/* Corner fillers to prevent background showing through rounded corners */}
+      <div
+        className="absolute top-0 right-0 w-6 h-6 bg-[#F8F9FC]"
+        style={{
+          borderTopRightRadius: "24px",
+          borderBottomLeftRadius: "24px",
+          zIndex: 1,
+        }}
+      />
+      <div
+        className="absolute bottom-0 right-0 w-6 h-6 bg-[#F8F9FC]"
+        style={{
+          borderBottomRightRadius: "24px",
+          borderTopLeftRadius: "24px",
+          zIndex: 1,
+        }}
+      />
+
       {/* Logo at the top */}
       <div
         className={`mb-8 w-full flex justify-center ${
           collapsed ? "px-0" : "px-2"
         }`}
+        style={{ zIndex: 2 }}
       >
         <div
           className={`bg-white rounded-2xl flex items-center justify-center ${
@@ -88,7 +110,10 @@ export default function SideNavbar({
         </div>
       </div>
       {/* Navigation icons - centered vertically */}
-      <div className="flex-1 flex flex-col justify-center items-center w-full">
+      <div
+        className="flex-1 flex flex-col justify-center items-center w-full"
+        style={{ zIndex: 2 }}
+      >
         <nav
           className={`flex flex-col ${
             collapsed ? "gap-4" : "gap-6"
@@ -167,11 +192,15 @@ export default function SideNavbar({
         </nav>
       </div>
       {/* User/avatar section at the bottom */}
-      <div className="w-full flex flex-col items-center mb-2">
-        <div
+      <div
+        className="w-full flex flex-col items-center mb-2"
+        style={{ zIndex: 2 }}
+      >
+        <Link
+          href="/profile"
           className={`flex flex-row items-center justify-between ${
             collapsed ? "w-12 px-0" : "w-[90%] px-3"
-          } bg-white rounded-2xl py-2 mt-2 shadow-sm`}
+          } bg-white rounded-2xl py-2 mt-2 shadow-sm hover:bg-[#F0F4F8] transition-colors`}
         >
           <div className="flex flex-row items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-[#FFFBEA] flex items-center justify-center overflow-hidden">
@@ -192,7 +221,7 @@ export default function SideNavbar({
               </svg>
             </button>
           )}
-        </div>
+        </Link>
       </div>
       {/* Vertical divider/handle */}
       <button
@@ -206,6 +235,7 @@ export default function SideNavbar({
           border: "none",
           background: "transparent",
           cursor: "pointer",
+          zIndex: 3,
         }}
       >
         <div className="w-2 h-8 bg-[#E0E6ED] rounded-full shadow-inner group-hover:bg-[#00AEEF] transition-colors" />

@@ -44,14 +44,14 @@ export default function ProjectsPage() {
   const otherProjects = projects.filter((p) => !p.projectOfTheWeek);
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FC]">
+    <div className="flex h-screen bg-white overflow-hidden">
       <SideNavbar />
-      <main className="flex-1 flex flex-col items-start px-12 py-12 overflow-x-hidden">
+      <main className="flex-1 flex flex-col items-start px-12 py-8 overflow-hidden">
         {/* Project of the week */}
         {projectOfTheWeek && (
           <div
-            className="w-full max-w-6xl flex flex-row items-stretch border border-[#E0E6ED] rounded-3xl bg-white mb-12"
-            style={{ minHeight: 240 }}
+            className="w-full max-w-6xl flex flex-row items-stretch border border-[#E0E6ED] rounded-3xl bg-[#F8F9FC] mb-12"
+            style={{ minHeight: 280 }}
           >
             <div className="flex flex-col justify-center flex-1 pl-8">
               <div className="text-3xl md:text-4xl font-extrabold text-[#222E3A] mb-2">
@@ -65,7 +65,7 @@ export default function ProjectsPage() {
               </div>
               <LetsGoButton
                 style={{
-                  width: 300,
+                  width: 260,
                   minWidth: 170,
                   height: 48,
                   minHeight: 48,
@@ -92,11 +92,13 @@ export default function ProjectsPage() {
           </div>
         )}
         {/* Explore other projects */}
-        <div className="w-full max-w-6xl">
-          <div className="text-2xl md:text-3xl font-extrabold text-[#22AEEF] mb-6 mt-2">
+        <div className="w-full max-w-6xl flex-1 flex flex-col overflow-hidden">
+          <div className="text-2xl md:text-3xl font-extrabold text-[#22AEEF] mb-4">
             Explore other projects
           </div>
-          <ProjectsCarousel projects={otherProjects} />
+          <div className="flex-1 overflow-hidden">
+            <ProjectsCarousel projects={otherProjects} />
+          </div>
         </div>
       </main>
     </div>

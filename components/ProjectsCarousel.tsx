@@ -29,7 +29,7 @@ export default function ProjectsCarousel({ projects }: ProjectsCarouselProps) {
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full overflow-hidden">
       {/* Carousel viewport */}
       <div className="overflow-hidden w-full">
         <div
@@ -43,8 +43,10 @@ export default function ProjectsCarousel({ projects }: ProjectsCarouselProps) {
             <div
               key={project.id}
               className={`min-w-[290px] max-w-[290px] rounded-2xl bg-white shadow flex flex-col overflow-hidden ${
-                project.faded ? "opacity-40 grayscale" : "hover:shadow-lg"
-              } transition-shadow border border-[#E0E6ED] relative`}
+                project.faded
+                  ? "opacity-40 grayscale"
+                  : "hover:shadow-lg hover:shadow-[#00000022]"
+              } transition-shadow border border-[#E0E6ED] relative mb-6`}
             >
               <div className="relative w-full h-40 bg-[#F5F7FA]">
                 <Image
@@ -86,7 +88,7 @@ export default function ProjectsCarousel({ projects }: ProjectsCarouselProps) {
             style={{
               width: "100%",
               background:
-                "linear-gradient(to right, rgba(248,249,252,0) 0%, #F8F9FC 80%)",
+                "linear-gradient(to right, rgba(248,249,252,0) 0%, white 80%)",
               zIndex: 1,
               pointerEvents: "none",
             }}
@@ -117,7 +119,7 @@ export default function ProjectsCarousel({ projects }: ProjectsCarouselProps) {
             style={{
               width: "100%",
               background:
-                "linear-gradient(to left, rgba(248,249,252,0) 0%, #F8F9FC 80%)",
+                "linear-gradient(to left, rgba(248,249,252,0) 0%, white 80%)",
               zIndex: 1,
               pointerEvents: "none",
             }}

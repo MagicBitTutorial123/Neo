@@ -23,7 +23,6 @@ export default function Home() {
         </div>
         {/* Notification badge */}
         <NotificationWrapper />
-    
       </div>
       {/* Right Panel - full height, no scroll, heading in one line */}
       <div className="w-1/2 h-full flex flex-col justify-center items-center bg-[#F8F9FC]">
