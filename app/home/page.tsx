@@ -139,7 +139,7 @@ export default function HomePage() {
             <div className="text-3xl text-[#555] font-poppins mb-18">
               {subTextStep2}
             </div>
-            <LetsGoButton onClick={() => router.push("/missions/mission1")}>
+            <LetsGoButton onClick={() => router.push("/missions/1")}>
               Let's Go
             </LetsGoButton>
           </div>

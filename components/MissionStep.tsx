@@ -31,6 +31,7 @@ interface MissionStepProps {
   finishButtonText?: string;
   showTryAgainButton?: boolean;
   tryAgainButtonText?: string;
+  onTryAgain?: () => void;
 }
 
 export default function MissionStep({
@@ -61,6 +62,7 @@ export default function MissionStep({
   finishButtonText = "Finish",
   showTryAgainButton = false,
   tryAgainButtonText = "Try Again",
+  onTryAgain,
 }: MissionStepProps) {
   const [currentStep, setCurrentStep] = useState(stepNumber);
 
@@ -82,8 +84,6 @@ export default function MissionStep({
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FC]">
-      {/* Side Navbar */}
-      <SideNavbar />
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Mission Header */}
@@ -155,7 +155,7 @@ export default function MissionStep({
             )}
             {showTryAgainButton && (
               <button
-                onClick={handleNext}
+                onClick={onTryAgain}
                 className="px-6 py-3 rounded-full font-medium bg-[#D9F2FF] text-[#222E3A] hover:bg-[#B3E6FF] transition-colors"
               >
                 {tryAgainButtonText}

@@ -47,7 +47,7 @@ export default function MissionIntro({
   };
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center relative px-8">
+    <main className="flex-1 flex flex-col items-center justify-center relative bg-white px-8">
       {/* Top Row: Title and Time */}
       <div className="w-full flex flex-row items-start justify-between mt-12 mb-4 max-w-4xl mx-auto">
         <h1 className="text-3xl md:text-4xl font-extrabold text-[#222E3A]">

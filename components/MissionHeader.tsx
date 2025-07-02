@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import MissionTimer, { formatTime } from "./MissionTimer";
+import ToggleConnectButton from "@/components/ToggleConnectButton";
 
 interface MissionHeaderProps {
   missionNumber: number;
@@ -83,8 +84,8 @@ export default function MissionHeader({
           </div>
         </div>
 
-        {/* Right: Live users */}
-        <div className="flex items-center gap-2 ml-auto h-full">
+        {/* Right: Live users and ToggleConnectButton (for mission 2+) */}
+        <div className="flex items-center gap-4 ml-auto h-full">
           <span className="relative flex items-center justify-center">
             <span className="w-3 h-3 bg-green-400 rounded-full block z-10" />
             <span
@@ -95,6 +96,12 @@ export default function MissionHeader({
           <span className="text-white text-lg font-regular">
             {liveUsers} online
           </span>
+          {missionNumber > 1 && (
+            <ToggleConnectButton
+              isConnected={connected}
+              onToggle={handleConnectToggle}
+            />
+          )}
         </div>
       </div>
       {/* Orange line at the bottom */}
