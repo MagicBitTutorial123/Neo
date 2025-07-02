@@ -37,12 +37,13 @@ export default function MissionIntro({
 
   const handleGo = () => {
     setMissionStarted(true);
-    onMissionStart?.();
-
-    // Navigate to the first step of the mission
-    setTimeout(() => {
-      router.push(`/missions/mission${missionNumber}/step1`);
-    }, 1000); // Small delay to show the "Mission is now active!" message
+    if (onMissionStart) {
+      onMissionStart();
+    } else {
+      setTimeout(() => {
+        router.push(`/missions/mission${missionNumber}/steps`);
+      }, 1000);
+    }
   };
 
   return (

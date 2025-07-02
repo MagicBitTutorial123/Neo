@@ -12,7 +12,7 @@ export default function StepRetryCard({
   onClose,
   message = "Don't worry!",
   subtitle = "Check the images of elevation and try again.",
-  imageSrc = "/mission1-step1-image.png", // Replace with your illustration
+  imageSrc = "/dont-worry-card-image.png", // Replace with your illustration
   buttonText = "Try Again",
 }: StepRetryCardProps) {
   return (
@@ -26,7 +26,7 @@ export default function StepRetryCard({
         </div>
         <div className="mb-6 text-center text-base text-black">{subtitle}</div>
         <img
-          src={imageSrc}
+          src="/dont-worry-card-image.png"
           alt="Try Again"
           className="mb-8 w-40 h-28 object-contain"
         />
