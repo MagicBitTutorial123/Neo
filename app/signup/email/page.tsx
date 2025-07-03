@@ -14,7 +14,7 @@ export default function SignupEmail() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleBack = () => {
-    router.push("/signup/name");
+    router.push("/signup/age");
   };
 
   return (
@@ -99,7 +99,7 @@ export default function SignupEmail() {
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.preventDefault();
                 if (!validateEmail(email)) return;
-                router.push("/signup/age"); 
+                router.push("/signup/email/setPassword"); 
               }}
             >
               Next

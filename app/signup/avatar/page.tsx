@@ -18,7 +18,7 @@ export default function SignupAvatar() {
   const [hovered, setHovered] = useState<number | null>(null);
 
   const handleBack = () => {
-    router.push("/signup/age");
+    router.push("/signup/email/setPassword");
   };
 
   return (
@@ -132,7 +132,7 @@ export default function SignupAvatar() {
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
               if (selected === null) return;
-              router.push("/home"); // TODO: navigate to next step
+              router.push("/signup/mobile/setMpin"); // TODO: navigate to next step
             }}
           >
             Next

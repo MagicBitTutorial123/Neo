@@ -124,7 +124,7 @@ export default function Home() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-black font-poppins mb-1">
-                  Enter your OTP
+                  Enter your MPIN
                 </label>
                 <input
                   type="text"

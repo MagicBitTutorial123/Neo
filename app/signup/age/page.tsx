@@ -15,7 +15,7 @@ export default function SignupAge() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleBack = () => {
-    router.push("/signup/email");
+    router.push("/signup/name");
   };
 
   return (
@@ -106,7 +106,7 @@ export default function SignupAge() {
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.preventDefault();
                 if (!validateAge(age)) return;
-                router.push("/signup/avatar");
+                router.push("/signup/email");
               }}
             >
               Next

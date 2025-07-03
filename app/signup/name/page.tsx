@@ -101,7 +101,7 @@ export default function SignupName() {
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.preventDefault();
                 if (!name.trim()) return;
-                router.push("/signup/email"); 
+                router.push("/signup/age"); 
               }}
             >
               Next
