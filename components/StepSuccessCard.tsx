@@ -19,7 +19,10 @@ export default function StepSuccessCard({
       style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
     >
       <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-        <div className="mb-2 text-center text-3xl font-extrabold text-black">
+        <div
+          className="mb-2 text-center text-3xl font-extrabold opacity-100"
+          style={{ color: "#F28B20" }}
+        >
           {message}
         </div>
         <div className="mb-8 text-center text-base text-black">{subtitle}</div>
