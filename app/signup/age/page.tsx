@@ -3,19 +3,38 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import NextButton from "@/components/NextButton";
+import { useUser } from "@/context/UserContext";
+
 
 function validateAge(age: string) {
   const n = Number(age);
   return /^\d{1,3}$/.test(age) && n >= 1 && n <= 120;
 }
 
+
 export default function SignupAge() {
   const router = useRouter();
-  const [age, setAge] = useState("");
+  // Get registration data from UserContext for state persistence
+  const { registrationData, updateRegistrationData } = useUser();
+  // Initialize age state with existing data from context or empty string
+  const [age, setAge] = useState(
+    registrationData.age ? String(registrationData.age) : ""
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
+  
   const handleBack = () => {
     router.push("/signup/name");
+  };
+
+  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!validateAge(age)) return;
+
+    // Save age to UserContext for persistence across signup flow
+    updateRegistrationData({ age: Number(age) });
+    // Navigate to email input page
+    router.push("/signup/email");
   };
 
   return (
@@ -25,7 +44,7 @@ export default function SignupAge() {
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
-        aria-label="Back to email step"
+        aria-label="Back to name step"
       >
         <svg
           width="48"
@@ -101,14 +120,7 @@ export default function SignupAge() {
               max={120}
               inputMode="numeric"
             />
-            <NextButton
-              disabled={!validateAge(age)}
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.preventDefault();
-                if (!validateAge(age)) return;
-                router.push("/signup/email");
-              }}
-            >
+            <NextButton disabled={!validateAge(age)} onClick={handleNext}>
               Next
             </NextButton>
           </form>

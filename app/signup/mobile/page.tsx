@@ -1,25 +1,146 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
+import { useUser } from "@/context/UserContext";
+
+// Extend Window interface to include recaptchaVerifier
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: import("firebase/auth").ConfirmationResult;
+  }
+}
 
 export default function SignupMobile() {
   const router = useRouter();
-  const [activated, setActivated] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [phone, setPhone] = useState("");
-  const handleBack = () => {
-    router.push("/signup");
-  };
-  // Country code/flag dropdown logic
+  // Get registration data from UserContext for state persistence
+  const { registrationData, updateRegistrationData } = useUser();
+
+  // Country code/flag dropdown logic - moved before useState hooks
   const countryOptions = [
     { code: "+94", flag: "🇱🇰" },
     { code: "+1", flag: "🇺🇸" },
     { code: "+44", flag: "🇬🇧" },
     { code: "+91", flag: "🇮🇳" },
   ];
-  const [selectedCountry, setSelectedCountry] = useState(countryOptions[0]);
+
+  const [activated, setActivated] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  // Initialize phone state with existing data from context or empty string
+  const [phone, setPhone] = useState("");
+
+  // Initialize selected country from context or default to first option
+  const [selectedCountry, setSelectedCountry] = useState(() => {
+    if (registrationData.fullPhone) {
+      const countryCodes = ["+94", "+1", "+44", "+91"];
+      for (const code of countryCodes) {
+        if (registrationData.fullPhone.startsWith(code)) {
+          return (
+            countryOptions.find((opt) => opt.code === code) || countryOptions[0]
+          );
+        }
+      }
+    }
+    return countryOptions[0];
+  });
+
+  // Cleanup reCAPTCHA on component unmount
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = undefined;
+      }
+    };
+  }, []);
+
+  /**
+   * Navigate back to the main signup page
+   */
+  const handleBack = () => {
+    router.push("/signup");
+  };
+
+  /**
+   * Setup reCAPTCHA for Firebase phone authentication
+   */
+  const setupRecaptcha = () => {
+    // Clear existing verifier if any
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = undefined;
+    }
+
+    // Create new verifier
+    window.recaptchaVerifier = new RecaptchaVerifier(
+      auth,
+      "recaptcha-container",
+      {
+        size: "invisible",
+        callback: (response: any) => {},
+      }
+    );
+  };
+
+  /**
+   * Send OTP to the provided phone number
+   *
+   * CHANGES:
+   * - Added phone validation before proceeding
+   * - Updates UserContext with phone data
+   * - Navigates to OTP verification page
+   */
+  const sendOTP = async () => {
+    // Validate phone number
+    if (!phone || phone.length < 7) {
+      alert("Please enter a valid phone number (at least 7 digits)");
+      return;
+    }
+
+    try {
+      setupRecaptcha();
+      const appVerifier = window.recaptchaVerifier;
+
+      if (!appVerifier) {
+        throw new Error("Failed to initialize reCAPTCHA");
+      }
+
+      const fullPhone = selectedCountry.code + phone;
+
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        fullPhone,
+        appVerifier
+      );
+      window.confirmationResult = confirmation;
+
+      // Save full phone number to UserContext for persistence across signup flow
+      updateRegistrationData({ fullPhone });
+
+      router.push("/signup/mobile/otp");
+    } catch (err: any) {
+      console.error("Error sending OTP", err);
+
+      // Handle specific Firebase errors
+      if (err.code === "auth/operation-not-allowed") {
+        alert(
+          "SMS verification is not enabled. Please contact support or use email signup."
+        );
+      } else if (err.code === "auth/invalid-phone-number") {
+        alert("Invalid phone number. Please check and try again.");
+      } else if (err.message.includes("reCAPTCHA")) {
+        alert("reCAPTCHA error. Please refresh and try again.");
+      } else {
+        alert("Failed to send OTP. Please try again.");
+      }
+    }
+  };
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">
@@ -57,7 +178,7 @@ export default function SignupMobile() {
       <div className="w-full h-full max-w-full max-h-full bg-[#F8F9FC] flex items-center justify-center relative p-8">
         {/* Centered overlay content */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-full max-w-[600px] px-4 z-10">
-          <div className="flex flex-col items-center mb-2" >
+          <div className="flex flex-col items-center mb-2">
             <Image
               src="/call_end.png"
               alt="Call End Icon"
@@ -104,9 +225,9 @@ export default function SignupMobile() {
                 {dropdownOpen && (
                   <div className="absolute left-0 top-12 bg-white rounded-lg shadow-lg z-50 min-w-[120px]">
                     {countryOptions.map((opt) => (
-                      <button
+                      <div
                         key={opt.code}
-                        className="flex items-center w-full px-3 py-2 hover:bg-gray-100 text-left"
+                        className="flex items-center w-full px-3 py-2 hover:bg-gray-100 text-left cursor-pointer"
                         onClick={() => {
                           setSelectedCountry(opt);
                           setDropdownOpen(false);
@@ -114,7 +235,7 @@ export default function SignupMobile() {
                       >
                         <span className="mr-2 text-lg">{opt.flag}</span>
                         <span className="font-bold">{opt.code}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -163,7 +284,7 @@ export default function SignupMobile() {
               onClick={(e) => {
                 e.preventDefault();
                 if (!phone) return;
-                router.push("/signup/mobile/otp");
+                sendOTP(); // 👈 This will trigger OTP sending
               }}
             >
               Next
@@ -171,6 +292,7 @@ export default function SignupMobile() {
           </form>
         </div>
       </div>
+      <div id="recaptcha-container" />
     </div>
   );
 }

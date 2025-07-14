@@ -2,10 +2,11 @@
 import SideNavbar from "@/components/SideNavbar";
 import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
+import { useUser } from "@/context/UserContext";
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -29,44 +30,34 @@ function useTypingEffect(text: string, speed = 30) {
 
 export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
-  const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
-  const [hasCompletedMission2, setHasCompletedMission2] =
-    useState<boolean>(false);
   const [step, setStep] = useState(0);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { userData } = useUser();
 
   const mainTextStep1 = useTypingEffect("Welcome onboard!");
   const mainTextStep2 = useTypingEffect("I'm your Robot.");
   const subTextStep2 = useTypingEffect("Let's get things up!");
 
-  // On mount, read localStorage to determine which home to show
+  // On mount, set hydrated state and check for new user query param
   useEffect(() => {
     setHydrated(true);
-    if (typeof window !== "undefined") {
-      const localIsNewUser = localStorage.getItem("isNewUser");
-      const localHasCompletedMission2 = localStorage.getItem(
-        "hasCompletedMission2"
-      );
-      setIsNewUser(localIsNewUser === "true");
-      setHasCompletedMission2(localHasCompletedMission2 === "true");
+
+    // Check if this is a new user from signup
+    const isNewUserFromSignup = searchParams.get("newUser") === "true";
+    if (isNewUserFromSignup) {
+      // Clear the query parameter from URL
+      router.replace("/home");
     }
-  }, []);
+  }, [searchParams, router]);
 
   // New User Home step logic
   useEffect(() => {
-    if (isNewUser && step < 2) {
+    if (userData?.isNewUser && step < 2) {
       const timer = setTimeout(() => setStep(step + 1), 2000);
       return () => clearTimeout(timer);
     }
-  }, [step, isNewUser]);
-
-  // Simulate completing Mission 2 for testing
-  const completeMission2 = () => {
-    localStorage.setItem("hasCompletedMission2", "true");
-    localStorage.setItem("isNewUser", "false");
-    setHasCompletedMission2(true);
-    setIsNewUser(false);
-  };
+  }, [step, userData?.isNewUser]);
 
   // Dummy data for mission progress
   const totalSteps = 5;
@@ -84,11 +75,14 @@ export default function HomePage() {
     { src: "/badge5.png", alt: "Badge5", earned: false },
     { src: "/badge6.png", alt: "Badge6", earned: false },
     { src: "/badge6.png", alt: "Badge7", earned: false },
-    { src: "/badge6.png", alt: "Badge8", earned: false },
+    { src: "/badge8.png", alt: "Badge8", earned: false },
   ];
 
   // Dummy battery level (0-100)
   const batteryLevel = 68;
+
+  // Determine the next mission (assuming missionProgress is the last completed mission)
+  const nextMission = (userData?.missionProgress ?? 0) + 1;
 
   const newUserContent = useMemo(() => {
     if (step === 0) {
@@ -139,7 +133,9 @@ export default function HomePage() {
             <div className="text-3xl text-[#555] font-poppins mb-18">
               {subTextStep2}
             </div>
-            <LetsGoButton onClick={() => router.push("/missions/1")}>
+            <LetsGoButton
+              onClick={() => router.push(`/missions/${nextMission}`)}
+            >
               Let's Go
             </LetsGoButton>
           </div>
@@ -161,7 +157,15 @@ export default function HomePage() {
         </div>
       );
     }
-  }, [step, router]);
+  }, [
+    step,
+    router,
+    mainTextStep1,
+    mainTextStep2,
+    subTextStep2,
+    userData?.missionProgress,
+    nextMission,
+  ]);
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
@@ -174,10 +178,10 @@ export default function HomePage() {
               Welcome back!
             </span>
             <div className="text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
-              Miggy{" "}
-              <span className="inline-block">
+              {userData?.name}{" "}
+              {/* <span className="inline-block">
                 <Image src="/User.png" alt="User" width={32} height={32} />
-              </span>
+              </span> */}
             </div>
           </div>
           {/* Mission Card */}
@@ -339,16 +343,23 @@ export default function HomePage() {
     </div>
   );
 
-  // Decide which home to show
-  let showNewUserHome = false;
-  if (!hydrated || isNewUser === null) {
-    // Still loading or not hydrated
-    return null;
-  } else if (isNewUser) {
-    showNewUserHome = true;
-  } else if (!hasCompletedMission2) {
-    showNewUserHome = true;
+  // Clean conditional rendering based on mission progress
+  if (!hydrated) {
+    return null; // Still loading
   }
+
+  // Get user data from context or localStorage fallback
+  const user =
+    userData ||
+    (typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("userData") || "null")
+      : null);
+
+  // Check if user is new based on mission progress or isNewUser flag
+  const isNewUser =
+    !user ||
+    user.isNewUser ||
+    (user.missionProgress !== undefined && user.missionProgress < 2);
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FC]">
@@ -356,14 +367,7 @@ export default function HomePage() {
       <SideNavbar />
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center relative overflow-x-hidden min-h-screen">
-        {showNewUserHome ? newUserContent : defaultHomeContent}
-        {/* Button to simulate completing Mission 2 for testing */}
-        <button
-          onClick={completeMission2}
-          className="fixed bottom-8 right-8 bg-[#00AEEF] text-white px-6 py-2 rounded-full shadow-lg z-50"
-        >
-          Simulate Complete Mission 2
-        </button>
+        {isNewUser ? newUserContent : defaultHomeContent}
       </main>
     </div>
   );

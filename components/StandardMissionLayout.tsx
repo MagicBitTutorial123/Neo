@@ -8,6 +8,8 @@ import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import { useRouter } from "next/navigation";
 import { missions } from "@/data/missions";
+import { useUser } from "@/context/UserContext";
+import { completeMission1, completeMission2 } from "@/utils/userState";
 
 export default function StandardMissionLayout({ mission }: { mission: any }) {
   const [showIntro, setShowIntro] = useState(true);
@@ -22,6 +24,7 @@ export default function StandardMissionLayout({ mission }: { mission: any }) {
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
   const router = useRouter();
+  const { userData, updateUserData, setUserData } = useUser();
 
   // Optionally: overlays, motivational cards, etc.
   // const [showOverlay, setShowOverlay] = useState(false);
@@ -67,8 +70,22 @@ export default function StandardMissionLayout({ mission }: { mission: any }) {
     }
     // Optionally: navigate home or to missions list
   };
-  const handleNextMission = () => {
+  const handleNextMission = async () => {
     setShowCongrats(false);
+
+    // Update mission progress in backend
+    if (userData?.firebaseUid) {
+      try {
+        if (mission.id === 1) {
+          await completeMission1(userData.firebaseUid);
+        } else if (mission.id === 2) {
+          await completeMission2(userData.firebaseUid);
+        }
+      } catch (error) {
+        console.error("Failed to update mission progress:", error);
+      }
+    }
+
     if (mission.id === 2) {
       setShowPlaygroundUnlocked(true);
     } else {
@@ -264,9 +281,34 @@ export default function StandardMissionLayout({ mission }: { mission: any }) {
       {/* Overlay for PlaygroundUnlockedCard */}
       {showPlaygroundUnlocked && (
         <PlaygroundUnlockedCard
-          onContinue={() => {
+          onContinue={async () => {
             setShowPlaygroundUnlocked(false);
-            router.push("/home");
+
+            if (userData?.firebaseUid) {
+              try {
+                // Update user state in backend
+                const updatedUser = await completeMission2(
+                  userData.firebaseUid
+                );
+                console.log("Backend update successful:", updatedUser);
+
+                // Update local user data with the response
+                setUserData(updatedUser);
+
+                router.push("/home");
+              } catch (error) {
+                console.error("Failed to update user state:", error);
+                // Fallback to localStorage if backend fails
+                localStorage.setItem("hasCompletedMission2", "true");
+                localStorage.setItem("isNewUser", "false");
+                router.push("/home");
+              }
+            } else {
+              // Fallback if no user data
+              localStorage.setItem("hasCompletedMission2", "true");
+              localStorage.setItem("isNewUser", "false");
+              router.push("/home");
+            }
           }}
         />
       )}

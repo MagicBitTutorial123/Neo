@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import MissionHeader from "./MissionHeader";
-import SideNavbar from "./SideNavbar";
 
 interface MissionStepProps {
   missionNumber: number;

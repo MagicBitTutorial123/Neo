@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import NextButton from "@/components/NextButton";
-
+import { useUser } from "@/context/UserContext";
 function validatePassword(password: string) {
   // At least 8 chars, one uppercase, one lowercase, one number, one special char
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(
@@ -13,11 +13,12 @@ function validatePassword(password: string) {
 
 export default function SignupSetPassword() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [password2, setPassword2] = useState("");
+  const { registrationData, updateRegistrationData } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
 
   const isValid = validatePassword(password);
   const isMatch = password === password2 && password.length > 0;
@@ -29,6 +30,19 @@ export default function SignupSetPassword() {
   } else if (touched && password2.length > 0 && !isMatch) {
     errorMsg = "Passwords do not match.";
   }
+
+  const handleBack = () => {
+    router.push("/signup/email");
+  };
+
+  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setTouched(true);
+    if (!isValid || !isMatch) return;
+
+    updateRegistrationData({ password });
+    router.push("/signup/avatar");
+  };
 
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">
@@ -243,16 +257,7 @@ export default function SignupSetPassword() {
                 {errorMsg}
               </div>
             )}
-            <NextButton
-              disabled={!isValid || !isMatch}
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.preventDefault();
-                setTouched(true);
-                if (!isValid || !isMatch) return;
-                router.push("/signup/avatar");
-                // handle password submit here
-              }}
-            >
+            <NextButton disabled={!isValid || !isMatch} onClick={handleNext}>
               Confirm
             </NextButton>
           </form>

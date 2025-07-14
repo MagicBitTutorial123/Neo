@@ -2,9 +2,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useUser } from "@/context/UserContext";
 
 export default function SignupMain() {
   const router = useRouter();
+  const { clearRegistrationData } = useUser();
+
+  useEffect(() => {
+    clearRegistrationData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleBack = () => {
     // Animate, then navigate
     setTimeout(() => router.push("/"), 300);

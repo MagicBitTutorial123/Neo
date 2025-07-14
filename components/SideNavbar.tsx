@@ -3,24 +3,28 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 
 export default function SideNavbar({
-  avatar = "/Avatar01.png",
-  name = "Name",
+  avatar,
+  name,
+  playgroundActive = true,
 }: {
   avatar?: string;
   name?: string;
+  playgroundActive?: boolean;
 }) {
+  const { registrationData, userData } = useUser();
+
+  // Use provided props or fall back to context data
+  const userAvatar =
+    avatar || userData?.avatar || registrationData.avatar || "/User.png";
+  const userName = name || userData?.name || registrationData.name || "User";
   const [collapsed, setCollapsed] = useState(false);
-  const [hasCompletedMission2, setHasCompletedMission2] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => {
-    const localHasCompletedMission2 = localStorage.getItem(
-      "hasCompletedMission2"
-    );
-    setHasCompletedMission2(localHasCompletedMission2 === "true");
-  }, []);
+  // Use userData from context for mission completion status
+  const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
 
   const navItems = [
     {
@@ -204,11 +208,16 @@ export default function SideNavbar({
         >
           <div className="flex flex-row items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-[#FFFBEA] flex items-center justify-center overflow-hidden">
-              <Image src={avatar} alt="User Avatar" width={36} height={36} />
+              <Image
+                src={userAvatar}
+                alt="User Avatar"
+                width={36}
+                height={36}
+              />
             </div>
             {!collapsed && (
               <span className="text-base font-semibold text-[#222E3A]">
-                {name}
+                {userName}
               </span>
             )}
           </div>

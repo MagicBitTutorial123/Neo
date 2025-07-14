@@ -3,21 +3,60 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import NextButton from "@/components/NextButton";
+import { useUser } from "@/context/UserContext";
 
+/**
+ * Name signup page component
+ *
+ * CHANGES MADE:
+ * - Integrated with UserContext for state management
+ * - Pre-fills name from context if available
+ * - Updates UserContext instead of using localStorage directly
+ * - Added proper form validation and disabled state for Next button
+ * - Maintains consistent styling with other signup pages
+ */
 export default function SignupName() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  // Get registration data from UserContext for state persistence
+  const { registrationData, updateRegistrationData } = useUser();
+  // Initialize name state with existing data from context or empty string
+  const [name, setName] = useState(registrationData.name || "");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Navigate back to the OTP step
+   */
   const handleBack = () => {
     router.push("/signup/mobile/otp");
   };
 
+  /**
+   * Handle name input changes with validation
+   * Only allows letters and spaces
+   */
   const handleChange = (value: string) => {
     // Only allow letters and spaces
     if (/^[a-zA-Z ]*$/.test(value)) {
       setName(value);
     }
+  };
+
+  /**
+   * Handle form submission and navigation to age step
+   *
+   * CHANGES:
+   * - Added name validation before proceeding
+   * - Updates UserContext with name data
+   * - Navigates to age selection page
+   */
+  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    // Save name to UserContext for persistence across signup flow
+    updateRegistrationData({ name: name.trim() });
+    // Navigate to age selection page
+    router.push("/signup/age");
   };
 
   return (
@@ -96,14 +135,7 @@ export default function SignupName() {
               style={{ height: 56, maxWidth: 400 }}
               maxLength={32}
             />
-            <NextButton
-              disabled={!name.trim()}
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.preventDefault();
-                if (!name.trim()) return;
-                router.push("/signup/age"); 
-              }}
-            >
+            <NextButton disabled={!name.trim()} onClick={handleNext}>
               Next
             </NextButton>
           </form>

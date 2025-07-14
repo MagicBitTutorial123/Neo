@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import NextButton from "@/components/NextButton";
+import { useUser } from "@/context/UserContext";
 
 const avatars = [
   "/Avatar01.png",
@@ -14,11 +15,20 @@ const avatars = [
 
 export default function SignupAvatar() {
   const router = useRouter();
+  const { registrationData, updateRegistrationData } = useUser();
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
 
   const handleBack = () => {
     router.push("/signup/email/setPassword");
+  };
+
+  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (selected === null) return;
+
+    updateRegistrationData({ avatar: avatars[selected] });
+    router.push("/signup/mobile/setMpin");
   };
 
   return (
@@ -127,15 +137,8 @@ export default function SignupAvatar() {
               </button>
             ))}
           </div>
-          <NextButton
-            disabled={selected === null}
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.preventDefault();
-              if (selected === null) return;
-              router.push("/signup/mobile/setMpin"); // TODO: navigate to next step
-            }}
-          >
-            Next
+          <NextButton disabled={selected === null} onClick={handleNext}>
+            Confirm
           </NextButton>
         </div>
       </div>

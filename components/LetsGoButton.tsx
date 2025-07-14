@@ -53,8 +53,8 @@ export default function LetsGoButton({
           transform: rotate(180deg);
         }
         .letsgo-btn:hover {
-          min-width: 390px !important;
-          width: 105% !important;
+          min-width: 370px !important;
+          width: 102% !important;
         }
       `}</style>
     </div>

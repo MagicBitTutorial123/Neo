@@ -1,45 +1,152 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NotificationWrapper from "@/components/NotificationWrapper";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
+import axios from "axios";
 
 export default function Home() {
+  const router = useRouter();
   const [tab, setTab] = useState<"email" | "mobile">("email");
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [countryCode, setCountryCode] = useState("+94");
+  const [mobile, setMobile] = useState("");
+  const [mpin, setMpin] = useState(""); // Always empty string
+
+  // Optionally, ensure it resets on mount
+  useEffect(() => {
+    setMpin("");
+  }, []);
+
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      // First try to authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const firebaseUser = userCredential.user;
+
+      // Then get user data from backend
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        { uid: firebaseUser.uid }
+      );
+      const userData = response.data;
+      localStorage.setItem("userData", JSON.stringify(userData));
+
+      if (userData.missionProgress >= 2) {
+        router.push("/home");
+      } else {
+        router.push("/home?newUser=true");
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
+
+      // Handle specific Firebase errors
+      if (err.code === "auth/user-not-found") {
+        setError("No account found with this email. Please sign up first.");
+      } else if (err.code === "auth/wrong-password") {
+        setError("Incorrect password. Please try again.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("Invalid email address.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please try again later.");
+      } else if (err.response?.status === 404) {
+        setError("Account not found in our system. Please sign up first.");
+      } else {
+        setError("Login failed. Please check your credentials and try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMobileLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const fullPhone = countryCode + mobile;
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/mpin-login",
+        {
+          mobile: fullPhone,
+          mpin,
+        }
+      );
+      const userData = response.data;
+      localStorage.setItem("userData", JSON.stringify(userData));
+
+      if (userData.missionProgress >= 2) {
+        router.push("/home");
+      } else {
+        router.push("/home?newUser=true");
+      }
+    } catch (err: any) {
+      console.error("Mobile login error:", err);
+
+      // Handle specific backend errors
+      if (err.response?.status === 404) {
+        setError(
+          "No account found with this phone number. Please sign up first."
+        );
+      } else if (err.response?.status === 401) {
+        setError("Incorrect MPIN. Please try again.");
+      } else if (err.response?.status === 503) {
+        setError("Server is not available. Please try again later.");
+      } else if (err.code === "ECONNREFUSED") {
+        setError(
+          "Cannot connect to server. Please check if the backend is running."
+        );
+      } else {
+        setError(
+          err.response?.data?.message || "Login failed. Please try again."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex w-screen h-screen overflow-hidden">
-      {/* Left Panel - no rounded corners, full height */}
       <div className="relative w-1/2 h-full bg-[#D9D9D9] flex flex-col justify-between">
-        <div className="absolute inset-0">
-          <Image
-            src="/login-bg-new.png"
-            alt="Login background"
-            fill
-            style={{ objectFit: "cover" }}
-            priority
-          />
-        </div>
-        {/* Notification badge */}
+        <Image
+          src="/login-bg-new.png"
+          alt="Login background"
+          fill
+          style={{ objectFit: "cover" }}
+          priority
+        />
         <NotificationWrapper />
       </div>
-      {/* Right Panel - full height, no scroll, heading in one line */}
+
       <div className="w-1/2 h-full flex flex-col justify-center items-center bg-[#F8F9FC]">
-        <div className="w-full max-w-sm flex flex-col justify-center px-4 py-8">
+        <div className="w-full max-w-sm px-4 py-8">
           <h1 className="text-2xl md:text-3xl font-extrabold text-[#222E3A] text-center mb-6 font-poppins leading-tight">
-            Hey Genius, Ready
-            <br />
-            to Build?
+            Hey Genius, Ready <br /> to Build?
           </h1>
-          {/* Tab switcher */}
+
           <div className="flex justify-center gap-8 mb-6 text-base font-semibold font-poppins">
             <button
               className={`pb-1 border-b-2 ${
                 tab === "mobile"
                   ? "border-[#F28B20] text-black"
                   : "border-transparent text-gray-400"
-              } focus:outline-none`}
+              }`}
               onClick={() => setTab("mobile")}
             >
               Mobile
@@ -49,117 +156,127 @@ export default function Home() {
                 tab === "email"
                   ? "border-[#F28B20] text-black"
                   : "border-transparent text-gray-400"
-              } focus:outline-none`}
+              }`}
               onClick={() => setTab("email")}
             >
               Email
             </button>
           </div>
+
           {tab === "email" ? (
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-black font-poppins mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="Enter your e-mail address"
-                  className="w-full rounded-full border-none px-6 py-3 text-black font-poppins bg-[#ffffff] placeholder:text-gray-400 shadow-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-black font-poppins mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter your password"
-                  className="w-full rounded-full border-none px-6 py-3 text-black font-poppins bg-[#ffffff] placeholder:text-gray-400 shadow-sm"
-                />
-              </div>
-              <div className="flex justify-end items-center">
-                <a
-                  href="#"
-                  className="text-[#00AEEF] text-xs font-semibold font-poppins"
-                >
-                  Forgot password?
-                </a>
-              </div>
+            <form className="space-y-4" onSubmit={handleEmailLogin}>
+              <label
+                htmlFor="login-email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-full px-6 py-3 text-black bg-white shadow-sm placeholder:text-[#808080] placeholder:text-sm"
+                autoComplete="email"
+              />
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Password
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-full px-6 py-3 text-black bg-white shadow-sm placeholder:text-[#808080] placeholder:text-sm"
+                autoComplete="new-password"
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
-                className="w-full bg-[#888] text-white rounded-full py-3 text-lg font-bold font-poppins cursor-not-allowed mt-2"
-                disabled
+                className="w-full bg-[#F28B20] text-white rounded-full py-3 text-lg font-bold font-poppins mt-2"
+                disabled={loading}
               >
-                Sign in
+                {loading ? "Signing in..." : "Sign in"}
               </button>
             </form>
           ) : (
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleMobileLogin}>
               <div className="flex gap-2">
-                <div className="flex flex-col w-2/5">
-                  <label className="block text-sm font-semibold text-black font-poppins mb-1">
-                    Country code
-                  </label>
-                  <div className="relative">
-                    <select className="w-full rounded-full border border-gray-200 px-4 py-3 text-black font-poppins bg-[#ffffff] shadow-sm appearance-none">
-                      <option value="+94">+94</option>
-                      <option value="+1">+1</option>
-                      <option value="+44">+44</option>
-                    </select>
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                      ▼
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col w-3/5">
-                  <label className="block text-sm font-semibold text-black font-poppins mb-1">
-                    Mobile number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="Enter your number here"
-                    className="w-full rounded-full border-none px-6 py-3 text-black font-poppins bg-[#ffffff] placeholder:text-gray-400 shadow-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-black font-poppins mb-1">
-                  Enter your MPIN
+                <label
+                  htmlFor="login-country"
+                  className="block text-sm font-medium text-gray-700 mb-1 w-2/5"
+                >
+                  Country
                 </label>
+                <label
+                  htmlFor="login-mobile"
+                  className="block text-sm font-medium text-gray-700 mb-1 w-3/5 "
+                >
+                  Mobile number
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  id="login-country"
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="w-2/5 rounded-full px-4 py-3 text-black bg-white shadow-sm placeholder:text-[#808080] placeholder:text-sm"
+                >
+                  <option value="+94">+94</option>
+                  <option value="+1">+1</option>
+                  <option value="+44">+44</option>
+                </select>
                 <input
-                  type="text"
-                  placeholder="OTP Code"
-                  className="w-full rounded-full border-none px-6 py-3 text-black font-poppins bg-[#ffffff] placeholder:text-gray-400 shadow-sm"
+                  id="login-mobile"
+                  type="tel"
+                  placeholder="Mobile number"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  className="w-3/5 rounded-full px-6 py-3 text-black bg-white shadow-sm placeholder:text-[#808080] placeholder:text-sm"
+                  autoComplete="tel"
                 />
               </div>
+              <label
+                htmlFor="login-mpin"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                MPIN
+              </label>
+              <input
+                id="login-mpin"
+                type="password"
+                placeholder="Enter your MPIN"
+                value={mpin}
+                onChange={(e) => setMpin(e.target.value)}
+                className="w-full rounded-full px-6 py-3 bg-white shadow-sm placeholder:text-[#808080] placeholder:text-sm"
+                autoComplete="current-password"
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
-                className="w-full bg-[#888] text-white rounded-full py-3 text-lg font-bold font-poppins cursor-not-allowed mt-2"
-                disabled
+                className="w-full bg-[#F28B20] text-white rounded-full py-3 text-lg font-bold font-poppins mt-2"
+                disabled={loading}
               >
-                Sign in
+                {loading ? "Signing in..." : "Sign in"}
               </button>
             </form>
           )}
-          <div className="flex flex-col items-center my-6">
-            <span className="text-gray-400 font-lato mb-3 text-sm">
-              Or sign in with
-            </span>
-            <div className="flex gap-6">
-              <div className="w-12 h-12 bg-gray-100 rounded-full border border-gray-200 flex items-center justify-center"></div>
-              <div className="w-12 h-12 bg-gray-100 rounded-full border border-gray-200 flex items-center justify-center"></div>
-            </div>
-          </div>
+
           <div className="text-center mt-6">
-            <span className="text-gray-400 font-lato text-sm">
+            <span className="text-gray-400 text-sm">
               Don't have an account?{" "}
             </span>
-            <Link
-              href="/signup"
-              className="text-black font-lato font-extrabold text-sm"
+            <button
+              onClick={() => router.push("/signup")}
+              className="text-black font-bold text-sm hover:underline"
             >
               Sign up
-            </Link>
+            </button>
           </div>
         </div>
       </div>

@@ -3,9 +3,21 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import NextButton from "@/components/NextButton";
+import axios from "axios";
+import { useUser } from "@/context/UserContext";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
 
 export default function SignupSetMpin() {
   const router = useRouter();
+  // Get registration data from UserContext for state persistence
+  const {
+    registrationData,
+    updateRegistrationData,
+    clearRegistrationData,
+    setUserData,
+  } = useUser();
+  // Initialize MPIN states with existing data from context or empty arrays
   const [mpin, setMpin] = useState(["", "", "", ""]);
   const [mpin2, setMpin2] = useState(["", "", "", ""]);
   const [showMpin, setShowMpin] = useState(false);
@@ -22,10 +34,118 @@ export default function SignupSetMpin() {
     useRef<HTMLInputElement>(null),
   ];
 
+  /**
+   * Navigate back to the avatar selection step
+   */
   const handleBack = () => {
     router.push("/signup/avatar");
   };
 
+  /**
+   * Save MPIN and complete signup process
+   *
+   * CHANGES:
+   * - Added MPIN validation before proceeding
+   * - Updates UserContext with MPIN data
+   * - Sends complete registration data to backend
+   * - Clears registration data after successful signup
+   * - Navigates to home page
+   */
+  const saveMpin = async () => {
+    const mpinStr = mpin.join(""); // "1234"
+    updateRegistrationData({ mpin: mpinStr });
+
+    let firebaseUser = null;
+
+    try {
+      const cleanRegistrationData = Object.fromEntries(
+        Object.entries(registrationData).filter(
+          ([_, value]) => value !== undefined && value !== null && value !== ""
+        )
+      ) as Record<string, string>;
+
+      let firebaseUid = cleanRegistrationData.uid;
+
+      // If email and password are provided, create Firebase user
+      if (cleanRegistrationData.email && cleanRegistrationData.password) {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            cleanRegistrationData.email,
+            cleanRegistrationData.password
+          );
+          firebaseUser = userCredential.user;
+          firebaseUid = firebaseUser.uid;
+          console.log("Firebase user created:", firebaseUid);
+        } catch (firebaseErr: any) {
+          console.error("Firebase user creation failed:", firebaseErr);
+          if (firebaseErr.code === "auth/email-already-in-use") {
+            alert(
+              "An account with this email already exists. Please use a different email or try logging in."
+            );
+            return;
+          }
+          // Continue with signup even if Firebase fails (for mobile-only users)
+        }
+      }
+
+      // Send complete registration data to backend
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/signup",
+        {
+          ...cleanRegistrationData,
+          mpin: mpinStr,
+          uid: firebaseUid,
+        }
+      );
+
+      setUserData({
+        ...response.data,
+        isNewUser: true,
+        hasCompletedMission2: false,
+        missionProgress: 0,
+      });
+
+      clearRegistrationData();
+      router.push("/home?newUser=true");
+    } catch (err: any) {
+      console.error("Signup failed:", err);
+
+      // If Firebase user was created but backend failed, delete Firebase user
+      if (firebaseUser) {
+        try {
+          await firebaseUser.delete();
+          console.log("Firebase user deleted due to backend failure.");
+        } catch (deleteErr) {
+          console.error(
+            "Failed to delete Firebase user after backend failure:",
+            deleteErr
+          );
+        }
+      }
+
+      if (err.response?.status === 409) {
+        alert(
+          `Signup failed: ${err.response.data.details || "User already exists"}`
+        );
+      } else if (err.response?.data?.details) {
+        alert(`Signup failed: ${err.response.data.details}`);
+      } else if (err.response?.status === 500) {
+        alert("Server error. Please try again later.");
+      } else if (err.code === "ECONNREFUSED") {
+        alert(
+          "Cannot connect to server. Please check if the backend is running."
+        );
+      } else {
+        alert("Something went wrong. Please try again.");
+      }
+    }
+  };
+
+  /**
+   * Handle MPIN input changes with validation
+   * Only allows single digit numbers
+   */
   const handleChange = (index: number, value: string, which: 1 | 2) => {
     if (!/^[0-9]?$/.test(value)) return; // Only allow single digit numbers
     if (which === 1) {
@@ -45,6 +165,9 @@ export default function SignupSetMpin() {
     }
   };
 
+  /**
+   * Handle keyboard navigation for MPIN inputs
+   */
   const handleKeyDown = (
     index: number,
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -72,7 +195,7 @@ export default function SignupSetMpin() {
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
-        aria-label="Back to OTP step"
+        aria-label="Back to avatar step"
       >
         <svg
           width="48"
@@ -127,7 +250,7 @@ export default function SignupSetMpin() {
           </div>
           <h3 className="font-bold text-lg text-center text-[#F28B20] mb-4 mt-4">
             This 4-digit code will be used for quick and secure login in the
-            future. Make sure it’s something you can remember, but not easy to
+            future. Make sure it's something you can remember, but not easy to
             guess.
           </h3>
           <form
@@ -241,7 +364,8 @@ export default function SignupSetMpin() {
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.preventDefault();
                 if (!mpinMatch) return;
-                router.push("/home");
+                saveMpin();
+
                 // handle MPIN submit here
               }}
             >
