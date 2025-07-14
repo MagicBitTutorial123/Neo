@@ -149,7 +149,7 @@ export const missions = {
   },
   9: {
     id: 9,
-    title: "Dummy Mission 7",
+    title: "Dummy-Mission 7",
     intro: {
       image: "/MissionIntroImage-9.png",
       description: "This is a placeholder for a future mission.",
