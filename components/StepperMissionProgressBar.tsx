@@ -17,19 +17,36 @@ interface Mission {
 interface StepperMissionProgressBarProps {
   missionList: Mission[];
   completed: number;
+  selectedMissionIdx?: number;
+  setSelectedMissionIdx?: (idx: number) => void;
 }
 
-const THUMBNAIL_WIDTH = 112; // px
-const VISIBLE_COUNT = 6;
+const THUMBNAIL_WIDTH = 160; // px
+const VISIBLE_COUNT = 7;
 const DOT_SIZE = 20; // px (w-5)
 const LINE_HEIGHT = 4; // px
+
+// Helper to ensure image src is always valid for Next.js Image
+function getSafeImageSrc(src: string | undefined) {
+  if (!src || typeof src !== "string" || src.trim() === "")
+    return "/mission-dummy.png";
+  if (src.startsWith("/") || src.startsWith("http")) return src;
+  return "/" + src;
+}
 
 const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
   missionList,
   completed,
+  selectedMissionIdx: controlledSelectedMissionIdx,
+  setSelectedMissionIdx: controlledSetSelectedMissionIdx,
 }) => {
   const [startIdx, setStartIdx] = useState(0);
-  const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
+  const [internalSelectedMissionIdx, setInternalSelectedMissionIdx] =
+    useState(completed);
+  const selectedMissionIdx =
+    controlledSelectedMissionIdx ?? internalSelectedMissionIdx;
+  const setSelectedMissionIdx =
+    controlledSetSelectedMissionIdx ?? setInternalSelectedMissionIdx;
   const router = useRouter();
   const maxStart = Math.max(0, missionList.length - VISIBLE_COUNT);
   const selectedMission = missionList[selectedMissionIdx] || missionList[0];
@@ -39,11 +56,30 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
 
   // For visible missions
   const visibleMissions = missionList.slice(startIdx, startIdx + VISIBLE_COUNT);
+  // Calculate dynamic line positions for the stepper
+  // Each dot center: left = idx * (THUMBNAIL_WIDTH + 32) + THUMBNAIL_WIDTH/2
+  const dotCenters = visibleMissions.map(
+    (_, idx) => idx * (THUMBNAIL_WIDTH + 32) + THUMBNAIL_WIDTH / 2
+  );
+  // Find the last completed dot in the visible range
+  const firstDotCenter = dotCenters[0];
+  // Find the last completed dot index in the visible range
+  const lastCompletedVisibleIdx = visibleMissions.findLastIndex(
+    (_, idx) => startIdx + idx < completed
+  );
+  const lastDotCenter = dotCenters[dotCenters.length - 1];
+  const lastCompletedDotCenter =
+    lastCompletedVisibleIdx >= 0
+      ? dotCenters[lastCompletedVisibleIdx]
+      : firstDotCenter;
 
   // For the full line
-  const fullLineWidth = (missionList.length - 1) * THUMBNAIL_WIDTH;
-  const completedIdx = Math.max(0, Math.min(completed, missionList.length - 1));
-  const orangeLineWidth = completedIdx * THUMBNAIL_WIDTH + DOT_SIZE / 2;
+  const fullLineWidth = (missionList.length - 1) * (THUMBNAIL_WIDTH + 32);
+  const completedIdx = completed - 1;
+  const orangeLineWidth =
+    completedIdx >= 0
+      ? completedIdx * (THUMBNAIL_WIDTH + 32) + DOT_SIZE / 2
+      : 0;
   const greyLineLeft = orangeLineWidth;
   const greyLineWidth = fullLineWidth + DOT_SIZE / 2 - orangeLineWidth;
 
@@ -55,38 +91,23 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
       {/* Mission Details Top Content */}
       <div className="w-full flex flex-row gap-8 mb-8">
         {/* Description Card */}
-        <div className="flex-1 bg-[#F8F9FC] rounded-2xl p-10 shadow border border-[#E0E6ED] flex flex-col justify-between min-h-[320px]">
-          <div>
-            <div className="text-2xl text-black font-bold mb-4">
-              {selectedMission.title}
-            </div>
-            <div
-              className="text-[#585A6C] text-base mb-12"
-              style={{ minHeight: 60 }}
-            >
-              {selectedMission.missionDescription}
-            </div>
-          </div>
-          <div className="flex justify-center w-full">
-            {selectedMissionIdx > completed ? (
-              <button
-                disabled
-                className="flex items-center justify-center bg-[#333] text-white text-xl font-bold rounded-full px-12 py-3 mt-2 opacity-90 cursor-not-allowed"
-                style={{
-                  minWidth: 200,
-                  width: 240,
-                  fontSize: 24,
-                  height: 60,
-                  minHeight: 60,
-                }}
+        <div className="flex-1 bg-[#F8F9FC] rounded-2xl p-10 shadow border border-[#E0E6ED] flex flex-col min-h-[320px] max-h-[320px] justify-between">
+          <div className="flex flex-col flex-1 justify-between h-full">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="text-2xl text-black font-bold mb-4">
+                {selectedMission.title}
+              </div>
+              <div
+                className="text-[#585A6C] text-base mb-12"
+                style={{ minHeight: 60 }}
               >
-                LOCKED
-                <span className="ml-3 text-2xl">
-                  <FaLock />
-                </span>
-              </button>
-            ) : (
+                {selectedMission.missionDescription}
+              </div>
+            </div>
+            <div className="flex justify-center items-end pt-2 mb-0">
               <LetsGoButton
+                locked={selectedMissionIdx > completed}
+                disabled={selectedMissionIdx > completed}
                 style={{
                   minWidth: 200,
                   width: 200,
@@ -95,27 +116,39 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                   minHeight: 60,
                   justifyContent: "center",
                 }}
-                onClick={() => router.push(`/missions/${selectedMission.id}`)}
+                onClick={
+                  selectedMissionIdx > completed
+                    ? undefined
+                    : () => router.push(`/missions/${selectedMission.id}`)
+                }
               >
-                START
+                {selectedMissionIdx > completed ? (
+                  <span className="flex items-center justify-center w-full">
+                    LOCKED{" "}
+                    <span className="ml-3 text-2xl">
+                      <FaLock />
+                    </span>
+                  </span>
+                ) : (
+                  "START"
+                )}
               </LetsGoButton>
-            )}
+            </div>
           </div>
         </div>
         {/* Mission Card */}
-        <div className="w-[370px] bg-[#F8F9FC] rounded-2xl shadow border border-[#E0E6ED] flex flex-col items-end min-h-[320px] overflow-hidden p-0 mr-0">
+        <div className="w-[370px] bg-[#F8F9FC] rounded-2xl shadow border border-[#E0E6ED] flex flex-col items-end min-h-[320px] max-h-[320px] overflow-hidden p-0 mr-0">
           {/* Mission Image - flush with top/edges, rounded top corners */}
-          {typeof (selectedMission as any).missionPageImage === "string" &&
-            (selectedMission as any).missionPageImage.trim() !== "" && (
-              <Image
-                src={(selectedMission as any).missionPageImage}
-                alt={selectedMission.title}
-                width={370}
-                height={260}
-                className="object-cover w-full h-[260px] rounded-t-2xl"
-                style={{ objectFit: "cover" }}
-              />
-            )}
+          <div className="w-[370px] h-[260px] rounded-t-2xl overflow-hidden">
+            <Image
+              src={getSafeImageSrc((selectedMission as any).missionPageImage)}
+              alt={selectedMission.title}
+              width={370}
+              height={260}
+              className="object-cover w-full h-full"
+              style={{ objectFit: "cover" }}
+            />
+          </div>
           {/* Card Content */}
           <div className="flex flex-row w-full items-center justify-between gap-2 p-6">
             <div className="flex flex-col items-start gap-2">
@@ -163,9 +196,51 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
       </div>
       {/* Carousel Row */}
       <div
-        className="relative flex items-center justify-center w-full"
+        className="relative flex items-center justify-center w-full bg-[#F8F9FC] rounded-2xl border border-[#E0E6ED] shadow p-4 mt-2 overflow-hidden"
         style={{ width: "100%", maxWidth: "100%" }}
       >
+        {/* Blue overlays for all unselected thumbnails, rendered absolutely at the carousel row level */}
+        {visibleMissions.map((mission, idx) => {
+          const globalIdx = startIdx + idx;
+          const isSelected = globalIdx === selectedMissionIdx;
+          if (isSelected) return null;
+          const GAP = 32;
+          const carouselInnerWidth =
+            VISIBLE_COUNT * THUMBNAIL_WIDTH + (VISIBLE_COUNT - 1) * GAP;
+          let left, width;
+          if (idx === 0) {
+            left = 32;
+            width = THUMBNAIL_WIDTH + GAP / 2;
+          } else {
+            left = 32 + idx * (THUMBNAIL_WIDTH + GAP) - GAP / 2;
+            if (idx === visibleMissions.length - 1) {
+              width = carouselInnerWidth + 32 - left;
+            } else {
+              width = THUMBNAIL_WIDTH + GAP;
+            }
+          }
+          let borderRadius = "";
+          if (idx === 0 && idx === visibleMissions.length - 1)
+            borderRadius = "rounded-2xl";
+          else if (idx === 0) borderRadius = "rounded-tl-2xl rounded-bl-2xl";
+          else if (idx === visibleMissions.length - 1)
+            borderRadius = "rounded-tr-2xl rounded-br-2xl";
+          return (
+            <div
+              key={`overlay-${mission.id}`}
+              className={`absolute ${borderRadius}`}
+              style={{
+                left,
+                width,
+                top: 0,
+                bottom: 0,
+                background: "rgba(0,174,239,0.18)",
+                zIndex: 5,
+                pointerEvents: "none",
+              }}
+            />
+          );
+        })}
         {/* Left Arrow */}
         <button
           onClick={handlePrev}
@@ -199,122 +274,122 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
             position: "relative",
           }}
         >
-          {/* Orange completed line */}
+          {/* Orange completed line (dynamic, stepper style) */}
           <div
             style={{
               position: "absolute",
-              left: DOT_SIZE / 2,
-              top: 112 + DOT_SIZE / 2 - LINE_HEIGHT / 2 + 8,
-              width: orangeLineWidth,
+              left: firstDotCenter,
+              top: 160 + DOT_SIZE / 2 - LINE_HEIGHT / 2 + 8,
+              width: Math.max(0, lastCompletedDotCenter - firstDotCenter),
               height: LINE_HEIGHT,
               background: "#FFB037",
               zIndex: 1,
               borderRadius: 2,
-              transition: "width 0.3s",
+              transition: "width 0.3s, left 0.3s",
             }}
           />
-          {/* Grey remaining line */}
+          {/* Grey remaining line (dynamic, stepper style) */}
           <div
             style={{
               position: "absolute",
-              left: greyLineLeft,
-              top: 112 + DOT_SIZE / 2 - LINE_HEIGHT / 2 + 8,
-              width: greyLineWidth,
+              left: lastCompletedDotCenter,
+              top: 160 + DOT_SIZE / 2 - LINE_HEIGHT / 2 + 8,
+              width: Math.max(0, lastDotCenter - lastCompletedDotCenter),
               height: LINE_HEIGHT,
               background: "#E0E6ED",
               zIndex: 0,
               borderRadius: 2,
-              transition: "width 0.3s",
+              transition: "width 0.3s, left 0.3s",
             }}
           />
           <div
-            className="flex transition-transform duration-300"
+            className="flex transition-transform duration-300 gap-8"
             style={{
-              width: missionList.length * THUMBNAIL_WIDTH,
-              transform: `translateX(-${startIdx * THUMBNAIL_WIDTH}px)`,
+              width:
+                missionList.length * THUMBNAIL_WIDTH +
+                (missionList.length - 1) * 32,
+              transform: `translateX(-${startIdx * (THUMBNAIL_WIDTH + 32)}px)`,
             }}
           >
             {visibleMissions.map((mission, idx) => {
               const globalIdx = startIdx + idx;
+              const isLocked = globalIdx > completed;
+              const isSelected = globalIdx === selectedMissionIdx;
               return (
                 <div
                   key={mission.id}
-                  className="flex flex-col items-center cursor-pointer"
+                  className={`flex flex-col items-center cursor-pointer group relative`}
                   style={{ width: THUMBNAIL_WIDTH }}
                   onClick={() => setSelectedMissionIdx(globalIdx)}
                 >
                   <div
-                    className={`rounded-2xl flex items-center justify-center mb-2 relative overflow-hidden w-full h-[112px] ${
-                      globalIdx > completed ? "opacity-60" : ""
-                    } ${
-                      globalIdx === selectedMissionIdx
-                        ? "ring-4 ring-[#00AEEF]"
-                        : ""
-                    }`}
-                    style={{ background: "#fff", border: "1px solid #E0E6ED" }}
+                    className={`relative overflow-hidden w-full h-[160px] rounded-2xl mb-2 border border-[#E0E6ED] bg-white transition-transform duration-200
+                      ${
+                        isSelected ? "ring-4 ring-[#00AEEF] shadow-xl z-10" : ""
+                      }
+                    `}
                   >
-                    {typeof (mission as any).missionPageImage === "string" &&
-                    (mission as any).missionPageImage.trim() !== "" ? (
-                      <img
-                        src={(mission as any).missionPageImage}
-                        alt={mission.title}
-                        width={112}
-                        height={112}
-                        className={`object-cover rounded-2xl w-full h-[112px]${
-                          globalIdx > completed ? " grayscale" : ""
-                        }`.replace(
-                          "object-covergrayscale",
-                          "object-cover grayscale"
-                        )}
-                        style={{ objectFit: "cover" }}
-                      />
-                    ) : (
-                      <img
-                        src={(mission as any).missionPageImage}
-                        alt="Dummy Mission"
-                        width={112}
-                        height={112}
-                        className={`object-cover rounded-2xl w-full h-[112px]${
-                          globalIdx > completed ? " grayscale" : ""
-                        }`.replace(
-                          "object-covergrayscale",
-                          "object-cover grayscale"
-                        )}
-                        style={{ objectFit: "cover" }}
-                      />
-                    )}
-                    {globalIdx > completed && (
-                      <span className="absolute text-3xl text-[#BDC8D5] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <svg
-                          width="32"
-                          height="32"
-                          fill="none"
-                          viewBox="0 0 24 24"
+                    {/* Mission image always in the background */}
+                    <img
+                      src={getSafeImageSrc((mission as any).missionPageImage)}
+                      alt={mission.title}
+                      width={160}
+                      height={160}
+                      className="object-cover w-full h-full"
+                      style={{
+                        objectFit: "cover",
+                        position: "absolute",
+                        inset: 0,
+                        zIndex: 0,
+                        pointerEvents: "none",
+                      }}
+                    />
+                    {/* Black overlay and lock icon for locked thumbnails (always present if locked) */}
+                    {isLocked && (
+                      <>
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background: "rgba(0,0,0,0.7)",
+                            zIndex: 1,
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <span
+                          className="absolute text-3xl text-white left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                          style={{ zIndex: 2, pointerEvents: "none" }}
                         >
-                          <rect
-                            x="5"
-                            y="11"
-                            width="14"
-                            height="10"
-                            rx="2"
-                            stroke="#BDC8D5"
-                            strokeWidth="2"
-                          />
-                          <path
-                            d="M17 11V7a5 5 0 00-10 0v4"
-                            stroke="#BDC8D5"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </span>
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <rect
+                              x="5"
+                              y="11"
+                              width="14"
+                              height="10"
+                              rx="2"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            <path
+                              d="M17 11V7a5 5 0 00-10 0v4"
+                              stroke="white"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      </>
                     )}
                   </div>
                   {/* Dot below thumbnail, centered */}
                   <div
-                    className={`w-5 h-5 rounded-full border-2 mt-2 ${
-                      globalIdx <= completed
+                    className={`w-5 h-5 rounded-full border-2 mt-4 ${
+                      globalIdx < completed
                         ? "bg-[#FFB037] border-[#FFB037]"
                         : "bg-[#E0E6ED] border-[#E0E6ED]"
                     }`}

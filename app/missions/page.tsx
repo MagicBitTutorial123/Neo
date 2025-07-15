@@ -14,9 +14,8 @@ export default function MissionsPage() {
   const { userData } = useUser();
   const completed = userData?.missionProgress ?? 0;
   const missionList = Object.values(missions);
-  // Show the current mission as selected in the breadcrumb
-  const selectedMissionIdx = completed;
-  const selectedMission = missionList[selectedMissionIdx] || missionList[0];
+  // Track the selected mission index for both the stepper and the breadcrumb
+  const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -26,7 +25,7 @@ export default function MissionsPage() {
           <span className="text-[#222E3A]">Missions</span>
           <span className="text-[#222E3A]">&gt;</span>
           <span className="text-[#00AEEF]">
-            Mission {String(selectedMission.id).padStart(2, "0")}
+            Mission {String(selectedMissionIdx+1)}
           </span>
         </div>
         {/* Mission Progress Bar */}
@@ -46,6 +45,8 @@ export default function MissionsPage() {
         <StepperMissionProgressBar
           missionList={missionList}
           completed={completed}
+          selectedMissionIdx={selectedMissionIdx}
+          setSelectedMissionIdx={setSelectedMissionIdx}
         />
       </main>
     </div>
