@@ -41,8 +41,13 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
   setSelectedMissionIdx: controlledSetSelectedMissionIdx,
 }) => {
   const [startIdx, setStartIdx] = useState(0);
-  const [internalSelectedMissionIdx, setInternalSelectedMissionIdx] =
-    useState(completed);
+  // Remove: const [internalSelectedMissionIdx, setInternalSelectedMissionIdx] = useState(completed);
+  // Instead, initialize with 0 (or a prop if provided), and do not update on carousel slide
+  const [internalSelectedMissionIdx, setInternalSelectedMissionIdx] = useState(
+    controlledSelectedMissionIdx !== undefined
+      ? controlledSelectedMissionIdx
+      : 0
+  );
   const selectedMissionIdx =
     controlledSelectedMissionIdx ?? internalSelectedMissionIdx;
   const setSelectedMissionIdx =
@@ -52,10 +57,18 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
   const selectedMission = missionList[selectedMissionIdx] || missionList[0];
 
   const handlePrev = () => setStartIdx((idx) => Math.max(0, idx - 1));
-  const handleNext = () => setStartIdx((idx) => Math.min(maxStart, idx + 1));
+  const handleNext = () => {
+    // Only slide if the last visible mission is not the last mission
+    if (startIdx + VISIBLE_COUNT < missionList.length) {
+      setStartIdx((idx) => idx + 1);
+    }
+  };
 
   // For visible missions
-  const visibleMissions = missionList.slice(startIdx, startIdx + VISIBLE_COUNT);
+  const visibleMissions = missionList.slice(
+    startIdx,
+    Math.min(startIdx + VISIBLE_COUNT, missionList.length)
+  );
   // Calculate dynamic line positions for the stepper
   // Each dot center: left = idx * (THUMBNAIL_WIDTH + 32) + THUMBNAIL_WIDTH/2
   const dotCenters = visibleMissions.map(
@@ -82,6 +95,11 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
       : 0;
   const greyLineLeft = orangeLineWidth;
   const greyLineWidth = fullLineWidth + DOT_SIZE / 2 - orangeLineWidth;
+
+  // Only update selectedMissionIdx when a thumbnail is clicked
+  // When rendering, compute isSelected as (globalIdx === selectedMissionIdx) even if selected is out of view
+  // Do NOT change selectedMissionIdx on startIdx change
+  // If the selected mission is not in visibleMissions, it simply won't be highlighted in the visible row
 
   return (
     <div
@@ -201,34 +219,25 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
       >
         {/* Blue overlays for all unselected thumbnails, rendered absolutely at the carousel row level */}
         {visibleMissions.map((mission, idx) => {
+          if (!mission) return null; // Only render overlays for real missions
           const globalIdx = startIdx + idx;
           const isSelected = globalIdx === selectedMissionIdx;
           if (isSelected) return null;
           const GAP = 32;
-          const carouselInnerWidth =
-            VISIBLE_COUNT * THUMBNAIL_WIDTH + (VISIBLE_COUNT - 1) * GAP;
-          let left, width;
-          if (idx === 0) {
-            left = 32;
-            width = THUMBNAIL_WIDTH + GAP / 2;
-          } else {
-            left = 32 + idx * (THUMBNAIL_WIDTH + GAP) - GAP / 2;
-            if (idx === visibleMissions.length - 1) {
-              width = carouselInnerWidth + 32 - left;
-            } else {
-              width = THUMBNAIL_WIDTH + GAP;
-            }
-          }
-          let borderRadius = "";
-          if (idx === 0 && idx === visibleMissions.length - 1)
-            borderRadius = "rounded-2xl";
-          else if (idx === 0) borderRadius = "rounded-tl-2xl rounded-bl-2xl";
-          else if (idx === visibleMissions.length - 1)
-            borderRadius = "rounded-tr-2xl rounded-br-2xl";
+          const overlayStart =
+            idx === 0
+              ? 32 // left margin
+              : 32 + idx * (THUMBNAIL_WIDTH + GAP) - GAP / 16;
+          const overlayEnd =
+            idx === visibleMissions.length - 1
+              ? 32 + (idx + 1) * (THUMBNAIL_WIDTH + GAP) - GAP // right margin
+              : 32 + (idx + 1) * (THUMBNAIL_WIDTH + GAP) - GAP / 16;
+          const left = overlayStart;
+          const width = overlayEnd - overlayStart;
           return (
             <div
               key={`overlay-${mission.id}`}
-              className={`absolute ${borderRadius}`}
+              className="absolute"
               style={{
                 left,
                 width,
@@ -237,6 +246,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                 background: "rgba(0,174,239,0.18)",
                 zIndex: 5,
                 pointerEvents: "none",
+                borderRadius: "16px 16px 0 0",
               }}
             />
           );
@@ -269,7 +279,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
         <div
           className="overflow-hidden"
           style={{
-            width: VISIBLE_COUNT * THUMBNAIL_WIDTH,
+            width: visibleMissions.length * THUMBNAIL_WIDTH,
             margin: "0 32px",
             position: "relative",
           }}
@@ -306,9 +316,9 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
             className="flex transition-transform duration-300 gap-8"
             style={{
               width:
-                missionList.length * THUMBNAIL_WIDTH +
-                (missionList.length - 1) * 32,
-              transform: `translateX(-${startIdx * (THUMBNAIL_WIDTH + 32)}px)`,
+                visibleMissions.length * THUMBNAIL_WIDTH +
+                (visibleMissions.length - 1) * 32,
+              transform: `translateX(0px)`,
             }}
           >
             {visibleMissions.map((mission, idx) => {
@@ -324,9 +334,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                 >
                   <div
                     className={`relative overflow-hidden w-full h-[160px] rounded-2xl mb-2 border border-[#E0E6ED] bg-white transition-transform duration-200
-                      ${
-                        isSelected ? "ring-4 ring-[#00AEEF] shadow-xl z-10" : ""
-                      }
+                      ${isSelected ? "shadow-xl z-10" : ""}
                     `}
                   >
                     {/* Mission image always in the background */}
@@ -407,7 +415,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
         {/* Right Arrow */}
         <button
           onClick={handleNext}
-          disabled={startIdx === maxStart}
+          disabled={startIdx + VISIBLE_COUNT >= missionList.length}
           className="absolute right-0 z-10 bg-white rounded-full shadow p-1 flex items-center justify-center disabled:opacity-30"
           style={{
             width: 32,
