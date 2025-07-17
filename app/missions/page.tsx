@@ -1,7 +1,6 @@
 "use client";
 import { useUser } from "@/context/UserContext";
 import { missions } from "@/data/missions";
-import SideNavbar from "@/components/SideNavbar";
 import Image from "next/image";
 import Link from "next/link";
 import LetsGoButton from "@/components/LetsGoButton";
@@ -9,6 +8,7 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import MissionProgressBar from "@/components/MissionProgressBar";
 import StepperMissionProgressBar from "@/components/StepperMissionProgressBar";
+import SideNavbar from "@/components/SideNavbar";
 
 export default function MissionsPage() {
   const { userData } = useUser();
@@ -18,14 +18,15 @@ export default function MissionsPage() {
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
 
   return (
-    <div className="flex min-h-screen bg-white">
-      <main className="flex-1 flex flex-col px-12 pr-8 py-8">
+    <div className="flex min-h-screen min-w-screen h-screen w-screen bg-white overflow-hidden max-w-screen max-h-screen">
+      <SideNavbar />
+      <main className="flex-1 flex flex-col overflow-hidden max-w-screen max-h-screen h-screen w-full p-0 m-0">
         {/* Breadcrumb */}
-        <div className="text-2xl font-extrabold text-[#222E3A] mb-6 flex items-center gap-2">
+        <div className="text-2xl font-extrabold text-[#222E3A] mb-6 flex items-center gap-2 px-8 pt-8">
           <span className="text-[#222E3A]">Missions</span>
           <span className="text-[#222E3A]">&gt;</span>
           <span className="text-[#00AEEF]">
-            Mission {String(selectedMissionIdx+1)}
+            Mission {String(selectedMissionIdx + 1)}
           </span>
         </div>
         {/* Mission Progress Bar */}
@@ -42,12 +43,14 @@ export default function MissionsPage() {
           />
         </div>
         {/* Stepper Progress Bar with Mission Details */}
-        <StepperMissionProgressBar
-          missionList={missionList}
-          completed={completed}
-          selectedMissionIdx={selectedMissionIdx}
-          setSelectedMissionIdx={setSelectedMissionIdx}
-        />
+        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full">
+          <StepperMissionProgressBar
+            missionList={missionList}
+            completed={completed}
+            selectedMissionIdx={selectedMissionIdx}
+            setSelectedMissionIdx={setSelectedMissionIdx}
+          />
+        </div>
       </main>
     </div>
   );

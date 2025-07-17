@@ -38,7 +38,38 @@ export default function LetsGoButton({
         {...props}
       >
         <span className="z-10 flex items-center justify-center w-full">
-          {children}
+          {locked &&
+          typeof children === "string" &&
+          children.toUpperCase() === "LOCKED" ? (
+            <>
+              LOCKED
+              <span
+                className="ml-3 text-2xl"
+                style={{ display: "flex", alignItems: "center" }}
+              >
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+                  <rect
+                    x="5"
+                    y="11"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="white"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M17 11V7a5 5 0 00-10 0v4"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </>
+          ) : (
+            children
+          )}
         </span>
       </button>
       {/* Animated triangle/arrow for START button only */}
