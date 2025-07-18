@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 
 interface LetsGoButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -8,6 +8,16 @@ interface LetsGoButtonProps
   locked?: boolean;
 }
 
+// Helper to get base width from style prop
+const getBaseWidth = (style: React.CSSProperties | undefined) => {
+  if (typeof style?.width === "number") return style.width;
+  if (typeof style?.width === "string") {
+    const match = style.width.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 200;
+  }
+  return 200;
+};
+
 export default function LetsGoButton({
   style = {},
   children = "Let's Go",
@@ -15,26 +25,46 @@ export default function LetsGoButton({
   locked = false,
   ...props
 }: LetsGoButtonProps) {
+  const [hovered, setHovered] = useState(false);
+  const baseWidth = getBaseWidth(style);
+  const baseHeight = style?.height || 56;
+  const baseFontSize = style?.fontSize || 20;
+
+  // Remove width/minWidth from button style to prevent override
+  const { width, minWidth, ...restStyle } = style;
+
   return (
-    <div className="relative group inline-block">
+    <div
+      className="relative inline-block"
+      style={{
+        width: baseWidth,
+        minWidth: baseWidth,
+        height: baseHeight,
+        overflow: "visible",
+        verticalAlign: "middle",
+      }}
+    >
       <button
-        className={`flex items-center justify-center rounded-full text-2xl font-bold font-poppins ${
+        className={`flex items-center justify-center rounded-full text-2xl font-bold font-poppins transition-all duration-300 ease-in-out focus:outline-none relative overflow-visible letsgo-btn ${
           locked
             ? "bg-[#333] text-white opacity-90 cursor-not-allowed"
             : "text-white bg-[#F28B20] hover:bg-[#F76B1C]"
-        } shadow-md transition-all duration-300 ease-in-out focus:outline-none relative overflow-visible letsgo-btn ${className}`}
+        } shadow-md ${className}`}
         style={{
-          minWidth: style?.width || 200,
-          minHeight: style?.height || 56,
-          fontSize: style?.fontSize || 20,
-          ...style,
+          ...restStyle,
+          width: "100%",
+          height: baseHeight,
+          fontSize: baseFontSize,
           opacity: props.disabled || locked ? 0.9 : 1,
           cursor: props.disabled || locked ? "not-allowed" : "pointer",
           border: "none",
+          transform: hovered ? "scaleX(1.12)" : "scaleX(1)",
           transition:
-            "width 0.3s cubic-bezier(0.77,0,0.175,1), background 0.3s, color 0.3s",
+            "transform 0.3s cubic-bezier(0.77,0,0.175,1), background 0.3s, color 0.3s",
         }}
         disabled={props.disabled || locked}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         {...props}
       >
         <span className="z-10 flex items-center justify-center w-full">
@@ -71,46 +101,32 @@ export default function LetsGoButton({
             children
           )}
         </span>
-      </button>
-      {/* Animated triangle/arrow for START button only */}
-      {!locked && !props.disabled && (
-        <span
-          className="letsgo-arrow absolute top-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out"
-          style={{ right: "-40px" }}
-          data-triangle
-        >
-          <svg
-            width="42.74"
-            height="42.74"
-            viewBox="0 0 32 32"
-            fill="#F28B20"
-            xmlns="http://www.w3.org/2000/svg"
-            className="transition-all duration-300 ease-in-out"
+        {/* Animated triangle/arrow for START button only */}
+        {!locked && !props.disabled && (
+          <span
+            className="letsgo-arrow absolute top-1/2 -translate-y-1/2"
+            style={{
+              right: hovered ? 32 : -40,
+              transition: "right 0.3s cubic-bezier(0.4,0,0.2,1)",
+              zIndex: 20,
+            }}
+            data-triangle
           >
-            <polygon points="28,8 12,16 28,24" />
-          </svg>
-        </span>
-      )}
-      {/* Hover animation for triangle */}
-      {!locked && !props.disabled && (
-        <style jsx>{`
-          .group:hover [data-triangle] {
-            right: 32px !important;
-          }
-          .group:hover [data-triangle] svg {
-            fill: white !important;
-            transform: rotate(180deg);
-          }
-          .letsgo-btn {
-            background: #f28b20;
-          }
-          .letsgo-btn:hover {
-            background: #f76b1c !important;
-            min-width: 210px !important;
-            width: 102% !important;
-          }
-        `}</style>
-      )}
+            <svg
+              width="42.74"
+              height="42.74"
+              viewBox="0 0 32 32"
+              fill={hovered ? "#fff" : "#F28B20"}
+              style={{
+                transform: hovered ? "rotate(180deg)" : "none",
+                transition: "fill 0.3s, transform 0.3s",
+              }}
+            >
+              <polygon points="28,8 12,16 28,24" />
+            </svg>
+          </span>
+        )}
+      </button>
     </div>
   );
 }

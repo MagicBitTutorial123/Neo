@@ -104,12 +104,12 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
 
   return (
     <div
-      className="w-full flex flex-col items-center select-none overflow-hidden max-w-full"
+      className="w-full flex flex-col items-center select-none overflow-visible max-w-full"
       style={{ userSelect: "none", maxWidth: "100vw" }}
     >
       <div className="w-full max-w-7xl mx-auto px-8">
         {/* Mission Details Top Content */}
-        <div className="flex flex-row gap-8 mb-8 overflow-hidden">
+        <div className="flex flex-row gap-8 mb-8 overflow-visible">
           {/* Description Card */}
           <div className="flex-1 bg-[#F8F9FC] rounded-2xl p-10 shadow border border-[#E0E6ED] flex flex-col min-h-[320px] max-h-[320px] justify-between overflow-hidden max-w-full">
             <div className="flex flex-col flex-1 justify-between h-full overflow-hidden max-w-full">
@@ -124,60 +124,65 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                   {selectedMission.missionDescription}
                 </div>
               </div>
-              <div className="flex justify-center items-end pt-2 mb-0">
-                <LetsGoButton
-                  locked={selectedMissionIdx > completed}
-                  disabled={selectedMissionIdx > completed}
-                  style={{
-                    minWidth: 200,
-                    width: 200,
-                    fontSize: 22,
-                    height: 60,
-                    minHeight: 60,
-                    justifyContent: "center",
-                  }}
-                  onClick={
-                    selectedMissionIdx > completed
-                      ? undefined
-                      : () => router.push(`/missions/${selectedMission.id}`)
-                  }
+              <div style={{ overflow: "visible" }}>
+                <div
+                  className="flex justify-center items-end pt-2 mb-0"
+                  style={{ overflow: "visible" }}
                 >
-                  {selectedMissionIdx > completed ? (
-                    <span className="flex items-center justify-center w-full">
-                      LOCKED
-                      <span
-                        className="ml-3 text-2xl"
-                        style={{ display: "flex", alignItems: "center" }}
-                      >
-                        <svg
-                          width="32"
-                          height="32"
-                          fill="none"
-                          viewBox="0 0 24 24"
+                  <LetsGoButton
+                    locked={selectedMissionIdx > completed}
+                    disabled={selectedMissionIdx > completed}
+                    style={{
+                      minWidth: 200,
+                      width: 240,
+                      fontSize: 22,
+                      height: 60,
+                      minHeight: 60,
+                      justifyContent: "center",
+                    }}
+                    onClick={
+                      selectedMissionIdx > completed
+                        ? undefined
+                        : () => router.push(`/missions/${selectedMission.id}`)
+                    }
+                  >
+                    {selectedMissionIdx > completed ? (
+                      <span className="flex items-center justify-center w-full">
+                        LOCKED
+                        <span
+                          className="ml-3 text-2xl"
+                          style={{ display: "flex", alignItems: "center" }}
                         >
-                          <rect
-                            x="5"
-                            y="11"
-                            width="14"
-                            height="10"
-                            rx="2"
-                            stroke="white"
-                            strokeWidth="2"
-                          />
-                          <path
-                            d="M17 11V7a5 5 0 00-10 0v4"
-                            stroke="white"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <rect
+                              x="5"
+                              y="11"
+                              width="14"
+                              height="10"
+                              rx="2"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                            <path
+                              d="M17 11V7a5 5 0 00-10 0v4"
+                              stroke="white"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    "START"
-                  )}
-                </LetsGoButton>
+                    ) : (
+                      "START"
+                    )}
+                  </LetsGoButton>
+                </div>
               </div>
             </div>
           </div>
@@ -366,7 +371,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                                 left: "-9px",
                                 right: "-9px",
                                 top: "-24px",
-                                height: "250px",
+                                height: "240px",
                                 borderRadius: "24px 24px 0 0",
                                 opacity: isHovered ? 0 : 1,
                               }}

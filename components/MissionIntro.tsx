@@ -76,10 +76,17 @@ export default function MissionIntro({
         <div className="text-center text-[#888] text-base md:text-lg mb-8 max-w-2xl">
           {instructions}
         </div>
-        <div className="flex justify-center w-full">
-          <div className="flex justify-center w-full">
+        <div
+          className="flex justify-center w-full"
+          style={{ overflow: "visible" }}
+        >
+          <div
+            className="flex justify-center w-full"
+            style={{ overflow: "visible" }}
+          >
             <LetsGoButton
               style={{
+                overflow: "visible",
                 width: 300,
                 minWidth: 300,
                 height: 60,
