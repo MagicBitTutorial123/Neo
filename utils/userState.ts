@@ -50,7 +50,7 @@ export const completeMission1 = async (firebaseUid: string) => {
 /**
  * Mark mission 2 as completed
  * This will update the user state and show the default home
- */
+*/
 export const completeMission2 = async (firebaseUid: string) => {
   return completeMission(firebaseUid, 2);
 };

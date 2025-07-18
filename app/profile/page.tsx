@@ -46,7 +46,7 @@ export default function ProfilePage() {
       <SideNavbar
         avatar={userAvatar}
         name={userName}
-        playgroundActive={playgroundActive}
+        playgroundActive= {true}//{playgroundActive}
       />
       <main className="flex-1 flex flex-col items-center px-8 py-12">
         {/* Profile Card */}
