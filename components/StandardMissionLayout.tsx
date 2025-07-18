@@ -307,7 +307,7 @@ export default function StandardMissionLayout({ mission }: { mission: any }) {
               // Fallback if no user data
               localStorage.setItem("hasCompletedMission2", "true");
               localStorage.setItem("isNewUser", "false");
-              router.push("/home");
+            router.push("/home");
             }
           }}
         />

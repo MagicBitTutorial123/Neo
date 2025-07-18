@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useUser } from "@/context/UserContext";
+import LetsGoButton from "@/components/LetsGoButton";
 
 export default function SignupMain() {
   const router = useRouter();
@@ -71,47 +72,18 @@ export default function SignupMain() {
             </div>
             {/* Navigation and button */}
             <div className="flex items-center gap-8 mt-8">
-              {/* Let's Go button with animated triangle (single SVG) */}
-              <div
-                className="relative group"
-                style={{ width: 361, height: 77.5 }}
+              <LetsGoButton
+                style={{
+                  width: 361,
+                  height: 77.5,
+                  fontSize: 24,
+                }}
+                onClick={() => {
+                  setTimeout(() => router.push("/signup/mobile"), 300);
+                }}
               >
-                <button
-                  className="w-full h-full flex items-center justify-center rounded-full text-2xl font-bold font-poppins text-white bg-[#F28B20] shadow-md transition-all duration-300 ease-in-out focus:outline-none hover:bg-[#F76B1C] relative overflow-visible"
-                  style={{ minWidth: 361, minHeight: 77.5 }}
-                  onClick={() => {
-                    setTimeout(() => router.push("/signup/mobile"), 300);
-                  }}
-                >
-                  <span>Let's Go</span>
-                  {/* Animated triangle */}
-                  <span
-                    className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out"
-                    style={{ right: "-40px" }}
-                    data-triangle
-                  >
-                    <svg
-                      width="42.74"
-                      height="42.74"
-                      viewBox="0 0 32 32"
-                      fill="#F28B20"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="transition-all duration-300 ease-in-out"
-                    >
-                      <polygon points="28,8 12,16 28,24" />
-                    </svg>
-                  </span>
-                </button>
-                <style jsx>{`
-                  .group:hover [data-triangle] {
-                    right: 32px !important;
-                  }
-                  .group:hover [data-triangle] svg {
-                    fill: white !important;
-                    transform: rotate(180deg);
-                  }
-                `}</style>
-              </div>
+                Let's Go
+              </LetsGoButton>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ export const missions = {
       timeAllocated: "15 mins",
     },
     missionPageImage: "/mission1-missionPageImage.png",
-    missionDescription: "adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
+    missionDescription: "Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
     steps: [
       {
         image: "/mission1-step1-image.png",
@@ -42,7 +42,7 @@ export const missions = {
       timeAllocated: "10 mins",
     },
     missionPageImage: "/mission2-missionPageImage.png",
-    missionDescription: "Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
+    missionDescription: "cing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
     steps: [
       {
         image: "/mission1-step2-image.png",
@@ -66,7 +66,7 @@ export const missions = {
       timeAllocated: "10 mins",
     },
     missionPageImage: "/mission3-missionPageImage.png",
-    missionDescription: "sque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
+    missionDescription: "Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
     steps: [
       {
         image: "/mission1-step2-image.png",
@@ -103,7 +103,7 @@ export const missions = {
       timeAllocated: "-- mins",
       
     },
-    missionPageImage: "/mission4-missionPageImage.png",
+    missionPageImage: "/mission5-missionPageImage.png",
     missionDescription: "Coming soon!",
     steps: [],
     overlays: [],
@@ -116,7 +116,7 @@ export const missions = {
       description: "This is a placeholder for a future mission.",
       timeAllocated: "-- mins",
     },
-    missionPageImage: "/mission4-missionPageImage.png",
+    missionPageImage: "/mission6-missionPageImage.png",
     missionDescription: "Coming soon!",
     steps: [],
     overlays: [],
@@ -136,7 +136,7 @@ export const missions = {
   },
   8: {
     id: 8,
-    title: "Dummy Mission 7",
+    title: "Dummy Mission 8",
     intro: {
       image: "/MissionIntroImage-8.png",
       description: "This is a placeholder for a future mission.",
@@ -149,9 +149,48 @@ export const missions = {
   },
   9: {
     id: 9,
-    title: "Dummy Mission 7",
+    title: "Dummy-Mission 9",
     intro: {
       image: "/MissionIntroImage-9.png",
+      description: "This is a placeholder for a future mission.",
+      timeAllocated: "-- mins",
+    },
+    missionPageImage: "mission4-missionPageImage.png",
+    missionDescription: "Coming soon!",
+    steps: [],
+    overlays: [],
+  },
+  10: {
+    id: 10,
+    title: "Dummy-Mission 10",
+    intro: {
+      image: "/MissionIntroImage-10.png",
+      description: "This is a placeholder for a future mission.",
+      timeAllocated: "-- mins",
+    },
+    missionPageImage: "mission4-missionPageImage.png",
+    missionDescription: "Coming soon!",
+    steps: [],
+    overlays: [],
+  },
+  11: {
+    id: 11,
+    title: "Dummy-Mission 11",
+    intro: {
+      image: "/MissionIntroImage-11.png",
+      description: "This is a placeholder for a future mission.",
+      timeAllocated: "-- mins",
+    },
+    missionPageImage: "mission4-missionPageImage.png",
+    missionDescription: "Coming soon!",
+    steps: [],
+    overlays: [],
+  },
+  12: {
+    id: 12,
+    title: "Dummy-Mission 12",
+    intro: {
+      image: "/MissionIntroImage-12.png",
       description: "This is a placeholder for a future mission.",
       timeAllocated: "-- mins",
     },

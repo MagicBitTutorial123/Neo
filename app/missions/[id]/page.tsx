@@ -3,6 +3,7 @@ import { useParams } from "next/navigation";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
+import SideNavbar from "@/components/SideNavbar";
 // import BlocklySplitLayout from "@/components/BlocklySplitLayout";
 
 const validMissionIds = ["1", "2"] as const;
@@ -21,7 +22,14 @@ export default function MissionPage() {
 
   switch (layoutType) {
     case "standardIntroLayout":
-      return <StandardMissionLayout mission={mission} />;
+      return (
+        <div className="flex h-screen bg-white overflow-hidden">
+          <SideNavbar />
+          <div className="flex-1 overflow-hidden">
+            <StandardMissionLayout mission={mission} />
+          </div>
+        </div>
+      );
     // case "blocklySplitLayout":
     //   return <BlocklySplitLayout mission={mission} />;
     default:
