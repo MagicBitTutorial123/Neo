@@ -134,6 +134,7 @@ export default function HomePage() {
               {subTextStep2}
             </div>
             <LetsGoButton
+              style={{ width: 200, height: 60 }}
               onClick={() => router.push(`/missions/${nextMission}`)}
             >
               Let's Go
