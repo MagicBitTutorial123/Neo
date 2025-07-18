@@ -198,8 +198,12 @@ export default function Home() {
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
-                className="w-full bg-[#F28B20] text-white rounded-full py-3 text-lg font-bold font-poppins mt-2"
-                disabled={loading}
+                className={`w-full rounded-full py-3 text-lg font-bold font-poppins mt-2 transition-colors duration-200 ${
+                  loading || !email || !password
+                    ? "bg-[#808080] text-white cursor-not-allowed"
+                    : "bg-[#F28B20] hover:bg-[#FF5900] text-white"
+                }`}
+                disabled={loading || !email || !password}
               >
                 {loading ? "Signing in..." : "Sign in"}
               </button>
@@ -259,8 +263,12 @@ export default function Home() {
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
-                className="w-full bg-[#F28B20] text-white rounded-full py-3 text-lg font-bold font-poppins mt-2"
-                disabled={loading}
+                className={`w-full rounded-full py-3 text-lg font-bold font-poppins mt-2 transition-colors duration-200 ${
+                  loading || !mobile || !mpin
+                    ? "bg-[#808080] text-white cursor-not-allowed"
+                    : "bg-[#F28B20] hover:bg-[#FF5900] text-white"
+                }`}
+                disabled={loading || !mobile || !mpin}
               >
                 {loading ? "Signing in..." : "Sign in"}
               </button>
