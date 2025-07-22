@@ -40,8 +40,8 @@ export default function ToggleConnectButton({
   let textColor = "";
 
   if (status === "connected") {
-    pillColor = "bg-[#5CE3B1] border-[#5CE3B1]";
-    iconBg = "bg-[#5CE3B1] border-[#5CE3B1]";
+    pillColor = "bg-[#00EF34] border-[#00EF34]";
+    iconBg = "bg-[#00EF34] border-[#00EF34]";
     iconSrc = "/connected-icon.png";
     pillText = "Connected";
     textColor = "text-black";

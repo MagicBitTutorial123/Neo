@@ -59,25 +59,44 @@ export const missions = {
   },
   3: {
     id: 3,
-    title: "Connect the robot",
+    title: "Wake Up and Move!",
     intro: {
-      image: "/MissionIntroImage-2.png",
-      description: "Your next mission is to build the robot's arm. Follow the instructions carefully to complete the assembly.",
-      timeAllocated: "10 mins",
+      image: "/MissionIntroImage-3.png",
+      description: "Learn to program your robot to move forward when you press the UP arrow key. This is your first step into the world of robot programming!",
+      timeAllocated: "15 mins",
     },
     missionPageImage: "/mission3-missionPageImage.png",
-    missionDescription: "Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
+    missionDescription: "In this mission, you'll learn the basics of robot movement programming. You'll use visual blocks to create code that makes your robot respond to keyboard input.",
     steps: [
       {
-        image: "/mission1-step2-image.png",
-        title: "Attach the Arm",
-        description: "Start by attaching the robot's arm to the main body. Make sure it is secure and moves freely.",
+        image: "/mission3-step1-image.png",
+        title: "Forward March (2 XP)",
+        blocks: [
+          {
+            name: "When (Up) key pressed",           
+          },
+          {
+            name: "Move robot (forward) at 50%",
+          },
+          
+        ],
+        tryThis: "Make your robot move forward when you press the UP arrow. ",
+        whyItWorks: "Both wheels spin forward together = straight movement.",
       },
       {
-        image: "/mission1-step1-image.png",
-        title: "Test the Arm",
-        description: "Test the arm's movement and ensure all connections are tight. Complete the mission by verifying the arm works as expected.",
-      },
+        image: "/mission3-step2-image.png",
+        title: "Reverse Gear (2 XP)",
+        blocks: [
+          {
+            name: "When (Down) key pressed",           
+          },
+          {
+            name: "Move robot (reverse) at 50%",
+          },
+          
+        ],
+        tryThis: "Make the robot back up when you press the DOWN arrow.",
+        whyItWorks: "Both wheels spin backward, just like reversing a car.",      },
     ],
     overlays: [],
   },

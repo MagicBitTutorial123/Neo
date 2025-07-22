@@ -84,8 +84,8 @@ export default function MissionHeader({
           </div>
         </div>
 
-        {/* Right: Live users and ToggleConnectButton (for mission 2+) */}
-        <div className="flex items-center gap-4 ml-auto h-full">
+        {/* Right: Live users, Control buttons (for mission 3+), and ToggleConnectButton (for mission 2+) */}
+        <div className="flex items-center gap-8 ml-auto h-full">
           <span className="relative flex items-center justify-center">
             <span className="w-3 h-3 bg-green-400 rounded-full block z-10" />
             <span
@@ -96,6 +96,42 @@ export default function MissionHeader({
           <span className="text-white text-lg font-regular">
             {liveUsers} online
           </span>
+
+          {/* Control buttons for mission 3+ */}
+          {missionNumber >= 3 && (
+            <div className="flex items-center gap-3">
+              {/* Play/Pause button */}
+              <button
+                onClick={isRunning ? onPause : onRun}
+                className="p-2 bg-[#599CFF] hover:bg-[#8ebbff] rounded-full transition-colors"
+                title={isRunning ? "Pause" : "Play"}
+              >
+                <Image
+                  src={isRunning ? "/stop button.png" : "/play button.png"}
+                  alt={isRunning ? "Pause" : "Play"}
+                  width={15}
+                  height={15}
+                  className="text-white"
+                />
+              </button>
+
+              {/* Erase/Reset button */}
+              <button
+                onClick={onErase}
+                className="p-2 bg-[#BB23C9] hover:bg-[#f27aff] rounded-full transition-colors"
+                title="Erase"
+              >
+                <Image
+                  src="/erase button.png"
+                  alt="Erase"
+                  width={16}
+                  height={16}
+                  className="text-white"
+                />
+              </button>
+            </div>
+          )}
+
           {missionNumber > 1 && (
             <ToggleConnectButton
               isConnected={connected}

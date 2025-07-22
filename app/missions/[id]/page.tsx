@@ -3,10 +3,23 @@ import { useParams } from "next/navigation";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
+import BlocklySplitLayout from "@/components/BlocklySplitLayout";
 import SideNavbar from "@/components/SideNavbar";
-// import BlocklySplitLayout from "@/components/BlocklySplitLayout";
 
-const validMissionIds = ["1", "2"] as const;
+const validMissionIds = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+] as const;
 type MissionId = (typeof validMissionIds)[number];
 
 export default function MissionPage() {
@@ -23,15 +36,22 @@ export default function MissionPage() {
   switch (layoutType) {
     case "standardIntroLayout":
       return (
-        <div className="flex h-screen bg-white overflow-hidden">
+        <div className="flex h-screen bg-white">
           <SideNavbar />
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-visible">
             <StandardMissionLayout mission={mission} />
           </div>
         </div>
       );
-    // case "blocklySplitLayout":
-    //   return <BlocklySplitLayout mission={mission} />;
+    case "blocklySplitLayout":
+      return (
+        <div className="flex h-screen bg-white">
+          <SideNavbar />
+          <div className="flex-1 overflow-visible">
+            <BlocklySplitLayout mission={mission} />
+          </div>
+        </div>
+      );
     default:
       return <div>Unknown layout</div>;
   }

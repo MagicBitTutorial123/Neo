@@ -70,7 +70,7 @@ export default function SideNavbar({
     <aside
       className={`flex flex-col justify-between items-center h-screen ${
         collapsed ? "w-[80px]" : "w-[260px]"
-      } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl border border-[#E0E6ED] relative transition-all duration-300`}
+      } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl z-50`}
       style={{
         position: "relative",
       }}
