@@ -15,6 +15,7 @@ interface MissionHeaderProps {
   onPause?: () => void;
   onErase?: () => void;
   isRunning?: boolean;
+  sidebarCollapsed?: boolean;
 }
 
 export default function MissionHeader({
@@ -28,6 +29,7 @@ export default function MissionHeader({
   onPause,
   onErase,
   isRunning = false,
+  sidebarCollapsed = false,
 }: MissionHeaderProps) {
   const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
@@ -40,6 +42,7 @@ export default function MissionHeader({
   const allocatedSeconds = parseTimeAllocated(timeAllocated);
 
   const handleConnectToggle = () => {
+    console.log("🔗 Connect toggle clicked!");
     const newConnected = !connected;
     setConnected(newConnected);
     onConnectToggle?.(newConnected);
@@ -48,9 +51,13 @@ export default function MissionHeader({
   return (
     <div
       className="w-full bg-[#181E2A] px-8 pb-0 relative"
-      style={{ height: "65px" }}
+      style={{ height: "65px", pointerEvents: "auto" }}
+      onClick={() => console.log("🎯 MissionHeader container clicked!")}
     >
-      <div className="flex items-center justify-between max-w-8xl mx-auto relative h-full">
+      <div
+        className="flex items-center justify-between max-w-8xl mx-auto relative h-full"
+        style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
+      >
         {/* Left: Mission number and title */}
         <div className="flex items-center gap-4 min-w-0 h-full">
           <span className="text-2xl font-extrabold text-white whitespace-nowrap">

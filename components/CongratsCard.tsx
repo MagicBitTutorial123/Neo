@@ -56,7 +56,12 @@ export default function CongratsCard({
             src={robotImageSrc}
             alt="Congratulations"
             className="absolute left-1/2 -translate-x-1/2"
-            style={{ zIndex: 2, top: "-100px", width: "200px", height: "200px" }}
+            style={{
+              zIndex: 2,
+              top: "-100px",
+              width: "200px",
+              height: "200px",
+            }}
           />
         </div>
         {/* Content */}

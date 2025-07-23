@@ -14,9 +14,16 @@ import { completeMission1, completeMission2 } from "@/utils/userState";
 export default function BlocklySplitLayout({
   mission,
   sidebarCollapsed = false,
+  onStateChange,
+  forceHideIntro = false,
 }: {
   mission: any;
   sidebarCollapsed?: boolean;
+  onStateChange?: (state: {
+    showIntro: boolean;
+    showCountdown: boolean;
+  }) => void;
+  forceHideIntro?: boolean;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
@@ -29,6 +36,24 @@ export default function BlocklySplitLayout({
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
+
+  // Notify parent of initial state
+  useEffect(() => {
+    onStateChange?.({ showIntro: true, showCountdown: false });
+  }, [onStateChange]);
+
+  // Hide intro when forceHideIntro is true (after countdown completes)
+  useEffect(() => {
+    if (forceHideIntro) {
+      console.log(
+        "🎯 BlocklySplitLayout: forceHideIntro received, setting showIntro to false"
+      );
+      setShowIntro(false);
+      // Immediately notify parent that intro is hidden
+      onStateChange?.({ showIntro: false, showCountdown: false });
+    }
+  }, [forceHideIntro, onStateChange]);
+
   // Store the user's preferred width
   const [userPanelWidth, setUserPanelWidth] = useState(200); // Initial size set to minimum
   const SIDEBAR_EXPANDED = 260;
@@ -75,10 +100,14 @@ export default function BlocklySplitLayout({
     }
   }, [isResizing, sidebarCollapsed]);
 
-  const handleStart = () => setShowCountdown(true);
+  const handleStart = () => {
+    setShowCountdown(true);
+    onStateChange?.({ showIntro: false, showCountdown: true });
+  };
   const handleCountdownGo = () => {
     setShowCountdown(false);
     setShowIntro(false);
+    onStateChange?.({ showIntro: false, showCountdown: false }); // Notify parent to show header
   };
 
   // Helper to know if we're on the elevation step
@@ -169,6 +198,8 @@ export default function BlocklySplitLayout({
     setShowCongrats(true);
   };
 
+  // Mission header button handlers are now handled at page level
+
   useEffect(() => {
     if (showHelpAccepted) {
       const timeout = setTimeout(() => {
@@ -178,7 +209,7 @@ export default function BlocklySplitLayout({
     }
   }, [showHelpAccepted, router]);
 
-  if (showIntro) {
+  if (showIntro && !forceHideIntro) {
     return (
       <MissionIntro
         missionNumber={mission.id}
@@ -194,18 +225,8 @@ export default function BlocklySplitLayout({
 
   return (
     <div className="flex min-h-screen bg-white relative">
-      {/* Mission Header - Full width behind everything */}
-      <div className="absolute top-0 left-0 right-0 z-10">
-        <MissionHeader
-          missionNumber={mission.id}
-          title={mission.title}
-          timeAllocated={mission.intro.timeAllocated}
-          liveUsers={17}
-        />
-      </div>
-
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen relative z-20">
+      <div className="flex-1 flex flex-col min-h-screen relative">
         {/* Split Content Area - Below the header */}
         <div className="flex flex-1 w-full" style={{ marginTop: "65px" }}>
           {/* Left Side - Instructions and Images */}

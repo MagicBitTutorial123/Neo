@@ -9,10 +9,12 @@ export default function SideNavbar({
   avatar,
   name,
   playgroundActive = true,
+  onCollapse,
 }: {
   avatar?: string;
   name?: string;
   playgroundActive?: boolean;
+  onCollapse?: (collapsed: boolean) => void;
 }) {
   const { registrationData, userData } = useUser();
 
@@ -237,7 +239,11 @@ export default function SideNavbar({
         className={`absolute top-1/2 right-0 -translate-y-1/2 w-3 h-12 flex items-center justify-center group transition-transform ${
           collapsed ? "scale-x-[-1]" : ""
         }`}
-        onClick={() => setCollapsed((c) => !c)}
+        onClick={() => {
+          const newCollapsed = !collapsed;
+          setCollapsed(newCollapsed);
+          onCollapse?.(newCollapsed);
+        }}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         style={{
           outline: "none",

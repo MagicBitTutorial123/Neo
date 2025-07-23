@@ -212,7 +212,7 @@ export default function HomePage() {
           {/* Project of the week - new layout */}
           <div className="rounded-2xl bg-white shadow flex flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full">
             {/* Left: Text */}
-            <div className="flex flex-col justify-center p-10 flex-1 min-w-[220px] h-full">
+            <div className="flex flex-col justify-center p-8 flex-1 min-w-[220px] h-full">
               <div className="flex items-center gap-4 mb-4">
                 <span className="w-10 h-10 flex items-center justify-center rounded-full bg-black shadow-lg">
                   <Image
@@ -234,7 +234,7 @@ export default function HomePage() {
               </div>
             </div>
             {/* Right: Image */}
-            <div className="flex-shrink-0 w-[260px] h-[180px] md:w-[320px] md:h-[200px] lg:w-[340px] lg:h-[220px] relative">
+            <div className="flex-shrink-0 w-[260px] h-[140px] md:w-[320px] md:h-[160px] lg:w-[340px] lg:h-[180px] relative">
               <Image
                 src="/project-image-4.png"
                 alt="Project of the Week"

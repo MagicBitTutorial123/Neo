@@ -71,18 +71,23 @@ export default function MissionTimer({
   }, [secondsLeft, onTimeout, onTick]);
 
   // Progress for circle (0-1, clamp at 0 for negative)
-  const progress = Math.max(0, secondsLeft / allocatedTime);
+  const progress = Math.max(0, secondsLeft / (allocatedTime || 1));
   // Color logic
   let color = "#00AEEF"; // Normal (blue)
-  if (secondsLeft <= allocatedTime * 0.2 && secondsLeft > allocatedTime * 0.1)
+  if (
+    secondsLeft <= (allocatedTime || 1) * 0.2 &&
+    secondsLeft > (allocatedTime || 1) * 0.1
+  )
     color = "#FF9C32"; // Warning (orange)
-  if (secondsLeft <= allocatedTime * 0.1 || secondsLeft < 0) color = "#FF4D4F"; // Critical (red)
+  if (secondsLeft <= (allocatedTime || 1) * 0.1 || secondsLeft < 0)
+    color = "#FF4D4F"; // Critical (red)
 
   // SVG circle params
   const radius = 16;
   const stroke = 4;
   const circumference = 2 * Math.PI * radius;
   const dash = circumference * progress;
+  const strokeDashoffset = Math.max(0, circumference - dash); // Ensure it's not negative
 
   if (!mounted) return null;
 
@@ -106,7 +111,7 @@ export default function MissionTimer({
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={circumference}
-          strokeDashoffset={circumference - dash}
+          strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           style={{ transition: "stroke-dashoffset 0.5s, stroke 0.3s" }}
         />
