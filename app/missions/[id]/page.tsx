@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
@@ -9,6 +9,9 @@ import SideNavbar from "@/components/SideNavbar";
 import MissionHeader from "@/components/MissionHeader";
 import CountdownTimer from "@/components/CountdownTimer";
 import StepQuestionCard from "@/components/StepQuestionCard";
+import MCQCard from "@/components/MCQCard";
+import StepRetryCard from "@/components/StepRetryCard";
+import StepSuccessCard from "@/components/StepSuccessCard";
 import CongratsCard from "@/components/CongratsCard";
 import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
@@ -31,6 +34,7 @@ type MissionId = (typeof validMissionIds)[number];
 
 export default function MissionPage() {
   const params = useParams();
+  const router = useRouter();
   let id = params.id;
   if (Array.isArray(id)) id = id[0];
   id = String(id);
@@ -49,13 +53,48 @@ export default function MissionPage() {
 
   // Overlay states - moved to page level
   const [showStepQuestion, setShowStepQuestion] = useState(false);
+  const [showMCQ, setShowMCQ] = useState(false);
   const [showNice, setShowNice] = useState(false);
   const [showDontWorry, setShowDontWorry] = useState(false);
+  const [showStepRetry, setShowStepRetry] = useState(false);
+  const [showStepSuccess, setShowStepSuccess] = useState(false);
   const [showCongrats, setShowCongrats] = useState(false);
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
   const [fromNo, setFromNo] = useState(false);
+  const [currentStepForMCQ, setCurrentStepForMCQ] = useState(0);
+  const [completedMCQSteps, setCompletedMCQSteps] = useState<Set<number>>(
+    new Set()
+  );
+  const [isFinalMCQ, setIsFinalMCQ] = useState(false);
+
+  // Arrays of images for random selection
+  const successImages = [
+    "/happy-robot-correct-1.png",
+    "/happy-robot-correct-2.png",
+    "/happy-robot-correct-3.png",
+  ];
+
+  const retryImages = [
+    "/sad-robot-wrong-answer-1.png",
+    "/sad-robot-wrong-answer-2.png",
+  ];
+
+  // State to store current random images
+  const [currentSuccessImage, setCurrentSuccessImage] = useState("");
+  const [currentRetryImage, setCurrentRetryImage] = useState("");
+
+  // Function to get random image from array
+  const getRandomImage = (imageArray: string[]) => {
+    return imageArray[Math.floor(Math.random() * imageArray.length)];
+  };
+
+  // Function to set random images when showing feedback cards
+  const setRandomImages = () => {
+    setCurrentSuccessImage(getRandomImage(successImages));
+    setCurrentRetryImage(getRandomImage(retryImages));
+  };
 
   // Show header when forceHideIntro is true (backup method)
   useEffect(() => {
@@ -100,6 +139,9 @@ export default function MissionPage() {
       // We need to communicate with StandardMissionLayout to go to elevation step
       // For now, we'll use a custom event or state
       window.dispatchEvent(new CustomEvent("goToElevationStep"));
+    } else if (layoutType === "blocklySplitLayout") {
+      // For BlocklySplitLayout, we need to communicate with the component
+      window.dispatchEvent(new CustomEvent("goToNextStep"));
     }
   };
 
@@ -109,6 +151,9 @@ export default function MissionPage() {
     if (layoutType === "standardIntroLayout") {
       // We need to communicate with StandardMissionLayout to go to elevation step
       window.dispatchEvent(new CustomEvent("goToElevationStep"));
+    } else if (layoutType === "blocklySplitLayout") {
+      // For BlocklySplitLayout, we need to communicate with the component
+      window.dispatchEvent(new CustomEvent("goToNextStep"));
     }
   };
 
@@ -116,6 +161,11 @@ export default function MissionPage() {
     setShowCongrats(false);
     if (mission.id === 1) {
       setShowHelpNeo(true);
+      return;
+    }
+    // For Mission 2 and Mission 3+, navigate to missions main page
+    if (mission.id >= 2) {
+      router.push("/missions");
       return;
     }
   };
@@ -133,8 +183,77 @@ export default function MissionPage() {
     // Reset to previous step
   };
 
-  const handleFinish = () => {
-    setShowCongrats(true);
+  // MCQ handlers
+  const handleMCQAnswer = (selectedAnswer: number) => {
+    setShowMCQ(false);
+    const currentStepData = mission.steps[currentStepForMCQ];
+    if (currentStepData && "mcq" in currentStepData) {
+      const isCorrect = selectedAnswer === currentStepData.mcq.correctAnswer;
+
+      if (isCorrect) {
+        // Mark this step as completed
+        setCompletedMCQSteps((prev) => new Set([...prev, currentStepForMCQ]));
+
+        // Set random images and show success card
+        setRandomImages();
+        setShowStepSuccess(true);
+      } else {
+        // Set random images and show retry card
+        setRandomImages();
+        setShowStepRetry(true);
+      }
+    }
+  };
+
+  const handleMCQTryAgain = () => {
+    setShowStepRetry(false);
+    setShowMCQ(true);
+  };
+
+  const handleMCQNext = () => {
+    setShowStepSuccess(false);
+
+    // Check if this is the final MCQ
+    if (isFinalMCQ) {
+      // Show congrats for final MCQ
+      setShowCongrats(true);
+    } else {
+      // Trigger next step in BlocklySplitLayout
+      window.dispatchEvent(new CustomEvent("goToNextStep"));
+    }
+  };
+
+  // Get current step's feedback messages
+  const getCurrentStepFeedback = () => {
+    const currentStepData = mission.steps[currentStepForMCQ];
+    if (
+      currentStepData &&
+      "mcq" in currentStepData &&
+      currentStepData.mcq.feedback
+    ) {
+      return currentStepData.mcq.feedback;
+    }
+    // If no feedback found, return empty strings (shouldn't happen with proper data)
+    return {
+      success: "",
+      retry: "",
+    };
+  };
+
+  const handleMCQChange = (show: boolean, stepIndex: number) => {
+    // Only show MCQ if this step hasn't been completed yet
+    if (show && !completedMCQSteps.has(stepIndex)) {
+      setShowMCQ(true);
+      setCurrentStepForMCQ(stepIndex);
+      // Check if this is the final MCQ (last step)
+      setIsFinalMCQ(stepIndex === mission.steps.length - 1);
+    } else if (show && completedMCQSteps.has(stepIndex)) {
+      // If step is already completed, go to next step
+      // This will trigger the final MCQ for the last step
+      window.dispatchEvent(new CustomEvent("goToNextStep"));
+    } else {
+      setShowMCQ(false);
+    }
   };
 
   const handleStateChange = useCallback(
@@ -218,8 +337,10 @@ export default function MissionPage() {
 
           {/* All overlays at page level with z-[99999] */}
           {showStepQuestion && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
                 <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
                   Did you follow the steps correctly?
@@ -243,8 +364,10 @@ export default function MissionPage() {
           )}
 
           {showNice && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
                 <div className="mb-4 text-3xl font-extrabold text-center">
                   Nice!
@@ -263,8 +386,10 @@ export default function MissionPage() {
           )}
 
           {showDontWorry && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
                 <div className="mb-4 text-3xl font-extrabold text-center">
                   Don't worry!
@@ -288,25 +413,29 @@ export default function MissionPage() {
           )}
 
           {showCongrats && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
               <CongratsCard
-                onBack={mission.id === 2 ? () => {} : handleBack}
+                onBack={handleBack}
                 onNextMission={handleNextMission}
                 headline="Congratulations!"
                 subtitle={`You completed mission ${mission.id} successfully.`}
                 points={0}
                 timeSpent="3:00"
                 robotImageSrc="/confettiBot.png"
-                backText={mission.id === 2 ? "" : "Back"}
-                nextMissionText={mission.id === 2 ? "Continue" : "Next Mission"}
+                backText="Back"
+                nextMissionText="Next Mission"
               />
             </div>
           )}
 
           {showHelpNeo && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
+            >
               <HelpNeoOverlay
                 headline="Hey, Neo needs your help!"
                 subtitle="He needs you the most right now!"
@@ -328,16 +457,18 @@ export default function MissionPage() {
           {showHelpAccepted && (
             <div
               className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
               onClick={() => setShowHelpAccepted(false)}
             >
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
               <HelpAcceptedOverlay />
             </div>
           )}
 
           {showPlaygroundUnlocked && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center">
-              <div className="absolute inset-0 bg-black bg-opacity-40" />
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
               <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
                 <div className="mb-4 text-3xl font-extrabold text-center">
                   Playground Unlocked!
@@ -388,6 +519,15 @@ export default function MissionPage() {
               mission={mission}
               onStateChange={handleStateChange}
               forceHideIntro={forceHideIntro}
+              fromNo={fromNo}
+              onStepQuestionChange={setShowStepQuestion}
+              onNiceChange={setShowNice}
+              onDontWorryChange={setShowDontWorry}
+              onCongratsChange={setShowCongrats}
+              onHelpAcceptedChange={setShowHelpAccepted}
+              onTryAgain={handleTryAgain}
+              onMCQAnswer={handleMCQAnswer}
+              onMCQChange={handleMCQChange}
             />
           </div>
 
@@ -395,9 +535,216 @@ export default function MissionPage() {
           {showCountdown && (
             <div
               className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.1)" }}
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
             >
               <CountdownTimer onGo={handleCountdownComplete} />
+            </div>
+          )}
+
+          {/* MCQ Overlay for Mission 3+ */}
+          {showMCQ &&
+            mission.steps[currentStepForMCQ] &&
+            "mcq" in mission.steps[currentStepForMCQ] && (
+              <div
+                className="fixed inset-0 z-[99999] flex items-center justify-center"
+                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+              >
+                <MCQCard
+                  question={mission.steps[currentStepForMCQ].mcq.question}
+                  options={mission.steps[currentStepForMCQ].mcq.options}
+                  correctAnswer={
+                    mission.steps[currentStepForMCQ].mcq.correctAnswer
+                  }
+                  questionNumber={currentStepForMCQ + 1}
+                  onAnswer={handleMCQAnswer}
+                />
+              </div>
+            )}
+
+          {/* Step Retry Overlay for Mission 3+ */}
+          {showStepRetry && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <StepRetryCard
+                onTryAgain={handleMCQTryAgain}
+                message={getCurrentStepFeedback().retry}
+                imageSrc={currentRetryImage}
+              />
+            </div>
+          )}
+
+          {/* Step Success Overlay for Mission 3+ */}
+          {showStepSuccess && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <StepSuccessCard
+                onNext={handleMCQNext}
+                message={getCurrentStepFeedback().success}
+                buttonText={isFinalMCQ ? "Finish" : "Next"}
+                buttonColor={isFinalMCQ ? "blue" : "black"}
+                imageSrc={currentSuccessImage}
+              />
+            </div>
+          )}
+
+          {/* All overlays at page level with z-[99999] - Same as StandardMissionLayout */}
+          {showStepQuestion && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
+                <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
+                  Did you follow the steps correctly?
+                </div>
+                <div className="flex gap-6">
+                  <button
+                    onClick={handleStepQuestionNo}
+                    className="px-8 py-2 rounded-xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
+                  >
+                    No
+                  </button>
+                  <button
+                    onClick={handleStepQuestionYes}
+                    className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showNice && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
+                <div className="mb-4 text-3xl font-extrabold text-center">
+                  Nice!
+                </div>
+                <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
+                  Let's see if you are correct or wrong.
+                </div>
+                <button
+                  onClick={handleNiceContinue}
+                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showDontWorry && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
+                <div className="mb-4 text-3xl font-extrabold text-center">
+                  Don't worry!
+                </div>
+                <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
+                  Check the images of elevation and try again.
+                </div>
+                <img
+                  src="/dont-worry-card-image.png"
+                  alt="Don't worry"
+                  className="mb-8 w-32 h-20 object-contain"
+                />
+                <button
+                  onClick={handleDontWorryContinue}
+                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showCongrats && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <CongratsCard
+                onBack={handleBack}
+                onNextMission={handleNextMission}
+                headline="Congratulations!"
+                subtitle={`You completed mission ${mission.id} successfully.`}
+                points={0}
+                timeSpent="3:00"
+                robotImageSrc="/confettiBot.png"
+                backText="Back"
+                nextMissionText="Next Mission"
+              />
+            </div>
+          )}
+
+          {showHelpNeo && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <HelpNeoOverlay
+                headline="Hey, Neo needs your help!"
+                subtitle="He needs you the most right now!"
+                imageSrc="/crying-bot.png"
+                laterText="Yes, But later"
+                helpText="I will help!"
+                onLater={() => {
+                  setShowHelpNeo(false);
+                  window.location.href = "/missions";
+                }}
+                onHelp={() => {
+                  setShowHelpNeo(false);
+                  setShowHelpAccepted(true);
+                }}
+              />
+            </div>
+          )}
+
+          {showHelpAccepted && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+              onClick={() => setShowHelpAccepted(false)}
+            >
+              <HelpAcceptedOverlay />
+            </div>
+          )}
+
+          {showPlaygroundUnlocked && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+            >
+              <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
+                <div className="mb-4 text-3xl font-extrabold text-center">
+                  Playground Unlocked!
+                </div>
+                <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
+                  You can now access the Playground from the sidebar and try out
+                  your own robot code!
+                </div>
+                <img
+                  src="/playground-unlocked-placeholder.png"
+                  alt="Playground Unlocked"
+                  className="mb-8 w-32 h-20 object-contain"
+                />
+                <button
+                  onClick={() => setShowPlaygroundUnlocked(false)}
+                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                >
+                  Continue
+                </button>
+              </div>
             </div>
           )}
         </div>

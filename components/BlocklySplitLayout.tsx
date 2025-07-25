@@ -4,6 +4,7 @@ import MissionIntro from "@/components/MissionIntro";
 import MissionHeader from "@/components/MissionHeader";
 import CongratsCard from "@/components/CongratsCard";
 import StepQuestionCard from "@/components/StepQuestionCard";
+import MCQCard from "@/components/MCQCard";
 import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,15 @@ export default function BlocklySplitLayout({
   sidebarCollapsed = false,
   onStateChange,
   forceHideIntro = false,
+  onStepQuestionChange,
+  onNiceChange,
+  onDontWorryChange,
+  onCongratsChange,
+  onHelpAcceptedChange,
+  onTryAgain,
+  onMCQAnswer,
+  onMCQChange,
+  fromNo = false,
 }: {
   mission: any;
   sidebarCollapsed?: boolean;
@@ -24,15 +34,24 @@ export default function BlocklySplitLayout({
     showCountdown: boolean;
   }) => void;
   forceHideIntro?: boolean;
+  onStepQuestionChange?: (show: boolean) => void;
+  onNiceChange?: (show: boolean) => void;
+  onDontWorryChange?: (show: boolean) => void;
+  onCongratsChange?: (show: boolean) => void;
+  onHelpAcceptedChange?: (show: boolean) => void;
+  onTryAgain?: () => void;
+  onMCQAnswer?: (selectedAnswer: number) => void;
+  onMCQChange?: (show: boolean, stepIndex: number) => void;
+  fromNo?: boolean;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [showCongrats, setShowCongrats] = useState(false);
   const [showStepQuestion, setShowStepQuestion] = useState(false);
+  const [showMCQ, setShowMCQ] = useState(false);
   const [showNice, setShowNice] = useState(false);
   const [showDontWorry, setShowDontWorry] = useState(false);
-  const [fromNo, setFromNo] = useState(false);
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
@@ -53,6 +72,48 @@ export default function BlocklySplitLayout({
       onStateChange?.({ showIntro: false, showCountdown: false });
     }
   }, [forceHideIntro, onStateChange]);
+
+  // Notify parent when showStepQuestion changes
+  useEffect(() => {
+    onStepQuestionChange?.(showStepQuestion);
+  }, [showStepQuestion, onStepQuestionChange]);
+
+  // Notify parent when showNice changes
+  useEffect(() => {
+    onNiceChange?.(showNice);
+  }, [showNice, onNiceChange]);
+
+  // Notify parent when showDontWorry changes
+  useEffect(() => {
+    onDontWorryChange?.(showDontWorry);
+  }, [showDontWorry, onDontWorryChange]);
+
+  // Notify parent when showCongrats changes
+  useEffect(() => {
+    onCongratsChange?.(showCongrats);
+  }, [showCongrats, onCongratsChange]);
+
+  // Notify parent when showHelpAccepted changes
+  useEffect(() => {
+    onHelpAcceptedChange?.(showHelpAccepted);
+  }, [showHelpAccepted, onHelpAcceptedChange]);
+
+  // Notify parent when showMCQ changes
+  useEffect(() => {
+    // This will be handled by the parent page
+  }, [showMCQ]);
+
+  // Listen for goToNextStep event
+  useEffect(() => {
+    const handleGoToNextStep = () => {
+      setCurrentStep((s: number) => s + 1);
+    };
+
+    window.addEventListener("goToNextStep", handleGoToNextStep);
+    return () => {
+      window.removeEventListener("goToNextStep", handleGoToNextStep);
+    };
+  }, []);
 
   // Store the user's preferred width
   const [userPanelWidth, setUserPanelWidth] = useState(200); // Initial size set to minimum
@@ -116,6 +177,12 @@ export default function BlocklySplitLayout({
 
   // Next handler
   const handleNext = () => {
+    // For Mission 3+, show MCQ question after each step (except last step)
+    if (mission.id >= 3 && currentStep < mission.steps.length - 1) {
+      onMCQChange?.(true, currentStep);
+      return;
+    }
+    // For older missions, keep the original StepQuestion logic
     if (isStep3) {
       setShowStepQuestion(true);
       return;
@@ -130,7 +197,6 @@ export default function BlocklySplitLayout({
   const handlePrevious = () => {
     if (isElevationStep) {
       setCurrentStep(mission.steps.length - 2); // Go to second-to-last step
-      setFromNo(false);
       return;
     }
     if (currentStep > 0) setCurrentStep((s: number) => s - 1);
@@ -175,13 +241,28 @@ export default function BlocklySplitLayout({
   const handleStepQuestionYes = () => {
     setShowStepQuestion(false);
     setShowNice(true);
-    setFromNo(false);
   };
   const handleStepQuestionNo = () => {
     setShowStepQuestion(false);
     setShowDontWorry(true);
-    setFromNo(true);
   };
+
+  // MCQ handlers
+  const handleMCQAnswer = (selectedAnswer: number) => {
+    onMCQChange?.(false, currentStep);
+    const currentStepData = mission.steps[currentStep];
+    const isCorrect = selectedAnswer === currentStepData.mcq.correctAnswer;
+
+    if (isCorrect) {
+      setShowNice(true);
+    } else {
+      setShowDontWorry(true);
+    }
+
+    // Notify parent
+    onMCQAnswer?.(selectedAnswer);
+  };
+
   const handleNiceContinue = () => {
     setShowNice(false);
     setCurrentStep(mission.steps.length - 1);
@@ -192,10 +273,10 @@ export default function BlocklySplitLayout({
   };
   const handleTryAgain = () => {
     setCurrentStep(0);
-    setFromNo(false);
   };
   const handleFinish = () => {
-    setShowCongrats(true);
+    // Trigger the final MCQ for the last step
+    onMCQChange?.(true, mission.steps.length - 1);
   };
 
   // Mission header button handlers are now handled at page level
@@ -240,7 +321,7 @@ export default function BlocklySplitLayout({
             }}
           >
             {/* Content Area */}
-            <div className="h-full p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pb-20">
+            <div className="h-full p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pt-10 pb-8">
               {mission.steps[currentStep] ? (
                 <>
                   {/* Step Title */}
@@ -258,7 +339,7 @@ export default function BlocklySplitLayout({
                     >
                       STEP {String(currentStep + 1).padStart(2, "0")}
                     </span>
-                    <span className="text-xl font-extrabold text-[#222E3A]">
+                    <span className="text-xl font-medium text-[#222E3A]">
                       {mission.steps[currentStep].title}
                     </span>
                   </div>
@@ -266,7 +347,7 @@ export default function BlocklySplitLayout({
                   {/* Blocks Section */}
                   {mission.steps[currentStep].blocks && (
                     <div className="mb-3 ml-2 pt-2">
-                      <h3 className="text-lg font-semibold text-[#222E3A] mb-2">
+                      <h3 className="text-sm font-bold text-[#222E3A] mb-2">
                         Blocks:
                       </h3>
                       <ul className="space-y-2">
@@ -274,7 +355,7 @@ export default function BlocklySplitLayout({
                           (block: any, index: number) => (
                             <li key={index} className="flex items-center">
                               <span className="w-2 h-2 bg-[#F28B20] rounded-full mr-2"></span>
-                              <span className="text-[#555] text-base">
+                              <span className="text-[#555] text-sm">
                                 {block.name}
                               </span>
                             </li>
@@ -287,10 +368,10 @@ export default function BlocklySplitLayout({
                   {/* Try This Section */}
                   {mission.steps[currentStep].tryThis && (
                     <div className="mb-3 ml-2">
-                      <h3 className="text-lg font-semibold text-[#222E3A] mb-2">
+                      <h3 className="text-sm font-bold text-[#222E3A] mb-2">
                         Try This:
                       </h3>
-                      <p className="text-[#555] text-base">
+                      <p className="text-[#555] text-sm">
                         {mission.steps[currentStep].tryThis}
                       </p>
                     </div>
@@ -299,10 +380,10 @@ export default function BlocklySplitLayout({
                   {/* Why It Works Section */}
                   {mission.steps[currentStep].whyItWorks && (
                     <div className="mb-4 ml-2">
-                      <h3 className="text-lg font-semibold text-[#222E3A] mb-2">
+                      <h3 className="text-sm font-bold text-[#222E3A] mb-2">
                         Why It Works:
                       </h3>
-                      <p className="text-[#555] text-base">
+                      <p className="text-[#555] text-sm">
                         {mission.steps[currentStep].whyItWorks}
                       </p>
                     </div>
@@ -349,9 +430,9 @@ export default function BlocklySplitLayout({
                 ) : (
                   <button
                     onClick={handleFinish}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-[#00AEEF] text-white hover:bg-[#0098D4] transition-colors ml-auto"
+                    className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
                   >
-                    Finish
+                    Next
                   </button>
                 )}
               </div>
@@ -471,136 +552,7 @@ export default function BlocklySplitLayout({
         </div>
       </div> */}
 
-      {/* Overlays - Same as StandardMissionLayout */}
-      {showStepQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <StepQuestionCard
-            question="Did you follow the steps correctly?"
-            onYes={handleStepQuestionYes}
-            onNo={handleStepQuestionNo}
-            yesLabel="Yes"
-            noLabel="No"
-          />
-        </div>
-      )}
-
-      {showNice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-            <div className="mb-4 text-3xl font-extrabold text-center">
-              Nice!
-            </div>
-            <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
-              Let's see if you are correct or wrong.
-            </div>
-            <button
-              onClick={handleNiceContinue}
-              className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showDontWorry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-            <div className="mb-4 text-3xl font-extrabold text-center">
-              Don't worry!
-            </div>
-            <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-              Check the images of elevation and try again.
-            </div>
-            <img
-              src="/dont-worry-card-image.png"
-              alt="Don't worry"
-              className="mb-8 w-32 h-20 object-contain"
-            />
-            <button
-              onClick={handleDontWorryContinue}
-              className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showCongrats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <CongratsCard
-            onBack={mission.id === 2 ? () => {} : handleBack}
-            onNextMission={handleNextMission}
-            headline="Congratulations!"
-            subtitle={`You completed mission ${mission.id} successfully.`}
-            points={0}
-            timeSpent="3:00"
-            robotImageSrc="/confettiBot.png"
-            backText={mission.id === 2 ? "" : "Back"}
-            nextMissionText={mission.id === 2 ? "Continue" : "Next Mission"}
-          />
-        </div>
-      )}
-
-      {showHelpNeo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <HelpNeoOverlay
-            headline="Hey, Neo needs your help!"
-            subtitle="He needs you the most right now!"
-            imageSrc="/crying-bot.png"
-            laterText="Yes, But later"
-            helpText="I will help!"
-            onLater={() => setShowHelpNeo(false)}
-            onHelp={() => {
-              setShowHelpNeo(false);
-              setShowHelpAccepted(true);
-            }}
-          />
-        </div>
-      )}
-
-      {showHelpAccepted && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={() => setShowHelpAccepted(false)}
-        >
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <HelpAcceptedOverlay />
-        </div>
-      )}
-
-      {showPlaygroundUnlocked && (
-        <PlaygroundUnlockedCard
-          onContinue={async () => {
-            setShowPlaygroundUnlocked(false);
-            if (userData?.firebaseUid) {
-              try {
-                const updatedUser = await completeMission2(
-                  userData.firebaseUid
-                );
-                console.log("Backend update successful:", updatedUser);
-                setUserData(updatedUser);
-                router.push("/home");
-              } catch (error) {
-                console.error("Failed to update user state:", error);
-                localStorage.setItem("hasCompletedMission2", "true");
-                localStorage.setItem("isNewUser", "false");
-                router.push("/home");
-              }
-            } else {
-              localStorage.setItem("hasCompletedMission2", "true");
-              localStorage.setItem("isNewUser", "false");
-              router.push("/home");
-            }
-          }}
-        />
-      )}
+      {/* All overlays are now handled at the page level */}
     </div>
   );
 }

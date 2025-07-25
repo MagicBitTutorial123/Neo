@@ -257,7 +257,7 @@ export default function StandardMissionLayout({
         showNextButton={
           !isElevationStep && currentStep < mission.steps.length - 1
         }
-        showFinishButton={isElevationStep}
+        showFinishButton={isElevationStep && !fromNo}
         showTryAgainButton={isElevationStep && fromNo}
         nextButtonText="Next"
         previousButtonText="Prev."

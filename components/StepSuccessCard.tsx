@@ -1,37 +1,46 @@
-import React from "react";
+"use client";
 
 interface StepSuccessCardProps {
-  onContinue: () => void;
+  onNext: () => void;
   message?: string;
-  subtitle?: string;
   buttonText?: string;
+  buttonColor?: string;
+  imageSrc?: string;
 }
 
 export default function StepSuccessCard({
-  onContinue,
-  message = "Nice!",
-  subtitle = "Let's see if you are correct or wrong.",
-  buttonText = "Continue",
+  onNext,
+  message = "Yay, Awesome!",
+  buttonText = "Next",
+  buttonColor = "black",
+  imageSrc = "/happy-robot-correct.png",
 }: StepSuccessCardProps) {
+  const getButtonClasses = () => {
+    if (buttonColor === "blue") {
+      return "px-12 py-3 rounded-3xl bg-[#00AEEF] text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition hover:bg-[#0098D4]";
+    }
+    return "px-12 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800";
+  };
+
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
-    >
-      <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-        <div
-          className="mb-2 text-center text-3xl font-extrabold opacity-100"
-          style={{ color: "#F28B20" }}
-        >
-          {message}
+    <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
+      {/* Left Side - Happy Robot */}
+      <div className="mr-8">
+        <img
+          src={imageSrc}
+          alt="Happy Robot"
+          className="w-64 h-64 object-contain"
+        />
+      </div>
+
+      {/* Right Side - Message and Button */}
+      <div className="flex flex-col flex-1">
+        <div className="mb-6 text-2xl font-bold text-[#222E3A]">{message}</div>
+        <div className="flex justify-start">
+          <button onClick={onNext} className={getButtonClasses()}>
+            {buttonText}
+          </button>
         </div>
-        <div className="mb-8 text-center text-base text-black">{subtitle}</div>
-        <button
-          onClick={onContinue}
-          className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-        >
-          {buttonText}
-        </button>
       </div>
     </div>
   );

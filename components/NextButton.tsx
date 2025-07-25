@@ -13,7 +13,7 @@ export default function NextButton({
   return (
     <button
       type="submit"
-      className="mt-8 flex items-center justify-center font-bold font-poppins text-white shadow-md focus:outline-none"
+      className="mt-8 flex items-center justify-center font-bold text-white shadow-md focus:outline-none"
       style={{
         width: 361,
         height: 77.5,

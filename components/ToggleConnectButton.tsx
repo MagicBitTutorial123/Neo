@@ -72,7 +72,7 @@ export default function ToggleConnectButton({
       {/* Status pill */}
       <button
         onClick={handleClick}
-        className={`px-4 py-1 rounded-full font-bold text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
+        className={`px-4 py-1 rounded-full font-medium text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
         style={{ minWidth: 100 }}
         disabled={status === "connecting" || status === "disconnecting"}
       >

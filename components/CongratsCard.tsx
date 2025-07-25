@@ -29,15 +29,15 @@ export default function CongratsCard({
       style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
     >
       <div
-        className="bg-white rounded-[32px] shadow-lg flex flex-col items-center min-w-[280px] max-w-[90vw] px-0 py-0 overflow-visible"
-        style={{ width: 360, position: "relative" }}
+        className="bg-white rounded-[36px] shadow-lg flex flex-col items-center min-w-[280px] max-w-[90vw] px-0 py-0 overflow-visible"
+        style={{ width: 460, position: "relative" }}
       >
         {/* Curved dark background with robot */}
         <div className="w-full relative" style={{ height: 100 }}>
           <svg
             width="100%"
             height="100%"
-            viewBox="0 0 360 100"
+            viewBox="0 0 420 100"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             style={{
@@ -48,7 +48,7 @@ export default function CongratsCard({
             preserveAspectRatio="none"
           >
             <path
-              d="M32,0 h296 a32,32 0 0 1 32,32 v38 C360,90 300,100 180,100 C60,100 0,90 0,70 V32 a32,32 0 0 1 32,-32 Z"
+              d="M32,0 h356 a32,32 0 0 1 32,32 v38 C420,90 360,100 210,100 C60,100 0,90 0,70 V32 a32,32 0 0 1 32,-32 Z"
               fill="#232733"
             />
           </svg>
@@ -91,13 +91,13 @@ export default function CongratsCard({
           <div className="flex gap-4 w-full justify-center">
             <button
               onClick={onBack}
-              className="px-6 py-2 rounded-full bg-[#E6F6FF] text-[#232733] font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#B3E6FF] transition"
+              className="w-40 px-4 py-2 rounded-full font-medium bg-[#E6F6FF] text-[#232733] hover:bg-[#D0D6DD] transition-colors focus:outline-none focus:ring-2 focus:ring-[#B3E6FF]"
             >
               {backText}
             </button>
             <button
               onClick={onNextMission}
-              className="px-6 py-2 rounded-full bg-black text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-black transition"
+              className="w-40 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
             >
               {nextMissionText}
             </button>
