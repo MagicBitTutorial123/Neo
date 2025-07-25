@@ -1,9 +1,8 @@
-"use client";
-
+'use client'
 import React, { useState, useRef, useEffect, useMemo } from "react";
-// import blocksTabIcon from "public/blocksTabIcon.svg";
-// import codingIcon from "public/codingIcon.svg";
-// import dashboardIcon from "public/dashboardIcon.svg";
+import blocksTabIcon from "@/assets/blocksTabIcon.svg";
+import codingIcon from "@/assets/codingIcon.svg";
+import dashboardIcon from "@/assets/dashboardIcon.svg";
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import * as En from "blockly/msg/en";
@@ -18,7 +17,9 @@ import Editor from "@monaco-editor/react";
 import "@/components/Blockly/customblocks/magicbitblocks";
 import "@/components/Blockly/customblocks/keyboardBlocks";
 import SideNavbar from "@/components/SideNavbar";
-// import AIChatbot from "./chatbot";
+import Image from "next/image";
+
+import AIChatbot from "./chatbot";
 
 Blockly.setLocale(En);
 
@@ -29,6 +30,7 @@ export default function Playground() {
   const [expandMenu, setexpandMenu] = useState(false);
   const blocklyDivRef = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [workspaceInitialized, setWorkspaceInitialized] = useState(false);
 
   const toolboxConfig = useMemo(() => ({
     kind: "categoryToolbox",
@@ -181,145 +183,38 @@ export default function Playground() {
     svgDefs.setAttribute("style", "height:0;width:0;position:absolute");
     svgDefs.innerHTML = `
     <defs>
-      <pattern id="blocklyGridPattern" patternUnits="userSpaceOnUse" width="20" height="20">
-        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ccc" stroke-width="1" />
-      </pattern>
-    </defs>
+    <pattern id="blocklyGridPattern" patternUnits="userSpaceOnUse" width="200" height="200">
+      <!-- Fill background -->
+      <rect width="200" height="200" fill="white" />
+      
+      <!-- Light grid (20px spacing) -->
+      <path d="
+        M 20 0 L 20 200
+        M 40 0 L 40 200
+        M 60 0 L 60 200
+        M 80 0 L 80 200
+        M 100 0 L 100 200
+        M 120 0 L 120 200
+        M 140 0 L 140 200
+        M 160 0 L 160 200
+        M 180 0 L 180 200
+        M 0 20 L 200 20
+        M 0 40 L 200 40
+        M 0 60 L 200 60
+        M 0 80 L 200 80
+        M 0 100 L 200 100
+        M 0 120 L 200 120
+        M 0 140 L 200 140
+        M 0 160 L 200 160
+        M 0 180 L 200 180
+      " stroke="#ddd" stroke-width="1" />
+
+      <!-- Bold grid every 10 cells (200px) -->
+      <path d="M 0 0 L 0 200 M 200 0 L 200 200 M 0 0 L 200 0 M 0 200 L 200 200" stroke="#ddd" stroke-width="2" />
+    </pattern>
+  </defs>
   `;
     document.body.appendChild(svgDefs);
-  }, []);
-
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-   
-    .blocklyMainBackground {
-      fill: url(#blocklyGridPattern) !important;
-      border-radius: 999px;
-    }
-    .blocklyToolboxDiv {
-      width: 6% !important;
-      height: 700px !important;
-      padding:2rem 0.5rem 0.5rem 0.5rem !important;
-      padding-top:2rem;
-      background-color : #CCE4FF !important;
-      border-top-left-radius: 5px;
-      border-bottom-left-radius: 5px;
-      border-top-right-radius: 40px;
-      border-bottom-right-radius: 40px;
-  
-    }
-   
-  .blocklyTreeRow {
-  background: transparent !important;
-  border-radius: 0 !important;
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 !important;
-  margin: 0.25rem 0 !important;
-  box-shadow: none !important;
-}
-
-/* === Selected Row Background Override === */
-.blocklyTreeRow.blocklyTreeSelected {
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
-/* === Extra Class When We Add "selected-category" on Click === */
-.blocklyTreeRow.selected-category {
-  background-color: transparent !important;
-}
- 
-
-/* === Category Icon Wrapper === */
-.blocklyToolboxCategory {
-  width: 100% !important;
-  display: flex !important;
-  justify-content: center !important;
-  padding: 0.25rem 0 !important;
-}
-
-/* === Toolbox Category Icons (Circle Button) === */
-.blocklyToolboxCategory .blocklyToolboxCategoryIcon {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
-  border-radius: 50% !important;
-  background-color: transparent !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  transition: all 0.2s ease;
-  box-shadow: none !important;
-  border: 3px solid transparent !important; /* <- for highlight ring */
-}
-
-/* === Highlight Selected Icon === */
-.blocklyToolboxCategoryIcon.selected-category {
-  background-color: var(--selected-category-color, #2196f3) !important;
-  border: 3px solid white !important; /* highlight ring */
-  box-shadow: 0 0 0 2px var(--selected-category-color, #2196f3) !important; /* outer ring */
-}
-
-
-/* === Category Label (Text) === */
-.blocklyTreeLabel {
-  font-size: 12px !important;
-  margin-top: 0.25rem;
-  text-align: center;
-  display: block;
-  color: black !important;
-}
-
-/* === Selected Category Label === */
-.blocklyTreeRow.blocklyTreeSelected .blocklyTreeLabel {
-  color: black !important;
-}
-      
-}
-
-  `;
-    document.head.appendChild(style);
-    const rows = document.querySelectorAll(".blocklyTreeRow");
-    rows.forEach((row) => {
-      row.addEventListener("click", () => {
-        const clickedCategoryId = row.getAttribute("id");
-
-        // If the same category is clicked again -> collapse
-        if (selectedCategory === clickedCategoryId) {
-          setexpandMenu(false);
-          setSelectedCategory(""); // no selected
-        } else {
-          setexpandMenu(true);
-          setSelectedCategory(clickedCategoryId);
-        }
-
-        // Remove from all rows and icons
-        rows.forEach((r) => {
-          r.classList.remove("selected-category");
-          const icon = r.querySelector(".blocklyToolboxCategoryIcon");
-          if (icon) icon.classList.remove("selected-category");
-        });
-
-        // Add to clicked row and icon
-        row.classList.add("selected-category");
-        const icon = row.querySelector(".blocklyToolboxCategoryIcon");
-        if (icon) icon.classList.add("selected-category");
-
-        // Optional: Set CSS var
-        const color = row.getAttribute("data-colour");
-        row.style.setProperty("--selected-category-color", color || "#2196f3");
-      });
-    });
-  }, [expandMenu]);
-
-  useEffect(() => {
-    if (!blocklyDivRef.current) return;
     // Register plugins
     if (
       !Blockly.registry.hasItem(
@@ -371,61 +266,186 @@ export default function Playground() {
       });
     }
 
-    // Motion blocks
-    Blockly.Blocks["motion_move_steps"] = {
-      init: function () {
-        this.appendDummyInput()
-          .appendField("move")
-          .appendField(new Blockly.FieldNumber(10), "STEPS")
-          .appendField("steps");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setColour("#4A90E2");
-        this.setTooltip("Move forward a number of steps.");
-        this.setHelpUrl("");
-      },
-    };
+    window.addEventListener("beforeunload", () => {
+      if (workspaceRef.current) {
+        const xml = Blockly.Xml.workspaceToDom(workspaceRef.current);
+        const xmlText = Blockly.Xml.domToText(xml);
+        localStorage.setItem("blocklyWorkspace", xmlText);
+      }
+    });
+  }, []);
 
-    Blockly.Blocks["motion_turn_right"] = {
-      init: function () {
-        this.appendDummyInput()
-          .appendField("turn right")
-          .appendField(new Blockly.FieldAngle(90), "ANGLE");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setColour("#4A90E2");
-        this.setTooltip("Turn right by angle.");
-        this.setHelpUrl("");
-      },
-    };
+  useEffect(() => {
+    const blocklyBgDiv = document.querySelector(".blocklyMainBackground");
+    if (blocklyBgDiv) {
+      blocklyBgDiv.addEventListener("click", () => {
+        if (expandMenu) {
+          setexpandMenu(false);
+          setSelectedCategory("");
+          console.log("closing");
+        }
+      });
+    }
+    const rows = document.querySelectorAll(".blocklyTreeRow");
+    rows.forEach((row) => {
+      let clickTimeout;
+      row.addEventListener("click", () => {
+        if (clickTimeout) return;
+        clickTimeout = setTimeout(() => (clickTimeout = null), 1000); // 300ms throttle
 
-    Blockly.Blocks["motion_turn_left"] = {
-      init: function () {
-        this.appendDummyInput()
-          .appendField("turn left")
-          .appendField(new Blockly.FieldAngle(90), "ANGLE");
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
-        this.setColour("#4A90E2");
-        this.setTooltip("Turn left by angle.");
-        this.setHelpUrl("");
-      },
-    };
+        console.log("clicked");
+        const clickedCategoryId = row.getAttribute("id");
 
-    pythonGenerator["motion_move_steps"] = function (block) {
-      const steps = block.getFieldValue("STEPS");
-      return `move_forward(${steps})\n`;
-    };
+        if (selectedCategory === clickedCategoryId) {
+          setSelectedCategory("");
+        } else {
+          setSelectedCategory(clickedCategoryId);
+        }
 
-    pythonGenerator["motion_turn_right"] = function (block) {
-      const angle = block.getFieldValue("ANGLE");
-      return `turn_right(${angle})\n`;
-    };
+        rows.forEach((r) => {
+          r.classList.remove("selected-category");
+          const icon = r.querySelector(".blocklyToolboxCategoryIcon");
+          if (icon) icon.classList.remove("selected-category");
+        });
 
-    pythonGenerator["motion_turn_left"] = function (block) {
-      const angle = block.getFieldValue("ANGLE");
-      return `turn_left(${angle})\n`;
-    };
+        row.classList.add("selected-category");
+        const icon = row.querySelector(".blocklyToolboxCategoryIcon");
+        if (icon) icon.classList.add("selected-category");
+
+        const color = row.getAttribute("data-colour");
+        row.style.setProperty("--selected-category-color", color || "#2196f3");
+      });
+    });
+  }, [expandMenu, activeTab, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedCategory && !expandMenu) {
+      setexpandMenu(true);
+    }
+  }, [expandMenu, selectedCategory]);
+
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+   
+    .blocklyMainBackground {
+      fill: url(#blocklyGridPattern) !important;
+      display: flex;
+    }
+  .blocklyToolboxDiv {
+ 
+  min-width: 70px !important;
+  max-height: 90vh !important;
+  padding: 2rem 0.25rem 0.15rem 0.25rem !important;
+  background-color: #CCE4FF !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem !important;
+  border-radius: 45px !important;
+  box-sizing: border-box;
+  margin-left: 25px !important;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+
+  .blocklyTreeRow {
+  background: transparent !important;
+  border-radius: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0.25rem 0 !important;
+  box-shadow: none !important;
+  border-radius: 48px !important;
+}
+
+
+/* Highlight background for selected toolbox category row */
+.blocklyTreeRow.selected-category {
+  background-color:#FFFFFF !important; 
+  border-radius: 12px !important;
+  padding: 4px 0 !important;
+}
+
+
+
+/* === Category Icon Wrapper === */
+.blocklyToolboxCategory {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  padding: 0.05rem 0 !important;
+}
+
+.blocklyContinuousToolbox .blocklyContinuousCategoryIcon {
+  stroke: none !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
+/* === Highlight Selected Icon === */
+.blocklyToolboxCategoryIcon.selected-category {
+  background-color: var(--selected-category-color, #2196f3) !important;
+  border: 3px solid white !important; /* highlight ring */
+  box-shadow: 0 0 0 2px var(--selected-category-color, #2196f3) !important; 
+}
+
+
+/* === Category Label (Text) === */
+.blocklyTreeLabel {
+  font-size: 12px !important;
+  margin-top: 0.25rem;
+  text-align: center;
+  color: black !important;
+  font-weight: 550 !important;
+}
+
+/* === Selected Category Label === */
+.blocklyTreeRow.blocklyTreeSelected .blocklyTreeLabel {
+  color: black !important;
+  display: ${expandMenu ? "block" : "none"} !important;
+ 
+}
+
+/* === Optional: Flyout Visibility Control via expandMenu === */
+.blocklyFlyout {
+  display: ${expandMenu ? "block" : "none"} !important;
+}
+
+.blocklyFlyoutScrollbar {
+  display: ${expandMenu ? "block" : "none"} !important;
+}
+  .blocklyFlyoutBackground {
+  fill: #ffffffff !important; 
+  fill-opacity: 1 !important;
+}
+
+.blocklyFlyout {
+  margin-left: 35px !important;
+  max-height: 100vh !important;   
+  top: 4vh !important;        
+  overflow-y: auto !important; 
+    
+}
+
+.blocklyFlyoutScrollbar {
+  margin-left: 35px !important;
+}
+
+ `;
+    document.head.appendChild(style);
+  }, [selectedCategory, expandMenu, activeTab]);
+
+  useEffect(() => {
+    if (!blocklyDivRef.current) return;
 
     const workspace = Blockly.inject(blocklyDivRef.current, {
       toolbox: toolboxConfig,
@@ -437,29 +457,15 @@ export default function Playground() {
       scrollbars: true,
       renderer: "zelos",
       theme: Blockly.Themes.Zelos,
-      trashcan: false,
-      grid: true,
+      trashcan: true,
       zoom: {
-        controls: false,
+        controls: true,
         wheel: true,
         startScale: 1,
       },
       media: "https://unpkg.com/blockly/media/",
+      flyoutGap: 110
     });
-
-    // Add event listener to hide flyout when clicking on canvas
-    setTimeout(() => {
-      const mainBg = blocklyDivRef.current?.querySelector('.blocklyMainBackground');
-      if (mainBg) {
-        mainBg.addEventListener('mousedown', () => {
-          if (workspace.getToolbox()) {
-            workspace.getToolbox().clearSelection();
-            setSelectedCategory("");
-            setexpandMenu(false);
-          }
-        });
-      }
-    }, 500);
 
     workspaceRef.current = workspace;
 
@@ -476,83 +482,165 @@ export default function Playground() {
     workspace.addChangeListener(() => {
       const code = pythonGenerator.workspaceToCode(workspace);
       setGeneratedCode(code);
-      const xml = Blockly.Xml.workspaceToDom(workspace);
-      const xmlText = Blockly.Xml.domToText(xml);
-      localStorage.setItem("blocklyWorkspace", xmlText);
     });
 
     return () => {
       workspace.dispose();
     };
-  }, []);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "Blocks") {
+      setWorkspaceInitialized(false);
+      if (workspaceRef.current) {
+        const xml = Blockly.Xml.workspaceToDom(workspaceRef.current);
+        const xmlText = Blockly.Xml.domToText(xml);
+        localStorage.setItem("blocklyWorkspace", xmlText);
+      }
+    } else {
+      if (workspaceRef.current && !workspaceInitialized) {
+        const savedState = localStorage.getItem("blocklyWorkspace");
+        if (savedState) {
+          try {
+            const xml = Blockly.utils.xml.textToDom(savedState);
+            Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current);
+            setWorkspaceInitialized(true);
+          } catch (e) {
+            console.error("Error restoring workspace:", e);
+          }
+        } else {
+          setWorkspaceInitialized(true);
+        }
+      }
+    }
+  }, [activeTab]);
+
+  const updateWorkspace = (el) => {
+    const workspace = Blockly.inject(el, {
+      toolbox: toolboxConfig,
+      scrollbars: true,
+      renderer: "zelos",
+      theme: Blockly.Themes.Zelos,
+      trashcan: true,
+      zoom: {
+        controls: false,
+        wheel: true,
+        startScale: 1,
+      },
+      media: "https://unpkg.com/blockly/media/",
+    });
+    workspaceRef.current = workspace;
+
+    // const savedState = localStorage.getItem("blocklyWorkspace");
+    // if (savedState) {
+    //   try {
+    //     const xml = Blockly.utils.xml.textToDom(savedState);
+    //     Blockly.Xml.domToWorkspace(xml, workspace);
+    //   } catch (e) {
+    //     console.error("Error restoring workspace:", e);
+    //   }
+    // }
+
+    // workspace.addChangeListener(() => {
+    //   const xml = Blockly.Xml.workspaceToDom(workspace);
+    //   const xmlText = Blockly.Xml.domToText(xml);
+    //   localStorage.setItem("blocklyWorkspace", xmlText);
+    //   console.log("Workspace updated and saved to localStorage");
+
+    // });
+  };
 
   return (
-    <div className="flex">
-    <div className="bg-white flex flex-row w-full ">
-      <SideNavbar/>
-      <div
-        className="w-full mx-6 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex min-h-[96.5vh]"
-        style={{ borderRadius: "48px" }}
-        >
-        <div className="absolute top-5 right-10 m-2 flex items-center gap-2 z-20">
-          {["Blocks", "Code", "Dashboard"].map((tab) => (
+    <>
+      <div className="min-h-[96vh] bg-white flex flex-row">
+        <SideNavbar/>
+        <div className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white w-full flex min-h-[98vh]" style={{ borderRadius: '48px' }}>
+          <div className="absolute top-0 right-4 m-2 flex flex-row items-center gap-4 z-20 ">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-sm border transition-colors duration-150
-                ${
-                  activeTab === tab
-                    ? "bg-white border-blue-400 text-blue-900 shadow-sm"
-                    : "bg-blue-100 border-transparent text-blue-800 hover:bg-blue-200"
-                }
-              `}
-              style={{
-                minWidth: 120,
-                boxShadow:
-                  activeTab === tab
-                    ? "0 2px 8px 0 rgba(0,0,0,0.04)"
-                    : undefined,
-              }}
+              onClick={() => setActiveTab("Blocks")}
+              className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
+              ${activeTab === "Blocks" 
+                  ? "bg-white border border-blue-400 text-black shadow-sm"
+                  : "bg-blue-100 border border-transparent text-blue-800 hover:bg-blue-200"
+                } rounded-l-[9999px] rounded-r-none`}
+              style={{ minWidth: 120 }}
             >
-              {tab === "Blocks" && <img src="blocksTabIcon.svg" alt="Blocks" className="w-5 h-5" />}
-              {tab === "Code" && <img src="codingIcon.svg" alt="Code" className="w-5 h-5" />}
-              {tab === "Dashboard" && <img src="dashboardIcon.svg" alt="Dashboard" className="w-5 h-5" />}
-              <span className="ml-1 font-bold text-black">{tab}</span>
+              <Image src={blocksTabIcon} alt="Blocks" className="w-5 h-5" />
+              <span className="ml-1 font-bold">Blocks</span>
             </button>
-          ))}
-        </div>
-
-        <div className="pl-0.4 pt-1 pb-4 pr-0.5 relative z-5 flex-grow w-full">
-          {activeTab === "Blocks" && (
-            <div
-              ref={blocklyDivRef}
-              style={{
-                height: "100%",
-                width: "100%",
-                backgroundColor: "white",
+             <AIChatbot />
+          <button
+              onClick={() => {
+                setActiveTab("Code");
+                const code = pythonGenerator.workspaceToCode(
+                  workspaceRef.current
+                );
+                setGeneratedCode(code);
               }}
-            />
-          )}
-          {activeTab === "Code" && (
-            <Editor
-              height="90vh"
-              defaultLanguage="python"
-              value={generatedCode}
-              theme="vs-light"
-              options={{ readOnly: true }}
-            />
-          )}
+              className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
+      ${
+        activeTab === "Code"
+          ? "bg-white border-blue-400 text-blue-900 shadow-sm"
+          : "bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-200"
+      } rounded-none`}
+              style={{ minWidth: 120 }}
+            >
+              <Image src={codingIcon} alt="Code" className="w-5 h-5" />
+              <span className="ml-1 font-bold">Code</span>
+            </button>
 
-          {activeTab === "Dashboard" && (
-            <div className="flex justify-center items-center h-full text-2xl text-blue-800 font-bold">
-              Dashboard Coming Soon!
-            </div>
-          )}
-        </div>
+            <button
+              onClick={() => setActiveTab("Dashboard")}
+              className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
+      ${
+        activeTab === "Dashboard"
+          ? "bg-white border-blue-400 text-blue-900 shadow-sm"
+          : "bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-200"
+      } rounded-r-full`}
+              style={{ minWidth: 120 }}
+            >
+              <Image src={dashboardIcon} alt="Dashboard" className="w-5 h-5" />
+              <span className="ml-1 font-bold">Dashboard</span>
+            </button>
+          </div>
+          <div className="  pb-4 pr-0.5 relative z-5 flex-grow w-full">
+            
+            {activeTab === "Blocks" && (
+              <div
+                ref={(el) => {
+                  if (!el) return;
+                  if (!workspaceInitialized) {
+                    updateWorkspace(el);
+                    setWorkspaceInitialized(true);
+                  }
+                }}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  backgroundColor: "white",
+                }}
+              />
+            )}
+            {activeTab === "Code" && (
+             <Editor
+             height="90vh"
+             defaultLanguage="python"
+             value={generatedCode}
+             theme="vs-light"
+            options={{
+            readOnly: true,
+            padding: { top: 20, bottom: 20, left: 20, right: 20 } 
+             }}
+             />
+            )}
+            {activeTab === "Dashboard" && (
+              <div className="flex justify-center items-center h-full text-2xl text-blue-800 font-bold">
+                Dashboard Coming Soon!
+              </div>
+            )}
+          </div>
+        </div >
       </div>
-
-      {/* <AIChatbot position="right" /> */}
-    </div>
-    </div>
+      </>
   );
 }
