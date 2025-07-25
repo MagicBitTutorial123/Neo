@@ -316,13 +316,13 @@ export default function Playground() {
         row.style.setProperty("--selected-category-color", color || "#2196f3");
       });
     });
-  }, [expandMenu, activeTab]);
+  }, [expandMenu, activeTab, selectedCategory]);
 
   useEffect(() => {
     if (selectedCategory && !expandMenu) {
       setexpandMenu(true);
     }
-  }, [selectedCategory]);
+  }, [expandMenu, selectedCategory]);
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -492,43 +492,28 @@ export default function Playground() {
   useEffect(() => {
     if (activeTab !== "Blocks") {
       setWorkspaceInitialized(false);
-      const xml = Blockly.Xml.workspaceToDom(workspaceRef.current);
-      const xmlText = Blockly.Xml.domToText(xml);
-      localStorage.setItem("blocklyWorkspace", xmlText);
-  }
-
-  if (workspaceRef.current && !workspaceInitialized) {
-    const savedState = localStorage.getItem("blocklyWorkspace");
-    if (savedState) {
-      try {
-        const xml = Blockly.utils.xml.textToDom(savedState);
-        Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current); 
-        setWorkspaceInitialized(true);
-      } catch (e) {
-        console.error("Error restoring workspace:", e);
+      if (workspaceRef.current) {
+        const xml = Blockly.Xml.workspaceToDom(workspaceRef.current);
+        const xmlText = Blockly.Xml.domToText(xml);
+        localStorage.setItem("blocklyWorkspace", xmlText);
       }
     } else {
-      setWorkspaceInitialized(true); 
-    }
-
-    if (workspaceRef.current && !workspaceInitialized) {
-      const savedState = localStorage.getItem("blocklyWorkspace");
-
-      if (savedState) {
-        try {
-          const xml = Blockly.utils.xml.textToDom(savedState);
-          Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current);
+      if (workspaceRef.current && !workspaceInitialized) {
+        const savedState = localStorage.getItem("blocklyWorkspace");
+        if (savedState) {
+          try {
+            const xml = Blockly.utils.xml.textToDom(savedState);
+            Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current);
+            setWorkspaceInitialized(true);
+          } catch (e) {
+            console.error("Error restoring workspace:", e);
+          }
+        } else {
           setWorkspaceInitialized(true);
-        } catch (e) {
-          console.error("Error restoring workspace:", e);
         }
-      } else {
-        setWorkspaceInitialized(true);
       }
     }
-  }
-}
-  , [activeTab]);
+  }, [activeTab]);
 
   const updateWorkspace = (el) => {
     const workspace = Blockly.inject(el, {
