@@ -11,8 +11,8 @@ import {
 import "blockly/javascript";
 import Editor from "@monaco-editor/react";
 import BlockMenu from "./BlockMenu";
-// import AI from "./AI";
-// import "../App.css";
+import AI from "./AI";
+import "../App.css";
 import "./customblocks/magicbitblocks";
 import "./customblocks/keyboardBlocks";
 import { Menu, X } from "lucide-react";
@@ -419,7 +419,6 @@ const BlocklyComponent = ({
         ref={blocklyDiv}
         style={{
           height: "100%",
-          backgroundColor: "#fff", // Ensure white background for Blockly workspace
         }}
       />
     </div>
