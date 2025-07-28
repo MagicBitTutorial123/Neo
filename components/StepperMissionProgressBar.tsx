@@ -227,7 +227,13 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                 {/* Time */}
                 <div className="flex items-center gap-2 bg-[#222E3A] rounded-full px-3 py-1 self-start">
                   <Image
-                    src="/missionPageCardClock-icon.png"
+                    src="/missioWhen user starts a mission → countdown starts from allocatedTime
+
+If user refreshes the page mid-mission → timer resumes
+
+If user finishes and restarts the same mission → timer resets
+
+If user moves to a new mission → timer resets for that new missionCardClock-icon.png"
                     alt="clock"
                     width={18}
                     height={18}

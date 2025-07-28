@@ -15,6 +15,8 @@ import StepSuccessCard from "@/components/StepSuccessCard";
 import CongratsCard from "@/components/CongratsCard";
 import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
+import { MissionStatePersistence } from "@/utils/missionStatePersistence";
+import { TimerPersistence } from "@/utils/timerPersistence";
 
 const validMissionIds = [
   "1",
@@ -68,6 +70,7 @@ export default function MissionPage() {
     new Set()
   );
   const [isFinalMCQ, setIsFinalMCQ] = useState(false);
+  const [timeTaken, setTimeTaken] = useState("");
 
   // Arrays of images for random selection
   const successImages = [
@@ -96,6 +99,102 @@ export default function MissionPage() {
     setCurrentRetryImage(getRandomImage(retryImages));
   };
 
+  // Load mission state on mount
+  useEffect(() => {
+    const savedState = MissionStatePersistence.getMissionState(id);
+    if (savedState) {
+      console.log("🔄 Loading saved mission state:", savedState);
+      setShowHeader(savedState.showHeader);
+      setForceHideIntro(savedState.forceHideIntro);
+      setShowCountdown(savedState.showCountdown);
+      setIsRunning(savedState.isRunning);
+      setFromNo(savedState.fromNo);
+      setCompletedMCQSteps(new Set(savedState.completedMCQSteps));
+
+      // If we're resuming a mission that was already started, resume the timer
+      if (savedState.showHeader && !savedState.showCountdown) {
+        // Wait for the timer component to be ready, then resume
+        setTimeout(() => {
+          if (
+            typeof window !== "undefined" &&
+            (window as any).missionTimerControls
+          ) {
+            const savedTimerState = TimerPersistence.loadTimerState();
+            if (savedTimerState && savedTimerState.missionId === id) {
+              console.log("🔄 Resuming existing timer for mission", id);
+              (window as any).missionTimerControls.resume();
+            }
+          }
+        }, 100);
+      }
+    }
+  }, [id]);
+
+  // Handle current step changes from layout components
+  const handleCurrentStepChange = (step: number) => {
+    console.log("🔄 Current step changed to:", step);
+    // Update mission state with new step
+    MissionStatePersistence.updateMissionState(id, {
+      currentStep: step,
+    });
+  };
+
+  // Function to stop timer and calculate time taken
+  const stopTimerAndCalculateTime = () => {
+    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+      // Pause the timer first
+      (window as any).missionTimerControls.pause();
+
+      // Get the current timer state to calculate time taken
+      const savedTimerState = TimerPersistence.loadTimerState();
+      if (savedTimerState && savedTimerState.missionId === id) {
+        const allocatedTime = savedTimerState.allocatedTime;
+        const elapsed = Math.floor(
+          (Date.now() - savedTimerState.startTime) / 1000
+        );
+        const remaining = Math.max(0, allocatedTime - elapsed);
+        const timeTaken = allocatedTime - remaining;
+
+        // Format time taken as MM:SS
+        const minutes = Math.floor(timeTaken / 60);
+        const seconds = timeTaken % 60;
+        const formattedTime = `${minutes}:${seconds
+          .toString()
+          .padStart(2, "0")}`;
+
+        setTimeTaken(formattedTime);
+        console.log("⏱️ Time taken to complete mission:", formattedTime);
+      }
+    }
+  };
+
+  // Save mission state when it changes
+  useEffect(() => {
+    MissionStatePersistence.updateMissionState(id, {
+      showHeader,
+      forceHideIntro,
+      showCountdown,
+      isRunning,
+      fromNo,
+      completedMCQSteps: Array.from(completedMCQSteps),
+    });
+  }, [
+    id,
+    showHeader,
+    forceHideIntro,
+    showCountdown,
+    isRunning,
+    fromNo,
+    completedMCQSteps,
+  ]);
+
+  // Stop timer when congratulations card is shown
+  useEffect(() => {
+    if (showCongrats) {
+      stopTimerAndCalculateTime();
+    }
+  }, [showCongrats]);
+
   // Show header when forceHideIntro is true (backup method)
   useEffect(() => {
     if (forceHideIntro) {
@@ -107,11 +206,19 @@ export default function MissionPage() {
   const handleRun = () => {
     console.log("🚀 Run button clicked from page level!");
     setIsRunning(true);
+    // Resume timer if persistence is enabled
+    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+      (window as any).missionTimerControls.resume();
+    }
   };
 
   const handlePause = () => {
     console.log("⏸️ Pause button clicked from page level!");
     setIsRunning(false);
+    // Pause timer if persistence is enabled
+    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+      (window as any).missionTimerControls.pause();
+    }
   };
 
   const handleErase = () => {
@@ -165,6 +272,9 @@ export default function MissionPage() {
     }
     // For Mission 2 and Mission 3+, navigate to missions main page
     if (mission.id >= 2) {
+      // Clear mission state and timer when going back to missions page
+      MissionStatePersistence.clearMissionState();
+      TimerPersistence.clearTimerState();
       router.push("/missions");
       return;
     }
@@ -172,6 +282,12 @@ export default function MissionPage() {
 
   const handleNextMission = async () => {
     setShowCongrats(false);
+    // Clear mission state and timer for new mission
+    MissionStatePersistence.clearMissionState();
+    TimerPersistence.clearTimerState();
+    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+      (window as any).missionTimerControls.reset();
+    }
     // Navigate to next mission
     const nextMissionId = String(Number(mission.id) + 1);
     window.location.href = `/missions/${nextMissionId}`;
@@ -180,6 +296,10 @@ export default function MissionPage() {
   const handleTryAgain = () => {
     setShowDontWorry(false);
     setFromNo(false);
+    // Reset timer when restarting the same mission
+    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+      (window as any).missionTimerControls.reset();
+    }
     // Reset to previous step
   };
 
@@ -215,6 +335,8 @@ export default function MissionPage() {
 
     // Check if this is the final MCQ
     if (isFinalMCQ) {
+      // Stop timer and calculate time taken for final MCQ
+      stopTimerAndCalculateTime();
       // Show congrats for final MCQ
       setShowCongrats(true);
     } else {
@@ -273,6 +395,20 @@ export default function MissionPage() {
     setShowCountdown(false);
     setForceHideIntro(true);
     setShowHeader(true); // Ensure header is visible after countdown
+
+    // Start timer when countdown completes (only if no saved timer exists)
+    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+      // Check if there's already a saved timer state for this mission
+      const savedTimerState = TimerPersistence.loadTimerState();
+      if (!savedTimerState || savedTimerState.missionId !== id) {
+        // Only reset if no saved timer exists for this mission
+        (window as any).missionTimerControls.reset();
+      } else {
+        // Resume existing timer
+        (window as any).missionTimerControls.resume();
+      }
+    }
+
     console.log("✅ setShowHeader(true) called");
   };
 
@@ -305,6 +441,7 @@ export default function MissionPage() {
                 onErase={handleErase}
                 isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
+                enableTimerPersistence={true}
               />
             </div>
           )}
@@ -322,6 +459,8 @@ export default function MissionPage() {
               onCongratsChange={setShowCongrats}
               onHelpAcceptedChange={setShowHelpAccepted}
               onTryAgain={handleTryAgain}
+              onCurrentStepChange={handleCurrentStepChange}
+              onFinish={stopTimerAndCalculateTime}
             />
           </div>
 
@@ -423,7 +562,7 @@ export default function MissionPage() {
                 headline="Congratulations!"
                 subtitle={`You completed mission ${mission.id} successfully.`}
                 points={0}
-                timeSpent="3:00"
+                timeSpent={timeTaken || "0:00"}
                 robotImageSrc="/confettiBot.png"
                 backText="Back"
                 nextMissionText="Next Mission"
@@ -509,6 +648,7 @@ export default function MissionPage() {
                 onErase={handleErase}
                 isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
+                enableTimerPersistence={true}
               />
             </div>
           )}
@@ -528,6 +668,8 @@ export default function MissionPage() {
               onTryAgain={handleTryAgain}
               onMCQAnswer={handleMCQAnswer}
               onMCQChange={handleMCQChange}
+              onCurrentStepChange={handleCurrentStepChange}
+              onFinish={stopTimerAndCalculateTime}
             />
           </div>
 
@@ -679,7 +821,7 @@ export default function MissionPage() {
                 headline="Congratulations!"
                 subtitle={`You completed mission ${mission.id} successfully.`}
                 points={0}
-                timeSpent="3:00"
+                timeSpent={timeTaken || "0:00"}
                 robotImageSrc="/confettiBot.png"
                 backText="Back"
                 nextMissionText="Next Mission"

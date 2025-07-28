@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { missions } from "@/data/missions";
 import { useUser } from "@/context/UserContext";
 import { completeMission1, completeMission2 } from "@/utils/userState";
+import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 
 export default function StandardMissionLayout({
   mission,
@@ -22,6 +23,8 @@ export default function StandardMissionLayout({
   onHelpAcceptedChange,
   onTryAgain,
   fromNo = false,
+  onCurrentStepChange,
+  onFinish,
 }: {
   mission: any;
   onStateChange?: (state: {
@@ -36,6 +39,8 @@ export default function StandardMissionLayout({
   onHelpAcceptedChange?: (show: boolean) => void;
   onTryAgain?: () => void;
   fromNo?: boolean;
+  onCurrentStepChange?: (step: number) => void;
+  onFinish?: () => void;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
@@ -50,6 +55,19 @@ export default function StandardMissionLayout({
   const [hasSeenStepQuestion, setHasSeenStepQuestion] = useState(false);
   const router = useRouter();
   const { userData, updateUserData, setUserData } = useUser();
+
+  // Load saved state on mount
+  useEffect(() => {
+    const savedState = MissionStatePersistence.getMissionState(
+      mission.id.toString()
+    );
+    if (savedState) {
+      console.log("🔄 StandardMissionLayout: Loading saved state:", savedState);
+      setCurrentStep(savedState.currentStep);
+      setShowIntro(!savedState.showHeader);
+      setShowCountdown(savedState.showCountdown);
+    }
+  }, [mission.id]);
 
   // Notify parent of initial state
   useEffect(() => {
@@ -93,6 +111,11 @@ export default function StandardMissionLayout({
     onHelpAcceptedChange?.(showHelpAccepted);
   }, [showHelpAccepted, onHelpAcceptedChange]);
 
+  // Notify parent when currentStep changes
+  useEffect(() => {
+    onCurrentStepChange?.(currentStep);
+  }, [currentStep, onCurrentStepChange]);
+
   // Listen for step progression events from page-level overlays
   useEffect(() => {
     const handleGoToElevationStep = () => {
@@ -127,13 +150,13 @@ export default function StandardMissionLayout({
     if (isStep3) {
       // Only show StepQuestion if user hasn't seen it before in this session
       if (!hasSeenStepQuestion) {
-      setShowStepQuestion(true);
+        setShowStepQuestion(true);
         setHasSeenStepQuestion(true);
         return;
       } else {
         // User has already seen the question, go directly to elevation step
         setCurrentStep(mission.steps.length - 1);
-      return;
+        return;
       }
     }
     if (isElevationStep) {
@@ -212,6 +235,7 @@ export default function StandardMissionLayout({
     onTryAgain?.(); // Reset fromNo state
   };
   const handleFinish = () => {
+    onFinish?.(); // Notify parent that finish was clicked
     setShowCongrats(true);
   };
 
@@ -328,7 +352,7 @@ export default function StandardMissionLayout({
               // Fallback if no user data
               localStorage.setItem("hasCompletedMission2", "true");
               localStorage.setItem("isNewUser", "false");
-            router.push("/home");
+              router.push("/home");
             }
           }}
         />

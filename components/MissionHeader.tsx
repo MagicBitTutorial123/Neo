@@ -16,6 +16,7 @@ interface MissionHeaderProps {
   onErase?: () => void;
   isRunning?: boolean;
   sidebarCollapsed?: boolean;
+  enableTimerPersistence?: boolean;
 }
 
 export default function MissionHeader({
@@ -30,6 +31,7 @@ export default function MissionHeader({
   onErase,
   isRunning = false,
   sidebarCollapsed = false,
+  enableTimerPersistence = false,
 }: MissionHeaderProps) {
   const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
@@ -87,6 +89,8 @@ export default function MissionHeader({
               allocatedTime={allocatedSeconds}
               showText={false}
               onTick={setTimerValue}
+              missionId={missionNumber.toString()}
+              enablePersistence={enableTimerPersistence}
             />
           </div>
         </div>

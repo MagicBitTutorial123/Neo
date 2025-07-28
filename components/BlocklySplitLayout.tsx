@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { missions } from "@/data/missions";
 import { useUser } from "@/context/UserContext";
 import { completeMission1, completeMission2 } from "@/utils/userState";
+import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 
 export default function BlocklySplitLayout({
   mission,
@@ -26,6 +27,8 @@ export default function BlocklySplitLayout({
   onMCQAnswer,
   onMCQChange,
   fromNo = false,
+  onCurrentStepChange,
+  onFinish,
 }: {
   mission: any;
   sidebarCollapsed?: boolean;
@@ -43,6 +46,8 @@ export default function BlocklySplitLayout({
   onMCQAnswer?: (selectedAnswer: number) => void;
   onMCQChange?: (show: boolean, stepIndex: number) => void;
   fromNo?: boolean;
+  onCurrentStepChange?: (step: number) => void;
+  onFinish?: () => void;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
@@ -55,6 +60,19 @@ export default function BlocklySplitLayout({
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
+
+  // Load saved state on mount
+  useEffect(() => {
+    const savedState = MissionStatePersistence.getMissionState(
+      mission.id.toString()
+    );
+    if (savedState) {
+      console.log("🔄 BlocklySplitLayout: Loading saved state:", savedState);
+      setCurrentStep(savedState.currentStep);
+      setShowIntro(!savedState.showHeader);
+      setShowCountdown(savedState.showCountdown);
+    }
+  }, [mission.id]);
 
   // Notify parent of initial state
   useEffect(() => {
@@ -97,6 +115,11 @@ export default function BlocklySplitLayout({
   useEffect(() => {
     onHelpAcceptedChange?.(showHelpAccepted);
   }, [showHelpAccepted, onHelpAcceptedChange]);
+
+  // Notify parent when currentStep changes
+  useEffect(() => {
+    onCurrentStepChange?.(currentStep);
+  }, [currentStep, onCurrentStepChange]);
 
   // Notify parent when showMCQ changes
   useEffect(() => {
@@ -275,6 +298,7 @@ export default function BlocklySplitLayout({
     setCurrentStep(0);
   };
   const handleFinish = () => {
+    onFinish?.(); // Notify parent that finish was clicked
     // Trigger the final MCQ for the last step
     onMCQChange?.(true, mission.steps.length - 1);
   };
