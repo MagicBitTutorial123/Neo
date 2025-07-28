@@ -127,13 +127,13 @@ export default function StandardMissionLayout({
     if (isStep3) {
       // Only show StepQuestion if user hasn't seen it before in this session
       if (!hasSeenStepQuestion) {
-        setShowStepQuestion(true);
+      setShowStepQuestion(true);
         setHasSeenStepQuestion(true);
         return;
       } else {
         // User has already seen the question, go directly to elevation step
         setCurrentStep(mission.steps.length - 1);
-        return;
+      return;
       }
     }
     if (isElevationStep) {
@@ -328,7 +328,7 @@ export default function StandardMissionLayout({
               // Fallback if no user data
               localStorage.setItem("hasCompletedMission2", "true");
               localStorage.setItem("isNewUser", "false");
-              router.push("/home");
+            router.push("/home");
             }
           }}
         />

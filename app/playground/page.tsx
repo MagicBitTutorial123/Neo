@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import blocksTabIcon from "@/assets/blocksTabIcon.svg";
 import codingIcon from "@/assets/codingIcon.svg";
@@ -464,7 +464,7 @@ export default function Playground() {
         startScale: 1,
       },
       media: "https://unpkg.com/blockly/media/",
-      flyoutGap: 110
+      flyoutGap: 110,
     });
 
     workspaceRef.current = workspace;
@@ -553,23 +553,27 @@ export default function Playground() {
   return (
     <>
       <div className="min-h-[96vh] bg-white flex flex-row">
-        <SideNavbar/>
-        <div className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white w-full flex min-h-[98vh]" style={{ borderRadius: '48px' }}>
+        <SideNavbar />
+        <div
+          className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white w-full flex min-h-[98vh]"
+          style={{ borderRadius: "48px" }}
+        >
           <div className="absolute top-0 right-4 m-2 flex flex-row items-center gap-4 z-20 ">
             <button
               onClick={() => setActiveTab("Blocks")}
               className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
-              ${activeTab === "Blocks" 
+              ${
+                activeTab === "Blocks"
                   ? "bg-white border border-blue-400 text-black shadow-sm"
                   : "bg-blue-100 border border-transparent text-blue-800 hover:bg-blue-200"
-                } rounded-l-[9999px] rounded-r-none`}
+              } rounded-l-[9999px] rounded-r-none`}
               style={{ minWidth: 120 }}
             >
               <Image src={blocksTabIcon} alt="Blocks" className="w-5 h-5" />
               <span className="ml-1 font-bold">Blocks</span>
             </button>
-             <AIChatbot />
-          <button
+            <AIChatbot />
+            <button
               onClick={() => {
                 setActiveTab("Code");
                 const code = pythonGenerator.workspaceToCode(
@@ -604,7 +608,6 @@ export default function Playground() {
             </button>
           </div>
           <div className="  pb-4 pr-0.5 relative z-5 flex-grow w-full">
-            
             {activeTab === "Blocks" && (
               <div
                 ref={(el) => {
@@ -622,16 +625,16 @@ export default function Playground() {
               />
             )}
             {activeTab === "Code" && (
-             <Editor
-             height="90vh"
-             defaultLanguage="python"
-             value={generatedCode}
-             theme="vs-light"
-            options={{
-            readOnly: true,
-            padding: { top: 20, bottom: 20, left: 20, right: 20 } 
-             }}
-             />
+              <Editor
+                height="90vh"
+                defaultLanguage="python"
+                value={generatedCode}
+                theme="vs-light"
+                options={{
+                  readOnly: true,
+                  padding: { top: 20, bottom: 20, left: 20, right: 20 },
+                }}
+              />
             )}
             {activeTab === "Dashboard" && (
               <div className="flex justify-center items-center h-full text-2xl text-blue-800 font-bold">
@@ -639,8 +642,8 @@ export default function Playground() {
               </div>
             )}
           </div>
-        </div >
+        </div>
       </div>
-      </>
+    </>
   );
 }
