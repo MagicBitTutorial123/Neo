@@ -22,7 +22,10 @@ export default function AIChatbot({ position = "right", workspaceRef,onClose }) 
   // draggable position
   const chatbotRef = useRef(null);
   const posRef = useRef({ x: 20, y: 430 }); 
+ 
 
+
+  
   // block list for Gemini to know
   const blockList = `
 - magicbit_set_digital: sets a digital pin high/low
@@ -56,14 +59,16 @@ useEffect(() => {
 
   const onMouseDown = (e) => {
     isDragging = true;
-    const rect = el.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    // Use current style position or posRef for initial position
+    initialLeft = parseInt(el.style.left, 10) || posRef.current.x || 0;
+    initialTop = parseInt(el.style.top, 10) || posRef.current.y || 0;
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
 
-    // Optional visual feedback
     el.style.transition = "none";
     el.style.opacity = "0.95";
     el.style.cursor = "grabbing";
@@ -71,16 +76,16 @@ useEffect(() => {
 
   const onMouseMove = (e) => {
     if (!isDragging) return;
-   const newLeft = e.clientX - startX;
-    const newTop = e.clientY - startY;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
 
+    const newLeft = initialLeft + dx;
+    const newTop = initialTop + dy;
 
     el.style.left = `${newLeft}px`;
     el.style.top = `${newTop}px`;
     el.style.right = "auto";
     el.style.bottom = "auto";
-
-
 
     posRef.current = { x: newLeft, y: newTop };
   };
@@ -102,8 +107,9 @@ useEffect(() => {
   return () => {
     if (header) header.removeEventListener("mousedown", onMouseDown);
   };
-}, []);
-*/
+}, []);*/
+
+
 
 useEffect(() => {
   const el = chatbotRef.current;
@@ -448,7 +454,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
     position: "fixed",
     top: posRef.current.y,
     left: posRef.current.x,
-    zIndex: 99999,
+    zIndex: 9999,
     transition: "opacity 0.2s ease",
 
   }}
@@ -457,7 +463,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
       {/* Bubble absolutely above the minimized widget */}
       {collapseLevel === 2 && (
         <div style={{ position: "relative", width: "210px", height: "60px" }}>
-  <Image
+  <img
     src={ChatBubbleSVG}
     alt="Bubble"
     style={{ width: "100%", height: "100%" }}
@@ -492,7 +498,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
           </div>
           {/* Avatar with active dot */}
           <div className="chatbot-avatar-wrapper">
-            <Image
+            <img
               src={downloadImg}
               alt="Neo"
               className="chatbot-avatar"
