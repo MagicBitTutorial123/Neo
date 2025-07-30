@@ -21,7 +21,7 @@ export default function AIChatbot({ position = "right", workspaceRef,onClose }) 
   const [collapseLevel, setCollapseLevel] = useState(0);
   // draggable position
   const chatbotRef = useRef(null);
-  const posRef = useRef({ x: 600, y: 20 }); 
+  const posRef = useRef({ x: 20, y: 430 }); 
 
   // block list for Gemini to know
   const blockList = `
@@ -45,7 +45,7 @@ useEffect(() => {
 
 //drag
 
-useEffect(() => {
+/*useEffect(() => {
   const el = chatbotRef.current;
   if (!el) return;
 
@@ -103,6 +103,87 @@ useEffect(() => {
     if (header) header.removeEventListener("mousedown", onMouseDown);
   };
 }, []);
+*/
+
+useEffect(() => {
+  const el = chatbotRef.current;
+  if (!el) return;
+
+  // 🟡 Delay just enough to ensure offsetHeight is correct
+  const timeout = setTimeout(() => {
+    if (!el.style.left && !el.style.top) {
+      const height = el.offsetHeight;
+
+      // 💡 Fallback to a default height if 0 (safety)
+      const defaultHeight = height > 0 ? height : 300;
+      const defaultX = 20;
+      const defaultY = window.innerHeight - defaultHeight - 20;
+
+      el.style.left = `${defaultX}px`;
+      el.style.top = `${defaultY}px`;
+
+      posRef.current = { x: defaultX, y: defaultY };
+    }
+  }, 50); // 1 frame delay (~16ms), just to be safe
+
+  let isDragging = false;
+  let startX, startY, initialLeft, initialTop;
+
+  const header = el.querySelector(".chatbot-header");
+
+  const onMouseDown = (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    initialLeft = parseInt(el.style.left, 10) || posRef.current?.x || 0;
+    initialTop = parseInt(el.style.top, 10) || posRef.current?.y || 0;
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+
+    el.style.transition = "none";
+    el.style.opacity = "0.95";
+    el.style.cursor = "grabbing";
+  };
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    const newLeft = initialLeft + dx;
+    const newTop = initialTop + dy;
+
+    el.style.left = `${newLeft}px`;
+    el.style.top = `${newTop}px`;
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+
+    posRef.current = { x: newLeft, y: newTop };
+  };
+
+  const onMouseUp = () => {
+    isDragging = false;
+    el.style.opacity = "1";
+    el.style.cursor = "default";
+
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+
+  if (header) {
+    header.style.cursor = "grab";
+    header.addEventListener("mousedown", onMouseDown);
+  }
+
+  return () => {
+    clearTimeout(timeout);
+    if (header) header.removeEventListener("mousedown", onMouseDown);
+  };
+}, []);
+
 
 
 
