@@ -19,7 +19,7 @@ Blockly.setLocale(En);
 export default function Playground() {
   const [generatedCode, setGeneratedCode] = useState("");
  const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [isConnected, setIsConnected] = useState(false);
 
   const portRef = useRef(null);
   const bluetoothDeviceRef = useRef(null);
@@ -30,8 +30,7 @@ export default function Playground() {
 
   // Bluetooth connection
   const connectBluetooth = async (maxRetries = 10, isUserInitiated = false) => {
-    if (connectionStatus === "connecting") return;
-    setConnectionStatus("connecting");
+   if (isConnected) return; // already connected or connecting
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -40,13 +39,14 @@ export default function Playground() {
           const server = await bluetoothDeviceRef.current.gatt.connect();
           const service = await server.getPrimaryService(serviceUUID);
           txChar.current = await service.getCharacteristic(txCharUUID);
-          setConnectionStatus("connected");
+          setIsConnected(true);
+
 
           bluetoothDeviceRef.current.addEventListener(
             "gattserverdisconnected",
             () => {
               console.log("Bluetooth disconnected, reconnecting...");
-              setConnectionStatus("disconnected");
+              setIsConnected(false);
               connectBluetooth();
             }
           );
@@ -63,13 +63,13 @@ export default function Playground() {
           const server = await bluetoothDeviceRef.current.gatt.connect();
           const service = await server.getPrimaryService(serviceUUID);
           txChar.current = await service.getCharacteristic(txCharUUID);
-          setConnectionStatus("connected");
+          setIsConnected(true);
 
           bluetoothDeviceRef.current.addEventListener(
             "gattserverdisconnected",
             () => {
               console.log("Bluetooth disconnected, reconnecting...");
-              setConnectionStatus("disconnected");
+              setIsConnected(false);
               connectBluetooth();
             }
           );
@@ -80,7 +80,7 @@ export default function Playground() {
       } catch (error) {
         console.error(`Connection attempt ${attempt} failed:`, error);
         if (attempt === maxRetries) {
-          setConnectionStatus("disconnected");
+          setIsConnected(false);
         }
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
       }
@@ -101,21 +101,31 @@ export default function Playground() {
     if (!generatedCode) return;
     try {
       if (bluetoothEnabled) {
-        if (connectionStatus !== "connected") {
+        if (!isConnected) {
           await connectBluetooth();
+          
         }
-
         await bluetoothUpload(generatedCode, txChar.current);
-
-      
       } else {
         await usbUpload(generatedCode, portRef);
+        if(!isConnected){
+          setIsConnected(true)
+        }
       }
     } catch (error) {
       console.error("Upload failed:", error);
     }
   };
 
+  const onConnectToggle = () => {
+    if (bluetoothEnabled){
+      connectBluetooth()
+    }
+    else{
+      usbUpload(generatedCode, portRef)
+    }
+    
+  }
 
   return (
     <div className="app-wrapper">
@@ -132,6 +142,9 @@ export default function Playground() {
               liveUsers={17}
               playground={true}
               onRun={uploadCode}
+              isConnected={isConnected}
+              setIsConnected={setIsConnected}
+              onConnectToggle={onConnectToggle}
               // onErase={clearWorkspace}
             />
          

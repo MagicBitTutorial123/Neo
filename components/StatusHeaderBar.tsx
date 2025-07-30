@@ -11,6 +11,7 @@ interface StatusHeaderProps {
   liveUsers: number;
   isConnected?: boolean;
   onConnectToggle?: (connected: boolean) => void;
+  setIsConnected: any,
   onRun?: () => void;
   onPause?: () => void;
   onErase?: () => void;
@@ -25,6 +26,7 @@ export default function StatusHeaderBar({
   timeAllocated,
   liveUsers,
   isConnected = false,
+  setIsConnected,
   onConnectToggle,
   onRun,
   onPause,
@@ -32,7 +34,6 @@ export default function StatusHeaderBar({
   playground = false,
   isRunning = false,
 }: StatusHeaderProps) {
-  const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
@@ -43,8 +44,8 @@ export default function StatusHeaderBar({
   const allocatedSeconds = parseTimeAllocated(timeAllocated);
 
   const handleConnectToggle = () => {
-    const newConnected = !connected;
-    setConnected(newConnected);
+    const newConnected = !isConnected;
+    setIsConnected(newConnected);
     onConnectToggle?.(newConnected);
   };
 
@@ -150,7 +151,7 @@ export default function StatusHeaderBar({
 
           {missionNumber > 1 && (
             <ToggleConnectButton
-              isConnected={connected}
+              isConnected={isConnected}
               onToggle={handleConnectToggle}
             />
           )}

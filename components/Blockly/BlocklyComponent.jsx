@@ -23,11 +23,10 @@ Blockly.setLocale(En);
 
 export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
   const [activeTab, setActiveTab] = useState("Blocks");
-  const workspaceRef = useRef(null);
   const [expandMenu, setexpandMenu] = useState(false);
-  const blocklyDivRef = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [workspaceInitialized, setWorkspaceInitialized] = useState(false);
+  const workspaceRef = useRef(null)
 
   const toolboxConfig = useMemo(() => ({
     kind: "categoryToolbox",
@@ -250,7 +249,6 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
       });
     }
   }, []);
-
 
   useEffect(() => {
     const blocklyBgDiv = document.querySelector(".blocklyMainBackground");
@@ -484,13 +482,11 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
     workspaceRef.current = workspace;
 
     workspaceRef.current.addChangeListener((event) => {
-      if (event.type == "create" || event.type == "move") {
         const xml = Blockly.Xml.workspaceToDom(workspace);
         const xmlText = Blockly.Xml.domToText(xml);
         localStorage.setItem("blocklyWorkspace", xmlText);
         const code = pythonGenerator.workspaceToCode(workspace);
         setGeneratedCode(code);
-      }
     });
   };
 
