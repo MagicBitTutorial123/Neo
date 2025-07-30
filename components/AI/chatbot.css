@@ -182,7 +182,7 @@
 }
 
 .chatbot-wrapper {
-  position: fixed;
+  position: relative;
  
 }
 

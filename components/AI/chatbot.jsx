@@ -4,6 +4,7 @@ import { FaChevronRight, FaRegPaperPlane } from "react-icons/fa";
 import * as Blockly from "blockly";
 import downloadImg from '@/assets/download.png';
 import ChatBubbleSVG from "@/assets/chat-bubble.svg";
+import Image from 'next/image';
 
 
 
@@ -20,10 +21,8 @@ export default function AIChatbot({ position = "right", workspaceRef,onClose }) 
   const [collapseLevel, setCollapseLevel] = useState(0);
   // draggable position
   const chatbotRef = useRef(null);
-  const posRef = useRef({ x: 20, y: 20 }); 
+  const posRef = useRef({ x: 20, y: 430 }); 
 
-
-  
   // block list for Gemini to know
   const blockList = `
 - magicbit_set_digital: sets a digital pin high/low
@@ -46,7 +45,7 @@ useEffect(() => {
 
 //drag
 
-useEffect(() => {
+/*useEffect(() => {
   const el = chatbotRef.current;
   if (!el) return;
 
@@ -57,12 +56,9 @@ useEffect(() => {
 
   const onMouseDown = (e) => {
     isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-
     const rect = el.getBoundingClientRect();
-    initialLeft = rect.left;
-    initialTop = rect.top;
+    startX = e.clientX - rect.left;
+    startY = e.clientY - rect.top;
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
@@ -75,6 +71,85 @@ useEffect(() => {
 
   const onMouseMove = (e) => {
     if (!isDragging) return;
+   const newLeft = e.clientX - startX;
+    const newTop = e.clientY - startY;
+
+
+    el.style.left = `${newLeft}px`;
+    el.style.top = `${newTop}px`;
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+
+
+
+    posRef.current = { x: newLeft, y: newTop };
+  };
+
+  const onMouseUp = () => {
+    isDragging = false;
+    el.style.opacity = "1";
+    el.style.cursor = "default";
+
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+
+  if (header) {
+    header.style.cursor = "grab";
+    header.addEventListener("mousedown", onMouseDown);
+  }
+
+  return () => {
+    if (header) header.removeEventListener("mousedown", onMouseDown);
+  };
+}, []);
+*/
+
+useEffect(() => {
+  const el = chatbotRef.current;
+  if (!el) return;
+
+  // 🟡 Delay just enough to ensure offsetHeight is correct
+  const timeout = setTimeout(() => {
+    if (!el.style.left && !el.style.top) {
+      const height = el.offsetHeight;
+
+      // 💡 Fallback to a default height if 0 (safety)
+      const defaultHeight = height > 0 ? height : 300;
+      const defaultX = 20;
+      const defaultY = window.innerHeight - defaultHeight - 20;
+
+      el.style.left = `${defaultX}px`;
+      el.style.top = `${defaultY}px`;
+
+      posRef.current = { x: defaultX, y: defaultY };
+    }
+  }, 50); // 1 frame delay (~16ms), just to be safe
+
+  let isDragging = false;
+  let startX, startY, initialLeft, initialTop;
+
+  const header = el.querySelector(".chatbot-header");
+
+  const onMouseDown = (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    initialLeft = parseInt(el.style.left, 10) || posRef.current?.x || 0;
+    initialTop = parseInt(el.style.top, 10) || posRef.current?.y || 0;
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+
+    el.style.transition = "none";
+    el.style.opacity = "0.95";
+    el.style.cursor = "grabbing";
+  };
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
 
@@ -104,9 +179,11 @@ useEffect(() => {
   }
 
   return () => {
+    clearTimeout(timeout);
     if (header) header.removeEventListener("mousedown", onMouseDown);
   };
 }, []);
+
 
 
 
@@ -371,7 +448,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
     position: "fixed",
     top: posRef.current.y,
     left: posRef.current.x,
-    zIndex: 9999,
+    zIndex: 99999,
     transition: "opacity 0.2s ease",
 
   }}
@@ -380,7 +457,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
       {/* Bubble absolutely above the minimized widget */}
       {collapseLevel === 2 && (
         <div style={{ position: "relative", width: "210px", height: "60px" }}>
-  <img
+  <Image
     src={ChatBubbleSVG}
     alt="Bubble"
     style={{ width: "100%", height: "100%" }}
@@ -415,7 +492,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
           </div>
           {/* Avatar with active dot */}
           <div className="chatbot-avatar-wrapper">
-            <img
+            <Image
               src={downloadImg}
               alt="Neo"
               className="chatbot-avatar"

@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+"use client";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import blocksTabIcon from "@/assets/blocksTabIcon.svg";
+import codingIcon from "@/assets/codingIcon.svg";
+import dashboardIcon from "@/assets/dashboardIcon.svg";
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
-import { pythonGenerator } from "blockly/python";
 import * as En from "blockly/msg/en";
 import {
   ContinuousToolbox,
@@ -9,136 +12,33 @@ import {
   ContinuousFlyout,
 } from "@blockly/continuous-toolbox";
 import "blockly/javascript";
+import { pythonGenerator } from "blockly/python";
 import Editor from "@monaco-editor/react";
-import BlockMenu from "./BlockMenu";
-import AI from "./AI";
-import "../App.css";
-import "./customblocks/magicbitblocks";
-import "./customblocks/keyboardBlocks";
-import { Menu, X } from "lucide-react";
-import { FaFolder, FaCode, FaTachometerAlt } from "react-icons/fa";
+import "@/components/Blockly/customblocks/magicbitblocks";
+import "@/components/Blockly/customblocks/keyboardBlocks";
+import AIChatbot from "@/components/AI/chatbot";
+import Image from "next/image";
+
 Blockly.setLocale(En);
 
-// Register plugins
-if (
-  !Blockly.registry.hasItem(Blockly.registry.Type.TOOLBOX, "ContinuousToolbox")
-) {
-  Blockly.registry.register(
-    Blockly.registry.Type.TOOLBOX,
-    "ContinuousToolbox",
-    ContinuousToolbox
-  );
-}
-if (
-  !Blockly.registry.hasItem(
-    Blockly.registry.Type.METRICS_MANAGER,
-    "ContinuousMetrics"
-  )
-) {
-  Blockly.registry.register(
-    Blockly.registry.Type.METRICS_MANAGER,
-    "ContinuousMetrics",
-    ContinuousMetrics
-  );
-}
-if (
-  !Blockly.registry.hasItem(
-    Blockly.registry.Type.FLYOUTS_VERTICAL_TOOLBOX,
-    "ContinuousFlyout"
-  )
-) {
-  Blockly.registry.register(
-    Blockly.registry.Type.FLYOUTS_VERTICAL_TOOLBOX,
-    "ContinuousFlyout",
-    ContinuousFlyout
-  );
-}
-
-// Motion blocks
-Blockly.Blocks["motion_move_steps"] = {
-  init: function () {
-    this.appendDummyInput()
-      .appendField("move")
-      .appendField(new Blockly.FieldNumber(10), "STEPS")
-      .appendField("steps");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour("#4A90E2");
-    this.setTooltip("Move forward a number of steps.");
-    this.setHelpUrl("");
-  },
-};
-
-Blockly.Blocks["motion_turn_right"] = {
-  init: function () {
-    this.appendDummyInput()
-      .appendField("turn right")
-      .appendField(new Blockly.FieldAngle(90), "ANGLE");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour("#4A90E2");
-    this.setTooltip("Turn right by angle.");
-    this.setHelpUrl("");
-  },
-};
-
-Blockly.Blocks["motion_turn_left"] = {
-  init: function () {
-    this.appendDummyInput()
-      .appendField("turn left")
-      .appendField(new Blockly.FieldAngle(90), "ANGLE");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour("#4A90E2");
-    this.setTooltip("Turn left by angle.");
-    this.setHelpUrl("");
-  },
-};
-
-pythonGenerator["motion_move_steps"] = function (block) {
-  const steps = block.getFieldValue("STEPS");
-  return `move_forward(${steps})\n`;
-};
-
-pythonGenerator["motion_turn_right"] = function (block) {
-  const angle = block.getFieldValue("ANGLE");
-  return `turn_right(${angle})\n`;
-};
-
-pythonGenerator["motion_turn_left"] = function (block) {
-  const angle = block.getFieldValue("ANGLE");
-  return `turn_left(${angle})\n`;
-};
-
-const BlocklyComponent = ({
-  generatedCode,
-  setGeneratedCode,
-  workspaceRef,
-  portRef,
-}) => {
-  const blocklyDiv = useRef(null);
-  const [showBlockMenu, setShowBlockMenu] = useState(false);
-  const [showAIChat, setShowAIChat] = useState(false);
-  const [toolboxCollapsed, setToolboxCollapsed] = useState(false);
+export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
   const [activeTab, setActiveTab] = useState("Blocks");
+  const [expandMenu, setexpandMenu] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [workspaceInitialized, setWorkspaceInitialized] = useState(false);
+  const workspaceRef = useRef(null)
 
-  const toolboxConfig = {
+  const toolboxConfig = useMemo(() => ({
     kind: "categoryToolbox",
+
     contents: [
       {
         kind: "category",
-        name: "Motion",
-        colour: "#4C97FF",
-        contents: [
-          { kind: "block", type: "motion_move_steps" },
-          { kind: "block", type: "motion_turn_right" },
-          { kind: "block", type: "motion_turn_left" },
-        ],
-      },
-      {
-        kind: "category",
-        name: "magicbit",
-        colour: "#FF8000",
+        name: "Magicbit",
+        colour: "#9B51E0",
+        id: "cat_magicbit",
+        expanded: expandMenu,
+
         contents: [
           { kind: "block", type: "magicbit_set_digital" },
           { kind: "block", type: "magicbit_set_pwm" },
@@ -158,17 +58,19 @@ const BlocklyComponent = ({
       {
         kind: "category",
         name: "Keyboard",
-        colour: "#FF33CC",
-        contents: [
-          { kind: "block", type: "keyboard_when_key_pressed" },
-          // { kind: "block", type: "keyboard_get_key" },
-        ],
-      },
+        colour: "#D96AC2",
+        id: "cat_keyboard",
+        expanded: expandMenu,
 
+        contents: [{ kind: "block", type: "keyboard_when_key_pressed" }],
+      },
       {
         kind: "category",
         name: "Logic",
-        colour: "%{BKY_LOGIC_HUE}",
+        colour: "#F2C94C",
+        id: "cat_logic",
+        expanded: expandMenu,
+
         contents: [
           { kind: "block", type: "controls_if" },
           { kind: "block", type: "logic_compare" },
@@ -182,18 +84,16 @@ const BlocklyComponent = ({
       {
         kind: "category",
         name: "Loops",
-        colour: "%{BKY_LOOPS_HUE}",
+        colour: "#F2994A",
+        id: "cat_loops",
+        expanded: expandMenu,
+
         contents: [
           {
             kind: "block",
             type: "controls_repeat_ext",
             inputs: {
-              TIMES: {
-                shadow: {
-                  type: "math_number",
-                  fields: { NUM: 10 },
-                },
-              },
+              TIMES: { shadow: { type: "math_number", fields: { NUM: 10 } } },
             },
           },
           { kind: "block", type: "controls_whileUntil" },
@@ -201,15 +101,9 @@ const BlocklyComponent = ({
             kind: "block",
             type: "controls_for",
             inputs: {
-              FROM: {
-                shadow: { type: "math_number", fields: { NUM: 1 } },
-              },
-              TO: {
-                shadow: { type: "math_number", fields: { NUM: 10 } },
-              },
-              BY: {
-                shadow: { type: "math_number", fields: { NUM: 1 } },
-              },
+              FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+              TO: { shadow: { type: "math_number", fields: { NUM: 10 } } },
+              BY: { shadow: { type: "math_number", fields: { NUM: 1 } } },
             },
           },
           { kind: "block", type: "controls_forEach" },
@@ -219,7 +113,10 @@ const BlocklyComponent = ({
       {
         kind: "category",
         name: "Math",
-        colour: "%{BKY_MATH_HUE}",
+        colour: "#56CCF2",
+        id: "cat_math",
+        expanded: expandMenu,
+
         contents: [
           { kind: "block", type: "math_number", fields: { NUM: 123 } },
           { kind: "block", type: "math_arithmetic" },
@@ -232,7 +129,9 @@ const BlocklyComponent = ({
       {
         kind: "category",
         name: "Text",
-        colour: "%{BKY_TEXTS_HUE}",
+        colour: "#6FCF97",
+        id: "cat_text",
+
         contents: [
           { kind: "block", type: "text" },
           { kind: "block", type: "text_join" },
@@ -243,268 +142,439 @@ const BlocklyComponent = ({
       {
         kind: "category",
         name: "Variables",
-        colour: "%{BKY_VARIABLES_HUE}",
+        colour: "#F2994A",
+        id: "cat_variables",
         custom: "VARIABLE",
+        expanded: expandMenu,
       },
       {
         kind: "category",
         name: "Functions",
-        colour: "%{BKY_PROCEDURES_HUE}",
+        colour: "#EB5757",
+        id: "cat_functions",
         custom: "PROCEDURE",
-      },
-      {
-        kind: "category",
-        name: "My Blocks",
-        colour: "#4C97FF",
-        contents: [
-          {
-            kind: "button",
-            text: "Make a Block",
-            callbackKey: "MAKE_A_BLOCK",
-          },
-        ],
+        expanded: expandMenu,
       },
     ],
-  };
-
-  const handleBlockCreated = (blockName) => {
-    console.log(`Block "${blockName}" created successfully!`);
-  };
-
-  const handleCreateBlock = () => {
-    setShowBlockMenu(true);
-  };
-  
-  //toggle
-  const toggleToolbox = () => {
-    const workspace = workspaceRef.current;
-    if (workspace) {
-      const flyout = workspace.getFlyout();
-      if (flyout) {
-        if (toolboxCollapsed) {
-          flyout.setVisible(true);
-          setToolboxCollapsed(false);
-        } else {
-          flyout.setVisible(false);
-          setToolboxCollapsed(true);
-        }
-        setTimeout(() => workspace.resize(), 50);
-      }
-    }
-  };
-
+  }));
 
   useEffect(() => {
-    if (!blocklyDiv.current) return;
+    const svgDefs = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg"
+    );
+    svgDefs.setAttribute("style", "height:0;width:0;position:absolute");
+    svgDefs.innerHTML = `
+    <defs>
+    <pattern id="blocklyGridPattern" patternUnits="userSpaceOnUse" width="200" height="200">
+      <!-- Fill background -->
+      <rect width="200" height="200" fill="white" />
+      
+      <!-- Light grid (20px spacing) -->
+      <path d="
+        M 20 0 L 20 200
+        M 40 0 L 40 200
+        M 60 0 L 60 200
+        M 80 0 L 80 200
+        M 100 0 L 100 200
+        M 120 0 L 120 200
+        M 140 0 L 140 200
+        M 160 0 L 160 200
+        M 180 0 L 180 200
+        M 0 20 L 200 20
+        M 0 40 L 200 40
+        M 0 60 L 200 60
+        M 0 80 L 200 80
+        M 0 100 L 200 100
+        M 0 120 L 200 120
+        M 0 140 L 200 140
+        M 0 160 L 200 160
+        M 0 180 L 200 180
+      " stroke="#ddd" stroke-width="1" />
 
-    const workspace = Blockly.inject(blocklyDiv.current, {
-      toolbox: toolboxConfig,
-      plugins: {
-        flyoutsVerticalToolbox: "ContinuousFlyout",
-        metricsManager: "ContinuousMetrics",
-        toolbox: "ContinuousToolbox",
-      },
-      scrollbars: true,
-      horizontalLayout: false,
-      toolboxPosition: "start",
-      renderer: "zelos",
-      theme: Blockly.Themes.Zelos,
-      zoom: {
-        controls: true,
-        wheel: true,
-        startScale: 1.0,
-        maxScale: 3,
-        minScale: 0.3,
-        scaleSpeed: 1.2,
-      },
-      trashcan: true,
-      media: "https://unpkg.com/blockly/media/",
-    });
-
-    workspaceRef.current = workspace;
-
-    const savedState = localStorage.getItem("blocklyWorkspace");
-    if (savedState) {
-      try {
-        const xml = Blockly.utils.xml.textToDom(savedState);
-        Blockly.Xml.domToWorkspace(xml, workspace);
-      } catch (e) {
-        console.error("Error loading saved workspace:", e);
-      }
+      <!-- Bold grid every 10 cells (200px) -->
+      <path d="M 0 0 L 0 200 M 200 0 L 200 200 M 0 0 L 200 0 M 0 200 L 200 200" stroke="#ddd" stroke-width="2" />
+    </pattern>
+  </defs>
+  `;
+    document.body.appendChild(svgDefs);
+    // Register plugins
+    if (
+      !Blockly.registry.hasItem(
+        Blockly.registry.Type.TOOLBOX,
+        "ContinuousToolbox"
+      )
+    ) {
+      Blockly.registry.register(
+        Blockly.registry.Type.TOOLBOX,
+        "ContinuousToolbox",
+        ContinuousToolbox
+      );
+    }
+    if (
+      !Blockly.registry.hasItem(
+        Blockly.registry.Type.METRICS_MANAGER,
+        "ContinuousMetrics"
+      )
+    ) {
+      Blockly.registry.register(
+        Blockly.registry.Type.METRICS_MANAGER,
+        "ContinuousMetrics",
+        ContinuousMetrics
+      );
+    }
+    if (
+      !Blockly.registry.hasItem(
+        Blockly.registry.Type.FLYOUTS_VERTICAL_TOOLBOX,
+        "ContinuousFlyout"
+      )
+    ) {
+      Blockly.registry.register(
+        Blockly.registry.Type.FLYOUTS_VERTICAL_TOOLBOX,
+        "ContinuousFlyout",
+        ContinuousFlyout
+      );
+    }
+    //variable click
+    if (!Blockly.registry.hasItem("toolboxCategory", "VARIABLE")) {
+      Blockly.registry.register("toolboxCategory", "VARIABLE", (workspace) => {
+        return Blockly.Variables.flyoutCategory(workspace);
+      });
     }
 
-    const onChange = () => {
-      // Reset event handler collection
-      pythonGenerator.eventHandlers_ = [];
-      // Generate main code
-      let code = pythonGenerator.workspaceToCode(workspace);
-      // Append all event handlers at the end
-      if (pythonGenerator.eventHandlers_ && pythonGenerator.eventHandlers_.length > 0) {
-        code += '\n' + pythonGenerator.eventHandlers_.join('\n');
-      }
-      setGeneratedCode(code);
-
-      const xml = Blockly.Xml.workspaceToDom(workspace);
-      const xmlText = Blockly.Xml.domToText(xml);
-      localStorage.setItem("blocklyWorkspace", xmlText);
-    };
-
-    workspace.addChangeListener(onChange);
-
-    Blockly.getMainWorkspace()?.registerButtonCallback(
-      "MAKE_A_BLOCK",
-      handleCreateBlock
-    );
-
-    return () => {
-      workspace.removeChangeListener(onChange);
-      workspace.dispose();
-    };
+    //variable function
+    if (!Blockly.registry.hasItem("toolboxCategory", "PROCEDURE")) {
+      Blockly.registry.register("toolboxCategory", "PROCEDURE", (workspace) => {
+        return Blockly.Procedures.flyoutCategory(workspace);
+      });
+    }
   }, []);
 
+  useEffect(() => {
+    const blocklyBgDiv = document.querySelector(".blocklyMainBackground");
+    if (blocklyBgDiv) {
+      blocklyBgDiv.addEventListener("click", () => {
+        if (expandMenu) {
+          setexpandMenu(false);
+          setSelectedCategory("");
+        }
+      });
+    }
+    const rows = document.querySelectorAll(".blocklyTreeRow");
+    rows.forEach((row) => {
+      let clickTimeout;
+      row.addEventListener("click", () => {
+        if (clickTimeout) return;
+        clickTimeout = setTimeout(() => (clickTimeout = null), 1000); // 300ms throttle
+
+        const clickedCategoryId = row.getAttribute("id");
+
+        if (selectedCategory === clickedCategoryId) {
+          setSelectedCategory("");
+        } else {
+          setSelectedCategory(clickedCategoryId);
+        }
+
+        rows.forEach((r) => {
+          r.classList.remove("selected-category");
+          const icon = r.querySelector(".blocklyToolboxCategoryIcon");
+          if (icon) icon.classList.remove("selected-category");
+        });
+
+        row.classList.add("selected-category");
+        const icon = row.querySelector(".blocklyToolboxCategoryIcon");
+        if (icon) icon.classList.add("selected-category");
+
+        const color = row.getAttribute("data-colour");
+        row.style.setProperty("--selected-category-color", color || "#2196f3");
+      });
+    });
+  }, [expandMenu, activeTab, workspaceInitialized]);
+
+  useEffect(() => {
+    if (selectedCategory && !expandMenu) {
+      setexpandMenu(true);
+    }
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    if (activeTab === "Blocks") {
+      const style = document.createElement("style");
+      style.innerHTML = `
+     
+      .blocklyMainBackground {
+        fill: url(#blocklyGridPattern) !important;
+        border-radius: 999px;
+        display: flex;
+        width: 100%
+
+      }
+        .blocklyWorkspace {
+          width: 100%;
+          background-color: red;
+        }
+
+        .blocklySvg{
+          display: flex;
+          width: 100%;
+        }
+  
+      .blocklyToolboxCategoryIcon {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    flex-shrink: 0 !important;
+  }
+    .blocklyToolboxDiv {
+   
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    height: auto !important;
+    max-height: 90vh !important;
+    overflow: visible !important;
+  
+    position: fixed !important;
+    z-index: 100 !important;
+  
+    margin-top: .5rem !important;
+    padding: 1.5rem 0.25rem 1.5rem 0.25rem !important;
+    background-color: #CCE4FF !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem !important;
+    border-radius: 45px !important;
+    box-sizing: border-box;
+    margin-left: 25px !important;
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+  
+  
+    .blocklyTreeRow {
+    background: transparent !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0.25rem 0 !important;
+    box-shadow: none !important;
+    border-radius: 48px !important;
+  }
+  
+  
+  /* Highlight background for selected toolbox category row */
+  .blocklyTreeRow.selected-category {
+    background-color:#FFFFFF !important; 
+    border-radius: 12px !important;
+    padding: 4px 0 !important;
+  }
+  
+  
+  
+  /* === Category Icon Wrapper === */
+  .blocklyToolboxCategory {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    padding: 0.05rem 0 !important;
+  }
+  
+  .blocklyContinuousToolbox .blocklyContinuousCategoryIcon {
+    stroke: none !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  
+  /* === Highlight Selected Icon === */
+  .blocklyToolboxCategoryIcon.selected-category {
+    background-color: var(--selected-category-color, #2196f3) !important;
+    border: 3px solid white !important; /* highlight ring */
+    box-shadow: 0 0 0 2px var(--selected-category-color, #2196f3) !important; 
+  }
+  
+  
+  /* === Category Label (Text) === */
+  .blocklyTreeLabel {
+    font-size: 12px !important;
+    margin-top: 0.25rem;
+    text-align: center;
+    color: black !important;
+    font-weight: 550 !important;
+  }
+  
+  /* === Selected Category Label === */
+  .blocklyTreeRow.blocklyTreeSelected .blocklyTreeLabel {
+    color: black !important;
+    display: ${expandMenu ? "block" : "none"} !important;
+   
+  }
+  
+  /* === Optional: Flyout Visibility Control via expandMenu === */
+  .blocklyFlyout {
+    display: ${expandMenu ? "block" : "none"} !important;
+  }
+  
+  .blocklyFlyoutScrollbar {
+    display: ${expandMenu ? "block" : "none"} !important;
+  }
+    .blocklyFlyoutBackground {
+    fill: #ffffffff !important; 
+    fill-opacity: 1 !important;
+  }
+  
+  .blocklyFlyout {
+    margin-left: 35px !important;
+    max-height: 80vh !important;   
+    top: 4vh !important;        
+    overflow-y: auto !important; 
+      
+  }
+  
+  .blocklyFlyoutScrollbar {
+    margin-left: 35px !important;
+  }
+    .blocklyMainWorkspaceScrollbar{
+    display:none !important;
+    }
+  
+   `;
+      document.head.appendChild(style);
+    }
+  }, [selectedCategory, activeTab, expandMenu]);
+
+  useEffect(() => {
+    if (activeTab === "Blocks") {
+      const savedState = localStorage.getItem("blocklyWorkspace");
+      if (savedState) {
+        try {
+          const xml = Blockly.utils.xml.textToDom(savedState);
+          Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current);
+        } catch (e) {
+          console.error("Error restoring workspace:", e);
+        }
+      }
+    }
+  }, [activeTab]);
+
+  const updateWorkspace = (el) => {
+    const workspace = Blockly.inject(el, {
+      toolbox: toolboxConfig,
+      scrollbars: true,
+      renderer: "zelos",
+      theme: Blockly.Themes.Zelos,
+      trashcan: true,
+      zoom: {
+        controls: false,
+        wheel: true,
+        startScale: 1,
+      },
+      media: "https://unpkg.com/blockly/media/",
+    });
+    workspaceRef.current = workspace;
+
+    workspaceRef.current.addChangeListener((event) => {
+        const xml = Blockly.Xml.workspaceToDom(workspace);
+        const xmlText = Blockly.Xml.domToText(xml);
+        localStorage.setItem("blocklyWorkspace", xmlText);
+        const code = pythonGenerator.workspaceToCode(workspace);
+        setGeneratedCode(code);
+    });
+  };
+
   return (
-  <div style={{ position: "relative", height: "100vh", backgroundColor: "#f0f8ff" }}>
-    
-    {/* Tabs aligned right - updated to match Playground.jsx */}
-    <div
-      className="absolute top-0 right-0 m-2 flex items-center gap-2 z-20"
-    >
-      {["Blocks", "Code", "Dashboard"].map((tab) => (
-        <button
-          key={tab}
-          onClick={() => setActiveTab(tab)}
-          className={`px-4 py-2 rounded font-semibold text-sm ${
-            activeTab === tab ? "bg-blue-100 text-blue-900" : "bg-transparent text-blue-700"
-          }`}
-          style={{ minWidth: 100 }}
+    <>
+      <div className="relative h-full bg-white flex flex-col ">
+        <div
+          className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
+          style={{ borderRadius: "48px" }}
         >
-          {tab === "Blocks" && <FaFolder />}
-          {tab === "Code" && <FaCode />}
-          {tab === "Dashboard" && <FaTachometerAlt />}
-          {tab}
-        </button>
-      ))}
-    </div>
+          <div className="absolute top-0 right-4 m-2 flex items-center gap-4 z-20">
+            <button
+              onClick={() => setActiveTab("Blocks")}
+              className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
+              ${
+                activeTab === "Blocks"
+                  ? "bg-white border border-blue-400 text-black shadow-sm"
+                  : "bg-blue-100 border border-transparent text-blue-800 hover:bg-blue-200"
+              } rounded-l-[9999px] rounded-r-none`}
+              style={{ minWidth: 120 }}
+            >
+              <Image src={blocksTabIcon} alt="Blocks" className="w-5 h-5" />
+              <span className="ml-1 font-bold">Blocks</span>
+            </button>
+            <AIChatbot />
+            <button
+              onClick={()=> setActiveTab("Code")}
+              className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
+      ${
+        activeTab === "Code"
+          ? "bg-white border-blue-400 text-blue-900 shadow-sm"
+          : "bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-200"
+      } rounded-none`}
+              style={{ minWidth: 120 }}
+            >
+              <Image src={codingIcon} alt="Code" className="w-5 h-5" />
+              <span className="ml-1 font-bold">Code</span>
+            </button>
 
-    {/* Blockly Workspace */}
-    <div
-      style={{
-        display: activeTab === "Blocks" ? "block" : "none",
-        height: "100%",
-        position: "relative",
-      }}
-    >
-      <button
-        onClick={toggleToolbox}
-        style={{
-          position: "absolute",
-          top: 10,
-          left: toolboxCollapsed ? 180 : 350,
-          zIndex: 1000,
-          background: "#4a5568",
-          color: "white",
-          border: "none",
-          padding: "6px 10px",
-          borderRadius: 4,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {toolboxCollapsed ? <Menu size={16} /> : <X size={16} />}
-      </button>
-
-      <div
-        ref={blocklyDiv}
-        style={{
-          height: "100%",
-        }}
-      />
-    </div>
-
-    {/* Code View */}
-    {activeTab === "Code" && (
-      <div style={{ height: "100%" }}>
-        <Editor
-          height="100%"
-          defaultLanguage="python"
-          value={generatedCode}
-          theme="vs-dark"
-          options={{
-            readOnly: true,
-            minimap: { enabled: false },
-            fontSize: 14,
-          }}
-        />
+            <button
+              onClick={() => setActiveTab("Dashboard")}
+              className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
+      ${
+        activeTab === "Dashboard"
+          ? "bg-white border-blue-400 text-blue-900 shadow-sm"
+          : "bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-200"
+      } rounded-r-full`}
+              style={{ minWidth: 120 }}
+            >
+              <Image src={dashboardIcon} alt="Dashboard" className="w-5 h-5" />
+              <span className="ml-1 font-bold">Dashboard</span>
+            </button>
+          </div>
+          <div className="relative z-5 flex-grow w-full">
+            {activeTab === "Blocks" && (
+              <div
+                ref={(el) => {
+                  if (!el) return;
+                  updateWorkspace(el);
+                }}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  backgroundColor: "white",
+                }}
+              />
+            )}
+            {activeTab === "Code" && (
+              <Editor
+                height="90vh"
+                defaultLanguage="python"
+                value={generatedCode}
+                theme="vs-light"
+                options={{
+                  readOnly: true,
+                  padding: { top: 40, bottom: 20, left: 20, right: 20 },
+                  minimap: false
+                }}
+              />
+            )}
+            {activeTab === "Dashboard" && (
+              <div className="flex justify-center items-center h-full text-2xl text-blue-800 font-bold">
+                Dashboard Coming Soon!
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    )}
-
-    {/* Dashboard View */}
-    {activeTab === "Dashboard" && (
-      <div
-        style={{
-          padding: 20,
-          height: "100%",
-          color: "#333",
-        }}
-      >
-        <h2>Dashboard</h2>
-        <p>Custom dashboard coming soon.</p>
-      </div>
-    )}
-
-    {/* AI Chat Button */}
-    <button
-      onClick={() => setShowAIChat(!showAIChat)}
-      style={{
-        position: "fixed",
-        bottom: 20,
-        right: 20,
-        zIndex: 999,
-        backgroundColor: "#4f8cff",
-        color: "white",
-        padding: "10px 16px",
-        border: "none",
-        borderRadius: 8,
-        cursor: "pointer",
-      }}
-    >
-      {showAIChat ? "Hide Chat" : "Ask AI"}
-    </button>
-
-    {showAIChat && (
-      <div
-        style={{
-          position: "fixed",
-          bottom: 80,
-          right: 20,
-          width: 400,
-          height: 500,
-          background: "white",
-          border: "1px solid #ccc",
-          borderRadius: 8,
-          overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-          zIndex: 999,
-        }}
-      >
-        <AI workspaceRef={workspaceRef} />
-      </div>
-    )}
-
-    {/* Block creator panel */}
-    {showBlockMenu && (
-      <BlockMenu
-        workspace={workspaceRef.current}
-        onBlockCreated={handleBlockCreated}
-        onClose={() => setShowBlockMenu(false)}
-      />
-    )}
-  </div>
-);
-
-};
-
-
-export default BlocklyComponent;
+    </>
+  );
+}
