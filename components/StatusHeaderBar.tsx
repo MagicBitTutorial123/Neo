@@ -45,8 +45,8 @@ export default function StatusHeaderBar({
 
   const handleConnectToggle = () => {
     console.log("🔗 Connect toggle clicked!");
-    const newConnected = !connected;
-    setConnected(newConnected);
+    const newConnected = !isConnected;
+    setIsConnected(newConnected);
     onConnectToggle?.(newConnected);
   };
 
@@ -58,7 +58,7 @@ export default function StatusHeaderBar({
     >
       <div
         className="flex items-center justify-between max-w-8xl mx-auto relative h-full"
-        style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
+        // style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
       >
         {/* Left: Mission number and title */}
         <div className="flex items-center gap-4 min-w-0 h-full">
@@ -112,7 +112,7 @@ export default function StatusHeaderBar({
               showText={false}
               onTick={setTimerValue}
               missionId={missionNumber.toString()}
-              enablePersistence={enableTimerPersistence}
+              enablePersistence={true}
             />
           </div>
         </div>
