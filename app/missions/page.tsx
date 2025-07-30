@@ -12,7 +12,7 @@ import SideNavbar from "@/components/SideNavbar";
 
 export default function MissionsPage() {
   const { userData } = useUser();
-  const completed = userData?.missionProgress ?? 0;
+  const completed = userData?.missionProgress ?? 2; // change later to 0 using 2 for testing
   const missionList = Object.values(missions);
   // Track the selected mission index for both the stepper and the breadcrumb
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);

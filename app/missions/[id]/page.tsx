@@ -3,7 +3,7 @@ import { useParams } from "next/navigation";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
-import BlocklySplitLayout from "@/components/BlocklySplitLayout";
+import BlocklySplitLayout from "@/components/MissionsSplitLayout";
 import SideNavbar from "@/components/SideNavbar";
 
 const validMissionIds = [

@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #ffffff;
+  user-select: none;
 }
 
 @theme inline {
@@ -68,8 +69,6 @@ body {
 }
 
 .app-wrapper {
-  display: flex;
-  flex-direction: column;
   height: 100vh;
 }
 
