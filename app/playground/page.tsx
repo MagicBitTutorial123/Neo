@@ -27,6 +27,7 @@ export default function Playground() {
   const serviceUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
   const txCharUUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 
+
   // Bluetooth connection
   const connectBluetooth = async (maxRetries = 10, isUserInitiated = false) => {
     if (connectionStatus === "connecting") return;

@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import smallLogo from "@/assets/logo-small.png"
@@ -10,15 +10,13 @@ import sideLogo from "@/assets/side-logo.png"
 export default function SideNavbar({
   avatar,
   name,
-setsidebarCollapsed, 
-sidebarCollapsed, 
 }: {
   avatar?: string;
   name?: string;
-  setsidebarCollapsed?: React.Dispatch<React.SetStateAction<boolean>>
-  sidebarCollapsed?: boolean;
 }) {
   const { registrationData, userData } = useUser();
+  const [sidebarCollapsed,setsidebarCollapsed] = useState(false);
+
 
   // Use provided props or fall back to context data
   const userAvatar =

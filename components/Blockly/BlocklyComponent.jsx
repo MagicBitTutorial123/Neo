@@ -251,6 +251,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
     }
   }, []);
 
+
   useEffect(() => {
     const blocklyBgDiv = document.querySelector(".blocklyMainBackground");
     if (blocklyBgDiv) {
@@ -306,7 +307,19 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
       .blocklyMainBackground {
         fill: url(#blocklyGridPattern) !important;
         border-radius: 999px;
+        display: flex;
+        width: 100%
+
       }
+        .blocklyWorkspace {
+          width: 100%;
+          background-color: red;
+        }
+
+        .blocklySvg{
+          display: flex;
+          width: 100%;
+        }
   
       .blocklyToolboxCategoryIcon {
     width: 40px !important;
@@ -422,7 +435,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
   
   .blocklyFlyout {
     margin-left: 35px !important;
-    max-height: 100vh !important;   
+    max-height: 80vh !important;   
     top: 4vh !important;        
     overflow-y: auto !important; 
       
@@ -431,6 +444,9 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
   .blocklyFlyoutScrollbar {
     margin-left: 35px !important;
   }
+    .blocklyMainWorkspaceScrollbar{
+    display:none !important;
+    }
   
    `;
       document.head.appendChild(style);
