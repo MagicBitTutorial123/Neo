@@ -16,11 +16,17 @@ export default function MissionsPage() {
   const missionList = Object.values(missions);
   // Track the selected mission index for both the stepper and the breadcrumb
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="flex min-h-screen min-w-screen h-screen w-screen bg-white overflow-hidden max-w-screen max-h-screen">
-      <SideNavbar />
-      <main className="flex-1 flex flex-col overflow-hidden max-w-screen max-h-screen h-screen w-full p-0 m-0">
+      <SideNavbar onCollapse={setSidebarCollapsed} />
+      <main
+        className="flex-1 flex flex-col overflow-hidden max-w-screen max-h-screen h-screen w-full p-0 m-0 transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+        }}
+      >
         {/* Breadcrumb */}
         <div className="text-2xl font-extrabold text-[#222E3A] mb-6 flex items-center gap-2 px-8 pt-8">
           <span className="text-[#222E3A]">Missions</span>
