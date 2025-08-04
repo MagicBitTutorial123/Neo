@@ -4,7 +4,7 @@ import Image from "next/image";
 import MissionTimer, { formatTime } from "./MissionTimer";
 import ToggleConnectButton from "@/components/ToggleConnectButton";
 
-interface StatusHeaderProps {
+interface HeaderProps {
   missionNumber: number;
   title: string;
   timeAllocated: string;
@@ -16,11 +16,12 @@ interface StatusHeaderProps {
   onPause?: () => void;
   onErase?: () => void;
   isRunning?: boolean;
-  playground?: boolean;
-  clearWorkspace?: () => void;
+  sidebarCollapsed?: boolean;
+  enableTimerPersistence?: boolean;
+  isPlayground?: boolean;
 }
 
-export default function StatusHeaderBar({
+export default function Header({
   missionNumber,
   title,
   timeAllocated,
@@ -33,7 +34,11 @@ export default function StatusHeaderBar({
   onErase,
   playground = false,
   isRunning = false,
-}: StatusHeaderProps) {
+  sidebarCollapsed = false,
+  enableTimerPersistence = false,
+  isPlayground = false
+}: HeaderProps) {
+  const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
@@ -61,37 +66,20 @@ export default function StatusHeaderBar({
         // style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
       >
         {/* Left: Mission number and title */}
-        <div className="flex items-center gap-4 min-w-0 h-full">
+        <div className="flex items-center gap-8 min-w-0 h-full">
           <span className="text-2xl font-extrabold text-white whitespace-nowrap">
-            {playground
-              ? "Playground"
-              : `Mission ${missionNumber.toString().padStart(2, "0")}`}
+           {!isPlayground ? `Mission ${missionNumber.toString().padStart(2, "0")}` : "Playground"} 
           </span>
           {/* Vertical separator */}
-          <span className="w-px h-8 bg-[#E0E6ED] mx-4 inline-block" />
-          {!playground ? (
+          {!isPlayground && (
+            <>
+            <span className="w-px h-8 bg-[#E0E6ED] mx-4 inline-block" />
             <span className="text-lg font-medium text-[#FF9C32] truncate">
               {title}
             </span>
-          ) : (
-            <>
-              <span className="relative flex items-center justify-center">
-                <span className="w-3 h-3 bg-green-400 rounded-full block z-10" />
-                <span
-                  className="absolute w-6 h-6 rounded-full bg-green-400 opacity-40 animate-ping z-0"
-                  style={{
-                    left: "-6px",
-                    top: "-6px",
-                    animationDuration: "1.8s",
-                  }}
-                />
-              </span>
-              <span className="text-white text-lg font-regular">
-                {liveUsers} online
-              </span>
             </>
           )}
-        </div>
+          </div>
 
         {/* Center: Timer pill */}
         {! playground && (
@@ -122,7 +110,7 @@ export default function StatusHeaderBar({
         {/* Right: Live users, Control buttons (for mission 3+), and ToggleConnectButton (for mission 2+) */}
         <div className="flex items-center gap-8 ml-auto h-full">
           {/* Control buttons for mission 3+ */}
-          {(missionNumber >= 3 || playground) && (
+          {(missionNumber >= 3 || isPlayground) && (
             <div className="flex items-center gap-3">
               {/* Play/Pause button */}
               <button
@@ -156,7 +144,7 @@ export default function StatusHeaderBar({
             </div>
           )}
 
-          {missionNumber > 1 && (
+          {(missionNumber > 1 || isPlayground) && (
             <ToggleConnectButton
               isConnected={isConnected}
               onToggle={handleConnectToggle}

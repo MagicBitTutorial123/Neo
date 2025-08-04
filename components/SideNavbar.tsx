@@ -24,6 +24,28 @@ export default function SideNavbar({
   const userName = name || userData?.name || registrationData.name || "User";
   const pathname = usePathname();
 
+  // Auto-collapse sidebar on smaller screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setCollapsed(true);
+      } else {
+        setCollapsed(false);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Notify parent when collapsed state changes
+  useEffect(() => {
+    onCollapse?.(collapsed);
+  }, [collapsed, onCollapse]);
+
   // Use userData from context for mission completion status
   const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
 

@@ -492,7 +492,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
 
   return (
     <>
-      <div className="relative h-full bg-white flex flex-col ">
+      <div className="h-full bg-white flex flex-col ">
         <div
           className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
           style={{ borderRadius: "48px" }}
@@ -511,7 +511,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
               <Image src={blocksTabIcon} alt="Blocks" className="w-5 h-5" />
               <span className="ml-1 font-bold">Blocks</span>
             </button>
-            <AIChatbot />
+            {/* <AIChatbot /> */}
             <button
               onClick={()=> setActiveTab("Code")}
               className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
@@ -540,7 +540,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
               <span className="ml-1 font-bold">Dashboard</span>
             </button>
           </div>
-          <div className="relative z-5 flex-grow w-full">
+          <div className="relative z-5 flex-grow w-full ">
             {activeTab === "Blocks" && (
               <div
                 ref={(el) => {

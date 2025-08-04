@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './chatbot.css';
 import { FaChevronRight, FaRegPaperPlane } from "react-icons/fa";
 import * as Blockly from "blockly";
 import downloadImg from '@/assets/download.png';
