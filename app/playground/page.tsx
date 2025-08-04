@@ -108,37 +108,6 @@ export default function Playground() {
         if (!isConnected) {
           setIsConnected(true);
         }
-
-        // Only request new device if user initiated or we have no device
-        if (isUserInitiated || !bluetoothDeviceRef.current) {
-          bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
-            filters: [{ name: "ESP32-BLE" }],
-            optionalServices: [serviceUUID],
-          });
-
-          const server = await bluetoothDeviceRef.current.gatt.connect();
-          const service = await server.getPrimaryService(serviceUUID);
-          txChar.current = await service.getCharacteristic(txCharUUID);
-          setIsConnected(true);
-
-          bluetoothDeviceRef.current.addEventListener(
-            "gattserverdisconnected",
-            () => {
-              console.log("Bluetooth disconnected, reconnecting...");
-              setIsConnected(false);
-              connectBluetooth();
-            }
-          );
-          return;
-        }
-
-        throw new Error("No device available for reconnection");
-      } catch (error) {
-        console.error(`Connection attempt ${attempt} failed:`, error);
-        if (attempt === maxRetries) {
-          setIsConnected(false);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
       }
     } catch (error) {
       console.error("Upload failed:", error);
@@ -182,4 +151,3 @@ export default function Playground() {
     </div>
   );
 }
- 
