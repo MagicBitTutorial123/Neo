@@ -11,7 +11,7 @@ interface HeaderProps {
   liveUsers: number;
   isConnected?: boolean;
   onConnectToggle?: (connected: boolean) => void;
-  setIsConnected: any,
+  setIsConnected: any;
   onRun?: () => void;
   onPause?: () => void;
   onErase?: () => void;
@@ -36,7 +36,7 @@ export default function Header({
   isRunning = false,
   sidebarCollapsed = false,
   enableTimerPersistence = false,
-  isPlayground = false
+  isPlayground = false,
 }: HeaderProps) {
   const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
@@ -62,49 +62,50 @@ export default function Header({
       onClick={() => console.log("🎯 MissionHeader container clicked!")}
     >
       <div
-        className="flex items-center justify-between max-w-8xl mx-auto relative h-full"
-        // style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
+        className="flex items-center justify-between max-w-8xl mx-auto relative h-full transition-all duration-300 ease-in-out"
+        style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
       >
         {/* Left: Mission number and title */}
         <div className="flex items-center gap-8 min-w-0 h-full">
           <span className="text-2xl font-extrabold text-white whitespace-nowrap">
-           {!isPlayground ? `Mission ${missionNumber.toString().padStart(2, "0")}` : "Playground"} 
+            {!isPlayground
+              ? `Mission ${missionNumber.toString().padStart(2, "0")}`
+              : "Playground"}
           </span>
           {/* Vertical separator */}
           {!isPlayground && (
             <>
-            <span className="w-px h-8 bg-[#E0E6ED] mx-4 inline-block" />
-            <span className="text-lg font-medium text-[#FF9C32] truncate">
-              {title}
-            </span>
+              <span className="w-px h-8 bg-[#E0E6ED] mx-4 inline-block" />
+              <span className="text-lg font-medium text-[#FF9C32] truncate">
+                {title}
+              </span>
             </>
           )}
-          </div>
-
-        {/* Center: Timer pill */}
-        {! playground && (
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-full">
-          <div className="flex items-center gap-3 bg-[#222A36] rounded-full px-6 py-1 min-w-[120px] shadow-inner border border-[#222A36] h-full">
-            <span
-              className={
-                timerValue < 0
-                  ? "text-[#FF4D4F] text-lg font-mono font-bold"
-                  : "text-white text-lg font-mono font-bold"
-              }
-              style={{ letterSpacing: 2 }}
-            >
-              {timerValue < 0 ? "Timeout!" : formatTime(timerValue)}
-            </span>
-            <MissionTimer
-              allocatedTime={allocatedSeconds}
-              showText={false}
-              onTick={setTimerValue}
-              missionId={missionNumber.toString()}
-              enablePersistence={true}
-            />
-          </div>
         </div>
 
+        {/* Center: Timer pill */}
+        {!playground && (
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-full">
+            <div className="flex items-center gap-3 bg-[#222A36] rounded-full px-6 py-1 min-w-[120px] shadow-inner border border-[#222A36] h-full">
+              <span
+                className={
+                  timerValue < 0
+                    ? "text-[#FF4D4F] text-lg font-mono font-bold"
+                    : "text-white text-lg font-mono font-bold"
+                }
+                style={{ letterSpacing: 2 }}
+              >
+                {timerValue < 0 ? "Timeout!" : formatTime(timerValue)}
+              </span>
+              <MissionTimer
+                allocatedTime={allocatedSeconds}
+                showText={false}
+                onTick={setTimerValue}
+                missionId={missionNumber.toString()}
+                enablePersistence={true}
+              />
+            </div>
+          </div>
         )}
 
         {/* Right: Live users, Control buttons (for mission 3+), and ToggleConnectButton (for mission 2+) */}

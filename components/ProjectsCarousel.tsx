@@ -11,11 +11,15 @@ interface Project {
 
 interface ProjectsCarouselProps {
   projects: Project[];
+  sidebarCollapsed?: boolean;
 }
 
 const CARDS_PER_VIEW = 3;
 
-export default function ProjectsCarousel({ projects }: ProjectsCarouselProps) {
+export default function ProjectsCarousel({
+  projects,
+  sidebarCollapsed = false,
+}: ProjectsCarouselProps) {
   const [index, setIndex] = useState(0);
   const maxIndex = Math.max(0, projects.length - CARDS_PER_VIEW);
 
@@ -35,18 +39,24 @@ export default function ProjectsCarousel({ projects }: ProjectsCarouselProps) {
         <div
           className="flex gap-6 transition-transform duration-500"
           style={{
-            transform: `translateX(-${index * 306}px)`, // 290px card + 16px gap
+            transform: `translateX(-${
+              index * (sidebarCollapsed ? 336 : 306)
+            }px)`, // card width + 16px gap
             willChange: "transform",
           }}
         >
           {projects.map((project: Project) => (
             <div
               key={project.id}
-              className={`min-w-[290px] max-w-[290px] rounded-2xl bg-white shadow flex flex-col overflow-hidden ${
+              className={`rounded-2xl bg-white shadow flex flex-col overflow-hidden ${
                 project.faded
                   ? "opacity-40 grayscale"
                   : "hover:shadow-lg hover:shadow-[#00000022]"
-              } transition-shadow border border-[#E0E6ED] relative mb-6`}
+              } transition-all duration-300 ease-in-out border border-[#E0E6ED] relative mb-6`}
+              style={{
+                minWidth: sidebarCollapsed ? "320px" : "290px",
+                maxWidth: sidebarCollapsed ? "320px" : "290px",
+              }}
             >
               <div className="relative w-full h-40 bg-[#F5F7FA]">
                 <Image

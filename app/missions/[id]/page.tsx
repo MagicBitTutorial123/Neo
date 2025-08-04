@@ -447,7 +447,12 @@ export default function MissionPage() {
           )}
 
           <SideNavbar onCollapse={setSidebarCollapsed} />
-          <div className="flex-1 overflow-hidden relative z-30">
+          <div
+            className="flex-1 overflow-hidden relative z-30 transition-all duration-300 ease-in-out"
+            style={{
+              marginLeft: sidebarCollapsed ? "80px" : "260px",
+            }}
+          >
             <StandardMissionLayout
               mission={mission}
               onStateChange={handleStateChange}
@@ -654,7 +659,12 @@ export default function MissionPage() {
           )}
 
           <SideNavbar onCollapse={setSidebarCollapsed} />
-          <div className="flex-1 overflow-hidden relative z-30">
+          <div
+            className="flex-1 overflow-hidden relative z-30 transition-all duration-300 ease-in-out"
+            style={{
+              marginLeft: sidebarCollapsed ? "80px" : "260px",
+            }}
+          >
             <BlocklySplitLayout
               mission={mission}
               onStateChange={handleStateChange}
