@@ -4,7 +4,7 @@ import Image from "next/image";
 import MissionTimer, { formatTime } from "./MissionTimer";
 import ToggleConnectButton from "@/components/ToggleConnectButton";
 
-interface MissionHeaderProps {
+interface HeaderProps {
   missionNumber: number;
   title: string;
   timeAllocated: string;
@@ -17,9 +17,10 @@ interface MissionHeaderProps {
   isRunning?: boolean;
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
+  isPlayground?: boolean;
 }
 
-export default function MissionHeader({
+export default function Header({
   missionNumber,
   title,
   timeAllocated,
@@ -32,7 +33,8 @@ export default function MissionHeader({
   isRunning = false,
   sidebarCollapsed = false,
   enableTimerPersistence = false,
-}: MissionHeaderProps) {
+  isPlayground = false
+}: HeaderProps) {
   const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
 
@@ -61,16 +63,20 @@ export default function MissionHeader({
         style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
       >
         {/* Left: Mission number and title */}
-        <div className="flex items-center gap-4 min-w-0 h-full">
+        <div className="flex items-center gap-8 min-w-0 h-full">
           <span className="text-2xl font-extrabold text-white whitespace-nowrap">
-            Mission {missionNumber.toString().padStart(2, "0")}
+           {!isPlayground ? `Mission ${missionNumber.toString().padStart(2, "0")}` : "Playground"} 
           </span>
           {/* Vertical separator */}
-          <span className="w-px h-8 bg-[#E0E6ED] mx-4 inline-block" />
-          <span className="text-lg font-medium text-[#FF9C32] truncate">
-            {title}
-          </span>
-        </div>
+          {!isPlayground && (
+            <>
+            <span className="w-px h-8 bg-[#E0E6ED] mx-4 inline-block" />
+            <span className="text-lg font-medium text-[#FF9C32] truncate">
+              {title}
+            </span>
+            </>
+          )}
+          </div>
 
         {/* Center: Timer pill */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-full">
@@ -109,7 +115,7 @@ export default function MissionHeader({
           </span>
 
           {/* Control buttons for mission 3+ */}
-          {missionNumber >= 3 && (
+          {(missionNumber >= 3 || isPlayground) && (
             <div className="flex items-center gap-3">
               {/* Play/Pause button */}
               <button
@@ -143,7 +149,7 @@ export default function MissionHeader({
             </div>
           )}
 
-          {missionNumber > 1 && (
+          {(missionNumber > 1 || isPlayground) && (
             <ToggleConnectButton
               isConnected={connected}
               onToggle={handleConnectToggle}

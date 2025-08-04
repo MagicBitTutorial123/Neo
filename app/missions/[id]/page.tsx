@@ -6,7 +6,7 @@ import { missionLayoutMap } from "@/data/missionLayoutMap";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
 import BlocklySplitLayout from "@/components/BlocklySplitLayout";
 import SideNavbar from "@/components/SideNavbar";
-import MissionHeader from "@/components/MissionHeader";
+import Header from "@/components/StatusHeaderBar";
 import CountdownTimer from "@/components/CountdownTimer";
 import StepQuestionCard from "@/components/StepQuestionCard";
 import MCQCard from "@/components/MCQCard";
@@ -431,7 +431,7 @@ export default function MissionPage() {
           {/* Mission Header - Full width behind everything including sidebar */}
           {showHeader && (
             <div className="absolute top-0 left-0 right-0 z-40">
-              <MissionHeader
+              <Header
                 missionNumber={mission.id}
                 title={mission.title}
                 timeAllocated={mission.intro.timeAllocated}
@@ -638,7 +638,7 @@ export default function MissionPage() {
           {/* Mission Header - Full width behind everything including sidebar */}
           {showHeader && (
             <div className="absolute top-0 left-0 right-0 z-40">
-              <MissionHeader
+              <Header
                 missionNumber={mission.id}
                 title={mission.title}
                 timeAllocated={mission.intro.timeAllocated}
