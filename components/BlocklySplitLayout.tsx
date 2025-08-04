@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import MissionIntro from "@/components/MissionIntro";
-import MissionHeader from "@/components/MissionHeader";
+import Header from "@/components/StatusHeaderBar";
 import CongratsCard from "@/components/CongratsCard";
 import StepQuestionCard from "@/components/StepQuestionCard";
 import MCQCard from "@/components/MCQCard";
@@ -12,6 +12,7 @@ import { missions } from "@/data/missions";
 import { useUser } from "@/context/UserContext";
 import { completeMission1, completeMission2 } from "@/utils/userState";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
+import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 
 export default function BlocklySplitLayout({
   mission,
@@ -60,6 +61,7 @@ export default function BlocklySplitLayout({
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
+  const [generatedCode,setGeneratedCode] = useState("")
 
   // Load saved state on mount
   useEffect(() => {
@@ -331,9 +333,9 @@ export default function BlocklySplitLayout({
   return (
     <div className="flex min-h-screen bg-white relative">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen relative">
+      <div className="flex-1 flex flex-row h-screen relative">
         {/* Split Content Area - Below the header */}
-        <div className="flex flex-1 w-full" style={{ marginTop: "65px" }}>
+        <div className="flex w-full h-full" style={{ marginTop: "65px" }}>
           {/* Left Side - Instructions and Images */}
           <div
             className="flex flex-col bg-[#F8F9FC]"
@@ -344,11 +346,9 @@ export default function BlocklySplitLayout({
               marginLeft: sidebarCollapsed ? "5px" : "10px",
             }}
           >
-            {/* Content Area */}
             <div className="h-full p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pt-10 pb-8">
               {mission.steps[currentStep] ? (
                 <>
-                  {/* Step Title */}
                   <div className="flex items-center mb-3">
                     <span
                       className="text-white text-xs font-bold px-5 py-1 mr-3"
@@ -368,7 +368,6 @@ export default function BlocklySplitLayout({
                     </span>
                   </div>
 
-                  {/* Blocks Section */}
                   {mission.steps[currentStep].blocks && (
                     <div className="mb-3 ml-2 pt-2">
                       <h3 className="text-sm font-bold text-[#222E3A] mb-2">
@@ -389,7 +388,6 @@ export default function BlocklySplitLayout({
                     </div>
                   )}
 
-                  {/* Try This Section */}
                   {mission.steps[currentStep].tryThis && (
                     <div className="mb-3 ml-2">
                       <h3 className="text-sm font-bold text-[#222E3A] mb-2">
@@ -401,7 +399,6 @@ export default function BlocklySplitLayout({
                     </div>
                   )}
 
-                  {/* Why It Works Section */}
                   {mission.steps[currentStep].whyItWorks && (
                     <div className="mb-4 ml-2">
                       <h3 className="text-sm font-bold text-[#222E3A] mb-2">
@@ -413,7 +410,6 @@ export default function BlocklySplitLayout({
                     </div>
                   )}
 
-                  {/* step Image */}
                   <div className="flex items-center justify-center mb-8">
                     {mission.steps[currentStep].image && (
                       <div className="relative w-full max-w-[400px] bg-gray-100 rounded-xl overflow-hidden">
@@ -432,7 +428,6 @@ export default function BlocklySplitLayout({
                 </div>
               )}
 
-              {/* Navigation Buttons - Inside content area */}
               <div className="flex justify-between items-center px-2 mb-4 mt-8">
                 {currentStep > 0 && (
                   <button
@@ -443,7 +438,6 @@ export default function BlocklySplitLayout({
                   </button>
                 )}
                 {currentStep === 0 && <div></div>}{" "}
-                {/* Empty div for spacing when no Previous button */}
                 {currentStep < mission.steps.length - 1 ? (
                   <button
                     onClick={handleNext}
@@ -471,9 +465,9 @@ export default function BlocklySplitLayout({
           />
 
           {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
-          <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
+            <BlocklyComponent generatedCode={generatedCode} setGeneratedCode={setGeneratedCode}/>
+          {/* <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
             <div className="h-full flex flex-col">
-              {/* Top Controls */}
               <div className="flex items-center justify-between p-4 border-b border-[#E0E6ED]">
                 <div className="flex space-x-2">
                   <button className="px-4 py-2 bg-[#F28B20] text-white rounded-lg font-medium flex items-center gap-2">
@@ -512,7 +506,6 @@ export default function BlocklySplitLayout({
                 </div>
               </div>
 
-              {/* Coding Workspace Placeholder */}
               <div className="flex-1 p-8 ">
                 <div className="h-full bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
                   <div className="text-center">
@@ -526,7 +519,8 @@ export default function BlocklySplitLayout({
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
+
         </div>
       </div>
 
