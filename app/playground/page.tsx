@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import React, { useEffect, useRef } from "react";
 import "blockly/javascript";
 import "@/components/Blockly/customblocks/magicbitblocks";
@@ -9,16 +9,16 @@ import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import * as En from "blockly/msg/en";
-import {usbUpload} from "@/utils/usbUpload"
-import {keyboardSendBLE} from "@/utils/keyboardPress"
-import {bluetoothUpload} from "@/utils/bluetoothUpload"
+import { usbUpload } from "@/utils/usbUpload";
+import { keyboardSendBLE } from "@/utils/keyboardPress";
+import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import { useState } from "react";
 
 Blockly.setLocale(En);
 
 export default function Playground() {
   const [generatedCode, setGeneratedCode] = useState("");
- const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
+  const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
   const portRef = useRef(null);
@@ -27,10 +27,9 @@ export default function Playground() {
   const serviceUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
   const txCharUUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 
-
   // Bluetooth connection
   const connectBluetooth = async (maxRetries = 10, isUserInitiated = false) => {
-   if (isConnected) return; // already connected or connecting
+    if (isConnected) return; // already connected or connecting
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -40,7 +39,6 @@ export default function Playground() {
           const service = await server.getPrimaryService(serviceUUID);
           txChar.current = await service.getCharacteristic(txCharUUID);
           setIsConnected(true);
-
 
           bluetoothDeviceRef.current.addEventListener(
             "gattserverdisconnected",
@@ -96,20 +94,19 @@ export default function Playground() {
     }
   }, [bluetoothEnabled]);
 
-   // Upload code based on current mode
+  // Upload code based on current mode
   const uploadCode = async () => {
     if (!generatedCode) return;
     try {
       if (bluetoothEnabled) {
         if (!isConnected) {
           await connectBluetooth();
-          
         }
         await bluetoothUpload(generatedCode, txChar.current);
       } else {
         await usbUpload(generatedCode, portRef);
-        if(!isConnected){
-          setIsConnected(true)
+        if (!isConnected) {
+          setIsConnected(true);
         }
       }
     } catch (error) {
@@ -118,23 +115,19 @@ export default function Playground() {
   };
 
   const onConnectToggle = () => {
-    if (bluetoothEnabled){
-      connectBluetooth()
+    if (bluetoothEnabled) {
+      connectBluetooth();
+    } else {
+      usbUpload(generatedCode, portRef);
     }
-    else{
-      usbUpload(generatedCode, portRef)
-    }
-    
-  }
+  };
 
   return (
     <div className="app-wrapper">
       <div>
         <div className="h-screen bg-white flex flex-row w-screen">
-          <SideNavbar/>
-          <div
-            className="flex flex-col w-full h-full"
-          >
+          <SideNavbar />
+          <div className="flex flex-col w-full h-full">
             <StatusHeaderBar
               missionNumber={2}
               title={"test"}
@@ -147,8 +140,11 @@ export default function Playground() {
               onConnectToggle={onConnectToggle}
               // onErase={clearWorkspace}
             />
-         
-            <BlocklyComponent  generatedCode={generatedCode} setGeneratedCode={setGeneratedCode}/>
+
+            <BlocklyComponent
+              generatedCode={generatedCode}
+              setGeneratedCode={setGeneratedCode}
+            />
           </div>
         </div>
       </div>
