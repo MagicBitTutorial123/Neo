@@ -61,7 +61,7 @@ export default function BlocklySplitLayout({
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
-  const [generatedCode,setGeneratedCode] = useState("")
+  const [generatedCode, setGeneratedCode] = useState("");
 
   // Load saved state on mount
   useEffect(() => {
@@ -464,9 +464,11 @@ export default function BlocklySplitLayout({
             style={{ cursor: isResizing ? "ew-resize" : "ew-resize" }}
           />
           <div className="flex-grow mb-16">
-          {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
-            <BlocklyComponent generatedCode={generatedCode} setGeneratedCode={setGeneratedCode}/>
-
+            {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
+            <BlocklyComponent
+              generatedCode={generatedCode}
+              setGeneratedCode={setGeneratedCode}
+            />
           </div>
           {/* <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
             <div className="h-full flex flex-col">
@@ -522,7 +524,6 @@ export default function BlocklySplitLayout({
               </div>
             </div>
           </div> */}
-
         </div>
       </div>
 
@@ -576,7 +577,6 @@ export default function BlocklySplitLayout({
     </div>
   );
 }
-
 function PlaygroundUnlockedCard({ onContinue }: { onContinue: () => void }) {
   return (
     <div

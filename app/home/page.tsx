@@ -171,7 +171,7 @@ export default function HomePage() {
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
-    <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
+    <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0 min-h-screen">
       {/* Mobile Mission Progress Bar - Top of page */}
       <div className="lg:hidden w-full flex flex-col items-center mb-4">
         <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -190,9 +190,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-start justify-between w-full max-w-7xl mx-auto gap-6 lg:gap-0">
+      <div className="flex flex-col lg:flex-row items-start justify-start w-full max-w-7xl mx-auto gap-6 lg:gap-0 h-full">
         {/* Left: Welcome and Mission */}
-        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px]">
+        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px] h-full">
           <div className="mb-2">
             <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#FF9C32]">
               Welcome back!
@@ -235,7 +235,7 @@ export default function HomePage() {
             </button>
           </div>
           {/* Project of the week - new layout */}
-          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full">
+          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full min-h-[200px]">
             {/* Left: Text */}
             <div className="flex flex-col justify-center p-4 sm:p-6 md:p-8 flex-1 min-w-0 sm:min-w-[220px] h-full">
               <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-4">
@@ -260,7 +260,7 @@ export default function HomePage() {
               </div>
             </div>
             {/* Right: Image */}
-            <div className="flex-shrink-0 w-full sm:w-[260px] md:w-[320px] lg:w-[340px] h-full relative overflow-hidden m-0 p-0">
+            <div className="flex-shrink-0 w-full sm:w-[260px] md:w-[320px] lg:w-[340px] h-full relative overflow-hidden m-0 p-0 min-h-[200px]">
               <Image
                 src="/project-image-4.png"
                 alt="Project of the Week"
@@ -279,7 +279,7 @@ export default function HomePage() {
           </div>
         </div>
         {/* Right: Mission Progress, Badges, Battery, Tip */}
-        <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full">
+        <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full flex-shrink-0">
           {/* Mission Progress Bar - Desktop Only */}
           <div className="hidden lg:flex w-full flex-col items-center mb-2">
             <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -405,7 +405,7 @@ export default function HomePage() {
       <SideNavbar onCollapse={setSidebarCollapsed} />
       {/* Main Content */}
       <main
-        className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
+        className="flex-1 flex flex-col items-start relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen w-full"
         style={{
           marginLeft: sidebarCollapsed ? "80px" : "260px",
         }}

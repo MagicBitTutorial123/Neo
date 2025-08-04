@@ -135,7 +135,8 @@ export default function CongratsCard({
             <div className="flex gap-6 mb-6">
               <div className="flex flex-col items-center">
                 <div className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1">
-                  {points}
+                  25
+                  <span className="text-sm">XP</span>
                 </div>
                 <div className="text-[#A1A6B0] text-xs font-semibold">
                   Points

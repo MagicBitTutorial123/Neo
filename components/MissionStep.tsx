@@ -103,7 +103,7 @@ export default function MissionStep({
                 <img
                   src={stepImage}
                   alt={stepTitle}
-                  className="max-h-[340px] w-auto object-contain"
+                  className="max-h-[500px] w-auto object-contain"
                 />
               )}
             </div>

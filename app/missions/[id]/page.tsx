@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
@@ -37,6 +37,7 @@ type MissionId = (typeof validMissionIds)[number];
 export default function MissionPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   let id = params.id;
   if (Array.isArray(id)) id = id[0];
   id = String(id);
@@ -52,6 +53,7 @@ export default function MissionPage() {
   const [showHeader, setShowHeader] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Overlay states - moved to page level
   const [showStepQuestion, setShowStepQuestion] = useState(false);
@@ -98,6 +100,25 @@ export default function MissionPage() {
     setCurrentSuccessImage(getRandomImage(successImages));
     setCurrentRetryImage(getRandomImage(retryImages));
   };
+
+  // Check for showIntro query parameter and reset state if needed
+  useEffect(() => {
+    const showIntroParam = searchParams.get("showIntro");
+    if (showIntroParam === "true") {
+      console.log(
+        "🔄 showIntro=true detected, resetting mission state to show intro"
+      );
+      setForceHideIntro(false);
+      setShowHeader(false);
+      setShowCountdown(false);
+      setIsRunning(false);
+      setFromNo(false);
+      setCompletedMCQSteps(new Set());
+      // Clear saved state to force intro display
+      MissionStatePersistence.clearMissionState();
+      TimerPersistence.clearTimerState();
+    }
+  }, [searchParams]);
 
   // Load mission state on mount
   useEffect(() => {
@@ -416,13 +437,17 @@ export default function MissionPage() {
   useEffect(() => {
     if (showHelpAccepted) {
       const timeout = setTimeout(() => {
-        // Navigate to next mission
+        // Navigate to next mission with intro parameter
         const nextMissionId = String(Number(mission.id) + 1);
-        window.location.href = `/missions/${nextMissionId}`;
+        if ((missions as any)[nextMissionId]) {
+          router.push(`/missions/${nextMissionId}?showIntro=true`);
+        } else {
+          router.push("/missions");
+        }
       }, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [showHelpAccepted, mission.id]);
+  }, [showHelpAccepted, router, mission.id]);
 
   switch (layoutType) {
     case "standardIntroLayout":
@@ -442,6 +467,7 @@ export default function MissionPage() {
                 isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
+                setIsConnected={setIsConnected}
               />
             </div>
           )}
@@ -512,19 +538,33 @@ export default function MissionPage() {
               className="fixed inset-0 z-[99999] flex items-center justify-center"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
             >
-              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
-                  Nice!
+              <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
+                {/* Left Side - Happy Robot */}
+                <div className="mr-8">
+                  <img
+                    src="/happy-robot-correct-3.png"
+                    alt="Happy Robot"
+                    className="w-64 h-64 object-contain"
+                  />
                 </div>
-                <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
-                  Let's see if you are correct or wrong.
+
+                {/* Right Side - Message and Button */}
+                <div className="flex flex-col flex-1">
+                  <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
+                    Nice!
+                  </div>
+                  <div className="mb-6 text-base font-medium text-[#222E3A] leading-relaxed">
+                    Let's see if you are correct or wrong.
+                  </div>
+                  <div className="flex justify-start">
+                    <button
+                      onClick={handleNiceContinue}
+                      className="px-6 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800"
+                    >
+                      Continue
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={handleNiceContinue}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                >
-                  Continue
-                </button>
               </div>
             </div>
           )}
@@ -535,7 +575,7 @@ export default function MissionPage() {
               style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
             >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
+                <div className="mb-4 text-3xl font-extrabold text-center text-[#222E3A]">
                   Don't worry!
                 </div>
                 <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
@@ -654,6 +694,7 @@ export default function MissionPage() {
                 isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
+                setIsConnected={setIsConnected}
               />
             </div>
           )}
