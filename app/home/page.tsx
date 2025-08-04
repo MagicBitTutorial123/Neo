@@ -172,6 +172,24 @@ export default function HomePage() {
   // Default Home (after Mission 2)
   const defaultHomeContent = (
     <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
+      {/* Mobile Mission Progress Bar - Top of page */}
+      <div className="lg:hidden w-full flex flex-col items-center mb-4">
+        <div className="w-full flex flex-row items-center justify-between mb-2">
+          <span className="text-sm sm:text-base font-bold text-[#00AEEF]">
+            {missionLabel}
+          </span>
+          <span className="text-sm sm:text-base font-bold text-[#00AEEF]">
+            {xpPoints} XP
+          </span>
+        </div>
+        <div className="w-full h-2 sm:h-3 rounded-full bg-[#E5EAF1] flex overflow-hidden">
+          <div
+            className="bg-[#00AEEF] h-full transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          ></div>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row items-start justify-between w-full max-w-7xl mx-auto gap-6 lg:gap-0">
         {/* Left: Welcome and Mission */}
         <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px]">
@@ -262,8 +280,8 @@ export default function HomePage() {
         </div>
         {/* Right: Mission Progress, Badges, Battery, Tip */}
         <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full">
-          {/* Mission Progress Bar */}
-          <div className="w-full flex flex-col items-center mb-2">
+          {/* Mission Progress Bar - Desktop Only */}
+          <div className="hidden lg:flex w-full flex-col items-center mb-2">
             <div className="w-full flex flex-row items-center justify-between mb-2">
               <span className="text-sm sm:text-base md:text-lg font-bold text-[#00AEEF]">
                 {missionLabel}
