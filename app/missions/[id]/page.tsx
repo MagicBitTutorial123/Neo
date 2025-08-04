@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
-import BlocklySplitLayout from "@/components/StandardMissionLayout";
+import BlocklySplitLayout from "@/components/BlocklySplitLayout";
 import SideNavbar from "@/components/SideNavbar";
 import Header from "@/components/StatusHeaderBar";
 import CountdownTimer from "@/components/CountdownTimer";
