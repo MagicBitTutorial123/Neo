@@ -25,6 +25,28 @@ export default function SideNavbar({
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
+  // Auto-collapse sidebar on smaller screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setCollapsed(true);
+      } else {
+        setCollapsed(false);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Notify parent when collapsed state changes
+  useEffect(() => {
+    onCollapse?.(collapsed);
+  }, [collapsed, onCollapse]);
+
   // Use userData from context for mission completion status
   const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
 
@@ -72,10 +94,7 @@ export default function SideNavbar({
     <aside
       className={`flex flex-col justify-between items-center h-screen ${
         collapsed ? "w-[80px]" : "w-[260px]"
-      } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl z-50`}
-      style={{
-        position: "relative",
-      }}
+      } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl z-50 fixed left-0 top-0`}
     >
       {/* Corner fillers to prevent background showing through rounded corners */}
       <div

@@ -31,6 +31,7 @@ function useTypingEffect(text: string, speed = 30) {
 export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
   const [step, setStep] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userData } = useUser();
@@ -170,15 +171,15 @@ export default function HomePage() {
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
-    <div className="flex flex-1 flex-col w-full h-full relative animate-fade-in px-12 pt-12">
-      <div className="flex flex-row items-start justify-between w-full max-w-7xl mx-auto">
+    <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
+      <div className="flex flex-col lg:flex-row items-start justify-between w-full max-w-7xl mx-auto gap-6 lg:gap-0">
         {/* Left: Welcome and Mission */}
-        <div className="flex-1 flex flex-col gap-6 min-w-[400px]">
+        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px]">
           <div className="mb-2">
-            <span className="text-3xl md:text-4xl font-extrabold text-[#FF9C32]">
+            <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#FF9C32]">
               Welcome back!
             </span>
-            <div className="text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
+            <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
               {userData?.name}{" "}
               {/* <span className="inline-block">
                 <Image src="/User.png" alt="User" width={32} height={32} />
@@ -192,12 +193,18 @@ export default function HomePage() {
               alt="Mission"
               width={500}
               height={300}
-              className="object-cover w-full h-[300px]"
+              className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
             />
-            <button className="absolute bottom-6 right-6 bg-black text-white font-bold rounded-full px-8 py-3 flex items-center gap-2 text-lg shadow-lg hover:bg-[#222] transition">
+            <button className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition">
               Continue mission{" "}
               <span className="inline-block">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <svg
+                  width="20"
+                  height="20"
+                  className="sm:w-6 sm:h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     d="M5 12h14M13 6l6 6-6 6"
                     stroke="#fff"
@@ -210,53 +217,62 @@ export default function HomePage() {
             </button>
           </div>
           {/* Project of the week - new layout */}
-          <div className="rounded-2xl bg-white shadow flex flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full">
+          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full">
             {/* Left: Text */}
-            <div className="flex flex-col justify-center p-8 flex-1 min-w-[220px] h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <span className="w-10 h-10 flex items-center justify-center rounded-full bg-black shadow-lg">
+            <div className="flex flex-col justify-center p-4 sm:p-6 md:p-8 flex-1 min-w-0 sm:min-w-[220px] h-full">
+              <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-4">
+                <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-black shadow-lg">
                   <Image
                     src="/project-week-icon.png"
                     alt="project-week-icon"
-                    width={22}
-                    height={22}
+                    width={18}
+                    height={18}
+                    className="sm:w-[22px] sm:h-[22px]"
                   />
                 </span>
-                <span className="text-lg font-medium text-[#222E3A]">
+                <span className="text-sm sm:text-base md:text-lg font-medium text-[#222E3A]">
                   Project of the week
                 </span>
               </div>
-              <div className="text-2xl font-extrabold text-[#222E3A] mb-2">
+              <div className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#222E3A] mb-1 sm:mb-2">
                 Boxing Champ
               </div>
-              <div className="text-[#555] text-base font-normal">
+              <div className="text-sm sm:text-base text-[#555] font-normal">
                 Lorem ipsum dolor sit amet consectetur.
               </div>
             </div>
             {/* Right: Image */}
-            <div className="flex-shrink-0 w-[260px] h-[140px] md:w-[320px] md:h-[160px] lg:w-[340px] lg:h-[180px] relative">
+            <div className="flex-shrink-0 w-full sm:w-[260px] md:w-[320px] lg:w-[340px] h-full relative overflow-hidden m-0 p-0">
               <Image
                 src="/project-image-4.png"
                 alt="Project of the Week"
                 fill
-                className="object-cover w-full h-full"
+                className="object-cover"
+                style={{
+                  objectPosition: "center",
+                  objectFit: "cover",
+                  width: "100%",
+                  height: "100%",
+                  margin: 0,
+                  padding: 0,
+                }}
               />
             </div>
           </div>
         </div>
         {/* Right: Mission Progress, Badges, Battery, Tip */}
-        <div className="flex flex-col gap-6 min-w-[340px] ml-12 w-[380px] h-full justify-start">
+        <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full">
           {/* Mission Progress Bar */}
           <div className="w-full flex flex-col items-center mb-2">
             <div className="w-full flex flex-row items-center justify-between mb-2">
-              <span className="text-lg font-bold text-[#00AEEF]">
+              <span className="text-sm sm:text-base md:text-lg font-bold text-[#00AEEF]">
                 {missionLabel}
               </span>
-              <span className="text-lg font-bold text-[#00AEEF]">
+              <span className="text-sm sm:text-base md:text-lg font-bold text-[#00AEEF]">
                 {xpPoints} XP
               </span>
             </div>
-            <div className="w-full h-3 rounded-full bg-[#E5EAF1] flex overflow-hidden">
+            <div className="w-full h-2 sm:h-3 rounded-full bg-[#E5EAF1] flex overflow-hidden">
               <div
                 className="bg-[#00AEEF] h-full transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
@@ -265,16 +281,19 @@ export default function HomePage() {
           </div>
 
           {/* Badges */}
-          <div className="rounded-2xl border border-[#E0E6ED] bg-white p-4 flex flex-col mt-10">
-            <div className="font-bold text-[#222E3A] mb-2">My Badges</div>
-            <div className="grid grid-cols-4 gap-3">
+          <div className="rounded-2xl border border-[#E0E6ED] bg-white p-3 sm:p-4 flex flex-col mt-6 sm:mt-8 lg:mt-10">
+            <div className="font-bold text-[#222E3A] mb-2 text-sm sm:text-base">
+              My Badges
+            </div>
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
               {badges.map((badge, idx) => (
                 <span key={idx} className="flex items-center justify-center">
                   <Image
                     src={badge.src}
                     alt={badge.alt}
-                    width={65}
-                    height={65}
+                    width={50}
+                    height={50}
+                    className="sm:w-[65px] sm:h-[65px]"
                     style={
                       badge.earned
                         ? {}
@@ -286,33 +305,33 @@ export default function HomePage() {
             </div>
           </div>
           {/* Battery */}
-          <div
-            className="rounded-2xl bg-white shadow flex flex-row items-center p-6 gap-6 min-h-[80px]"
-            style={{ minWidth: 340 }}
-          >
-            <span className="w-10 h-10 flex items-center justify-center rounded-full bg-[#00AEEF] shadow-lg">
+          <div className="rounded-2xl bg-white shadow flex flex-row items-center p-4 sm:p-6 gap-4 sm:gap-6 min-h-[70px] sm:min-h-[80px] w-full">
+            <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-[#00AEEF] shadow-lg">
               <Image
                 src="/power-icon.png"
                 alt="Battery"
-                width={20}
-                height={20}
+                width={16}
+                height={16}
+                className="sm:w-5 sm:h-5"
               />
             </span>
-            <div className="text-xl font-bold text-[#222E3A] ml-2">Battery</div>
+            <div className="text-lg sm:text-xl font-bold text-[#222E3A] ml-2">
+              Battery
+            </div>
             <div className="flex-1 flex justify-end items-center">
               {/* Battery Icon */}
               <div
-                className="relative flex items-center"
-                style={{ width: 120, height: 48 }}
+                className="relative flex items-center sm:w-[120px] sm:h-[48px]"
+                style={{ width: 100, height: 40 }}
               >
                 {/* Battery outline */}
                 <div
-                  className="absolute left-0 top-0 w-full h-full rounded-[12px] border-2 border-[#E5EAF1] bg-white"
+                  className="absolute left-0 top-0 w-full h-full rounded-[10px] sm:rounded-[12px] border-2 border-[#E5EAF1] bg-white"
                   style={{ boxShadow: "0 2px 8px #0001" }}
                 ></div>
                 {/* Battery fill */}
                 <div
-                  className="absolute left-0 top-0 h-full rounded-l-[10px] bg-gradient-to-b from-[#B6FF7A] to-[#7ED957]"
+                  className="absolute left-0 top-0 h-full rounded-l-[8px] sm:rounded-l-[10px] bg-gradient-to-b from-[#B6FF7A] to-[#7ED957]"
                   style={{
                     width: `${Math.max(0, Math.min(100, batteryLevel))}%`,
                     transition: "width 0.5s",
@@ -321,12 +340,12 @@ export default function HomePage() {
                 ></div>
                 {/* Battery tip */}
                 <div
-                  className="absolute right-[-12px] top-1/4 w-6 h-1/2 bg-white border-2 border-[#E5EAF1] rounded-r-[6px]"
+                  className="absolute right-[-10px] sm:right-[-12px] top-1/4 w-5 h-1/2 sm:w-6 sm:h-1/2 bg-white border-2 border-[#E5EAF1] rounded-r-[5px] sm:rounded-r-[6px]"
                   style={{ zIndex: 2 }}
                 ></div>
                 {/* Battery percentage */}
                 <span
-                  className="absolute left-0 top-0 w-full h-full flex items-center justify-center text-lg font-bold"
+                  className="absolute left-0 top-0 w-full h-full flex items-center justify-center text-sm sm:text-lg font-bold"
                   style={{
                     zIndex: 3,
                     color: batteryLevel > 20 ? "#222E3A" : "#FF4D4F",
@@ -363,11 +382,16 @@ export default function HomePage() {
     (user.missionProgress !== undefined && user.missionProgress < 2);
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FC]">
+    <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
       {/* Side Navbar */}
-      <SideNavbar />
+      <SideNavbar onCollapse={setSidebarCollapsed} />
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center relative overflow-x-hidden min-h-screen">
+      <main
+        className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
+        style={{
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+        }}
+      >
         {isNewUser ? newUserContent : defaultHomeContent}
       </main>
     </div>
