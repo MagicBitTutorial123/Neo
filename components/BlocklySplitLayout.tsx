@@ -335,7 +335,7 @@ export default function BlocklySplitLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-row h-screen relative">
         {/* Split Content Area - Below the header */}
-        <div className="flex w-full h-full" style={{ marginTop: "65px" }}>
+        <div className="relative h-screen flex w-full mt-16">
           {/* Left Side - Instructions and Images */}
           <div
             className="flex flex-col bg-[#F8F9FC]"
@@ -463,9 +463,11 @@ export default function BlocklySplitLayout({
             onMouseDown={handleMouseDown}
             style={{ cursor: isResizing ? "ew-resize" : "ew-resize" }}
           />
-
+          <div className="flex-grow mb-16">
           {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
             <BlocklyComponent generatedCode={generatedCode} setGeneratedCode={setGeneratedCode}/>
+
+          </div>
           {/* <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
             <div className="h-full flex flex-col">
               <div className="flex items-center justify-between p-4 border-b border-[#E0E6ED]">

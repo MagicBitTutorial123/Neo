@@ -486,15 +486,16 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
         const xmlText = Blockly.Xml.domToText(xml);
         localStorage.setItem("blocklyWorkspace", xmlText);
         const code = pythonGenerator.workspaceToCode(workspace);
+        console.log(code)
         setGeneratedCode(code);
     });
   };
 
   return (
     <>
-      <div className="relative h-screen w-full bg-white flex flex-col ">
+      <div className="h-full bg-white flex flex-col ">
         <div
-          className="relative gap-3px mx-2 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
+          className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
           style={{ borderRadius: "48px" }}
         >
           <div className="absolute top-0 right-4 m-2 flex items-center gap-4 z-20">
@@ -540,7 +541,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
               <span className="ml-1 font-bold">Dashboard</span>
             </button>
           </div>
-          <div className="relative z-5 flex-grow w-full">
+          <div className="relative z-5 flex-grow w-full ">
             {activeTab === "Blocks" && (
               <div
                 ref={(el) => {
