@@ -415,7 +415,6 @@ export default function HomePage() {
     </div>
   );
 }
-
 // Add a simple fade-in animation
 // In your global CSS (e.g., app/globals.css), add:
 // .animate-fade-in { animation: fadeIn 0.6s; }

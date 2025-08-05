@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import { useSidebar } from "@/context/SidebarContext";
 
 export default function SideNavbar({
   avatar,
@@ -17,35 +18,18 @@ export default function SideNavbar({
   onCollapse?: (collapsed: boolean) => void;
 }) {
   const { registrationData, userData } = useUser();
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
 
   // Use provided props or fall back to context data
   const userAvatar =
     avatar || userData?.avatar || registrationData.avatar || "/User.png";
   const userName = name || userData?.name || registrationData.name || "User";
-  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
-  // Auto-collapse sidebar on smaller screens
+  // Notify parent when collapsed state changes (for backward compatibility)
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        setCollapsed(true);
-      } else {
-        setCollapsed(false);
-      }
-    };
-
-    // Set initial state
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Notify parent when collapsed state changes
-  useEffect(() => {
-    onCollapse?.(collapsed);
-  }, [collapsed, onCollapse]);
+    onCollapse?.(sidebarCollapsed);
+  }, [sidebarCollapsed, onCollapse]);
 
   // Use userData from context for mission completion status
   const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
@@ -93,7 +77,7 @@ export default function SideNavbar({
   return (
     <aside
       className={`flex flex-col justify-between items-center h-screen ${
-        collapsed ? "w-[80px]" : "w-[260px]"
+        sidebarCollapsed ? "w-[80px]" : "w-[260px]"
       } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl z-50 fixed left-0 top-0`}
     >
       {/* Corner fillers to prevent background showing through rounded corners */}
@@ -117,20 +101,20 @@ export default function SideNavbar({
       {/* Logo at the top */}
       <div
         className={`mb-8 w-full flex justify-center ${
-          collapsed ? "px-0" : "px-2"
+          sidebarCollapsed ? "px-0" : "px-2"
         }`}
         style={{ zIndex: 2 }}
       >
         <div
           className={`bg-white rounded-2xl flex items-center justify-center ${
-            collapsed ? "w-14 h-14" : "w-[150px] h-[50px]"
+            sidebarCollapsed ? "w-14 h-14" : "w-[150px] h-[50px]"
           }`}
         >
           <Image
-            src={collapsed ? "/logo-small.png" : "/side-logo.png"}
+            src={sidebarCollapsed ? "/logo-small.png" : "/side-logo.png"}
             alt="BuddyNeo Logo"
-            width={collapsed ? 56 : 150}
-            height={collapsed ? 56 : 50}
+            width={sidebarCollapsed ? 56 : 150}
+            height={sidebarCollapsed ? 56 : 50}
           />
         </div>
       </div>
@@ -141,15 +125,15 @@ export default function SideNavbar({
       >
         <nav
           className={`flex flex-col ${
-            collapsed ? "gap-4" : "gap-6"
-          } items-start w-full ${collapsed ? "pl-2" : "pl-8"}`}
+            sidebarCollapsed ? "gap-4" : "gap-6"
+          } items-start w-full ${sidebarCollapsed ? "pl-2" : "pl-8"}`}
         >
           {navItems.map((item) =>
             item.disabled ? (
               <div
                 key={item.label}
                 className={`flex flex-row items-center gap-3 cursor-not-allowed select-none ${
-                  collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
+                  sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3`}
               >
                 <Image
@@ -159,7 +143,7 @@ export default function SideNavbar({
                   height={24}
                   style={{ filter: "grayscale(1)", opacity: 1 }}
                 />
-                {!collapsed && (
+                {!sidebarCollapsed && (
                   <span
                     className="text-base font-semibold"
                     style={{ color: "#BDC8D5" }}
@@ -173,7 +157,7 @@ export default function SideNavbar({
                 key={item.label}
                 href={item.href}
                 className={`flex flex-row items-center gap-3 ${
-                  collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
+                  sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3 rounded-2xl ${
                   item.active
                     ? "border border-[#00AEEF] bg-white shadow-sm"
@@ -186,7 +170,7 @@ export default function SideNavbar({
                   width={24}
                   height={24}
                 />
-                {!collapsed && (
+                {!sidebarCollapsed && (
                   <span className="text-base font-semibold text-[#222E3A]">
                     {item.label}
                   </span>
@@ -197,7 +181,7 @@ export default function SideNavbar({
                 key={item.label}
                 href={item.href}
                 className={`flex flex-row items-center gap-3 ${
-                  collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
+                  sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3 rounded-2xl hover:bg-[#F0F4F8] transition-colors`}
               >
                 <Image
@@ -206,7 +190,7 @@ export default function SideNavbar({
                   width={24}
                   height={24}
                 />
-                {!collapsed && (
+                {!sidebarCollapsed && (
                   <span className="text-base font-semibold text-[#222E3A]">
                     {item.label}
                   </span>
@@ -224,7 +208,7 @@ export default function SideNavbar({
         <Link
           href="/profile"
           className={`flex flex-row items-center justify-between ${
-            collapsed ? "w-12 px-0" : "w-[90%] px-3"
+            sidebarCollapsed ? "w-12 px-0" : "w-[90%] px-3"
           } bg-white rounded-2xl py-2 mt-2 shadow-sm hover:bg-[#F0F4F8] transition-colors`}
         >
           <div className="flex flex-row items-center gap-2">
@@ -236,13 +220,13 @@ export default function SideNavbar({
                 height={36}
               />
             </div>
-            {!collapsed && (
+            {!sidebarCollapsed && (
               <span className="text-base font-semibold text-[#222E3A]">
                 {userName}
               </span>
             )}
           </div>
-          {!collapsed && (
+          {!sidebarCollapsed && (
             <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#E0E0E0] transition-colors">
               <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
                 <circle cx="4" cy="10" r="2" fill="#888" />
@@ -256,14 +240,12 @@ export default function SideNavbar({
       {/* Vertical divider/handle */}
       <button
         className={`absolute top-1/2 right-0 -translate-y-1/2 w-3 h-12 flex items-center justify-center group transition-transform ${
-          collapsed ? "scale-x-[-1]" : ""
+          sidebarCollapsed ? "scale-x-[-1]" : ""
         }`}
         onClick={() => {
-          const newCollapsed = !collapsed;
-          setCollapsed(newCollapsed);
-          onCollapse?.(newCollapsed);
+          setSidebarCollapsed(!sidebarCollapsed);
         }}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         style={{
           outline: "none",
           border: "none",
