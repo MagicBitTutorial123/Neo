@@ -19,6 +19,7 @@ export default function SideNavbar({
 }) {
   const { registrationData, userData } = useUser();
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Use provided props or fall back to context data
   const userAvatar =
@@ -186,6 +187,12 @@ export default function SideNavbar({
     }
   };
 
+  const handleLogout = () => {
+    // Add logout logic here
+    console.log("Logout clicked");
+    setDropdownOpen(false);
+  };
+
   return (
     <aside
       className={`flex flex-col justify-between items-center h-screen ${
@@ -301,11 +308,10 @@ export default function SideNavbar({
         className="w-full flex flex-col items-center mb-2"
         style={{ zIndex: 2 }}
       >
-        <Link
-          href="/profile"
+        <div
           className={`flex flex-row items-center justify-between ${
             sidebarCollapsed ? "w-12 px-0" : "w-[90%] px-3"
-          } bg-white rounded-2xl py-2 mt-2 shadow-sm hover:bg-[#F0F4F8] transition-colors`}
+          } bg-white rounded-2xl py-2 mt-2 shadow-sm hover:bg-[#F0F4F8] transition-colors relative`}
         >
           <div className="flex flex-row items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-[#FFFBEA] flex items-center justify-center overflow-hidden">
@@ -323,7 +329,10 @@ export default function SideNavbar({
             )}
           </div>
           {!sidebarCollapsed && (
-            <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#E0E0E0] transition-colors">
+            <button
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#E0E0E0] transition-colors"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
               <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
                 <circle cx="4" cy="10" r="2" fill="#888" />
                 <circle cx="10" cy="10" r="2" fill="#888" />
@@ -331,7 +340,54 @@ export default function SideNavbar({
               </svg>
             </button>
           )}
-        </Link>
+
+          {/* Dropdown Menu */}
+          {dropdownOpen && !sidebarCollapsed && (
+            <div className="absolute top-0 left-full ml-2 w-48 bg-white rounded-2xl shadow-lg border border-gray-200 z-50">
+              <div className="py-1">
+                <Link
+                  href="/profile"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  <svg
+                    className="w-4 h-4 mr-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <svg
+                    className="w-4 h-4 mr-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       {/* Vertical divider/handle */}
       <button
