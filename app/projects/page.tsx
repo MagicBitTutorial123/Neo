@@ -57,7 +57,7 @@ export default function ProjectsPage() {
         {/* Project of the week */}
         {projectOfTheWeek && (
           <div
-            className="w-full flex flex-col lg:flex-row items-stretch border border-[#E0E6ED] rounded-2xl lg:rounded-3xl bg-[#F8F9FC] mb-8 lg:mb-12 transition-all duration-300 ease-in-out"
+            className="w-full flex flex-col md:flex-row items-stretch border border-[#E0E6ED] rounded-2xl lg:rounded-3xl bg-[#F8F9FC] mb-8 lg:mb-12 transition-all duration-300 ease-in-out"
             style={{
               minHeight: 280,
               maxWidth: sidebarCollapsed
@@ -88,15 +88,15 @@ export default function ProjectsPage() {
                 Explore Now
               </LetsGoButton>
             </div>
-            <div className="flex-shrink-0 h-48 lg:h-full w-full lg:w-[450px] relative overflow-hidden rounded-b-2xl lg:rounded-r-3xl lg:rounded-b-none">
+            <div className="flex-shrink-0 h-48 md:h-full w-full md:w-[350px] lg:w-[450px] relative overflow-hidden rounded-b-2xl md:rounded-r-3xl md:rounded-br-3xl md:rounded-b-none">
               <Image
                 src={projectOfTheWeek.image}
                 alt={projectOfTheWeek.title}
                 fill
                 className="object-cover h-full w-full"
                 style={{
-                  borderBottomLeftRadius: 16,
-                  borderBottomRightRadius: 16,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
                   borderTopRightRadius: 0,
                   borderTopLeftRadius: 0,
                   display: "block",
