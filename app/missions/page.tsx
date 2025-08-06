@@ -28,7 +28,7 @@ export default function MissionsPage() {
         }}
       >
         {/* Breadcrumb */}
-        <div className="text-2xl font-extrabold text-[#222E3A] mb-6 flex items-center gap-2 px-8 pt-8">
+        <div className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#222E3A] mb-4 sm:mb-6 flex items-center gap-1 sm:gap-2 px-4 sm:px-6 md:px-8 pt-4 sm:pt-6 md:pt-8">
           <span className="text-[#222E3A]">Missions</span>
           <span className="text-[#222E3A]">&gt;</span>
           <span className="text-[#00AEEF]">

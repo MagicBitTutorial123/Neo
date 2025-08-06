@@ -57,31 +57,31 @@ export default function ProjectsPage() {
         {/* Project of the week */}
         {projectOfTheWeek && (
           <div
-            className="w-full flex flex-col md:flex-row items-stretch border border-[#E0E6ED] rounded-2xl lg:rounded-3xl bg-[#F8F9FC] mb-8 lg:mb-12 transition-all duration-300 ease-in-out"
+            className="w-full flex flex-col md:flex-row items-stretch border border-[#E0E6ED] rounded-2xl lg:rounded-3xl bg-[#F8F9FC] mb-6 sm:mb-8 lg:mb-12 transition-all duration-300 ease-in-out"
             style={{
-              minHeight: 280,
+              minHeight: 240,
               maxWidth: sidebarCollapsed
                 ? "calc(100vw - 80px - 32px)"
                 : "calc(100vw - 260px - 32px)",
             }}
           >
-            <div className="flex flex-col justify-center flex-1 p-6 lg:pl-8">
-              <div className="text-2xl lg:text-3xl xl:text-4xl font-extrabold text-[#222E3A] mb-2">
+            <div className="flex flex-col justify-center flex-1 p-4 sm:p-6 lg:pl-8">
+              <div className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#222E3A] mb-1 sm:mb-2">
                 {projectOfTheWeek.title}
               </div>
-              <div className="text-base lg:text-lg font-bold text-[#888] mb-2">
+              <div className="text-sm sm:text-base md:text-lg font-bold text-[#888] mb-1 sm:mb-2">
                 {projectOfTheWeek.subtitle}
               </div>
-              <div className="text-sm lg:text-base text-[#222E3A] mb-4 lg:mb-6">
+              <div className="text-xs sm:text-sm md:text-base text-[#222E3A] mb-3 sm:mb-4 lg:mb-6">
                 {projectOfTheWeek.description}
               </div>
               <LetsGoButton
                 style={{
-                  width: 240,
-                  minWidth: 170,
-                  height: 44,
-                  minHeight: 44,
-                  fontSize: 16,
+                  width: 200,
+                  minWidth: 150,
+                  height: 40,
+                  minHeight: 40,
+                  fontSize: 14,
                   justifyContent: "center",
                 }}
               >
@@ -114,7 +114,7 @@ export default function ProjectsPage() {
               : "calc(100vw - 260px - 32px)",
           }}
         >
-          <div className="text-xl lg:text-2xl xl:text-3xl font-extrabold text-[#22AEEF] mb-4">
+          <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold text-[#22AEEF] mb-3 sm:mb-4">
             Explore other projects
           </div>
           <div className="flex-1 overflow-hidden">

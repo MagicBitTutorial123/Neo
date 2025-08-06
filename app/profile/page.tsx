@@ -58,34 +58,34 @@ export default function ProfilePage() {
         }}
       >
         {/* Profile Card */}
-        <div className="w-full max-w-5xl rounded-2xl lg:rounded-3xl bg-[#F7F8FA] border border-[#E0E6ED] flex flex-col lg:flex-row items-center px-6 lg:px-12 py-8 lg:py-10 mb-8 lg:mb-12 shadow-sm">
-          <div className="flex flex-col flex-1 gap-2 text-center lg:text-left">
-            <div className="text-2xl lg:text-3xl xl:text-4xl font-extrabold text-[#222E3A] mb-2">
+        <div className="w-full max-w-5xl rounded-2xl lg:rounded-3xl bg-[#F7F8FA] border border-[#E0E6ED] flex flex-col lg:flex-row items-center px-4 sm:px-6 lg:px-12 py-6 sm:py-8 lg:py-10 mb-6 sm:mb-8 lg:mb-12 shadow-sm">
+          <div className="flex flex-col flex-1 gap-1.5 sm:gap-2 text-center lg:text-left">
+            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#222E3A] mb-1.5 sm:mb-2">
               {userData.name}
             </div>
-            <div className="text-lg lg:text-xl xl:text-2xl font-extrabold text-[#22AEEF] mb-1">
+            <div className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold text-[#22AEEF] mb-1">
               Mission {currentMission}
             </div>
             {/* Progress bar */}
-            <div className="w-full max-w-xs h-2 rounded-full bg-[#E5EAF1] mb-2 mx-auto lg:mx-0">
+            <div className="w-full max-w-xs h-1.5 sm:h-2 rounded-full bg-[#E5EAF1] mb-1.5 sm:mb-2 mx-auto lg:mx-0">
               <div
                 className="h-full rounded-full bg-[#FF9C32]"
                 style={{ width: "60%" }}
               ></div>
             </div>
-            <div className="text-sm lg:text-base text-[#22AEEF] font-semibold mt-1">
+            <div className="text-xs sm:text-sm md:text-base text-[#22AEEF] font-semibold mt-1">
               {userData.xp} xp
             </div>
           </div>
           {/* Top Badge */}
-          <div className="flex flex-col items-center mt-6 lg:mt-0 lg:ml-16">
-            <div className="w-24 h-24 lg:w-36 lg:h-36 rounded-full bg-[#FFF6E6] flex items-center justify-center mb-2">
+          <div className="flex flex-col items-center mt-4 sm:mt-6 lg:mt-0 lg:ml-16">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-36 lg:h-36 rounded-full bg-[#FFF6E6] flex items-center justify-center mb-1.5 sm:mb-2">
               <Image
                 src={topBadge.image}
                 alt={topBadge.label}
-                width={80}
-                height={80}
-                className="lg:w-[110px] lg:h-[110px]"
+                width={60}
+                height={60}
+                className="sm:w-[80px] sm:h-[80px] md:w-[90px] md:h-[90px] lg:w-[110px] lg:h-[110px]"
               />
             </div>
             <div className="text-xs lg:text-sm text-[#888] font-semibold">
@@ -95,22 +95,23 @@ export default function ProfilePage() {
         </div>
         {/* Badges Section */}
         <div className="w-full max-w-5xl">
-          <div className="text-base lg:text-lg font-bold text-[#222E3A] mb-4 lg:mb-6">
+          <div className="text-sm sm:text-base md:text-lg font-bold text-[#222E3A] mb-3 sm:mb-4 lg:mb-6">
             My badges
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-y-8 lg:gap-x-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-y-8 lg:gap-x-4">
             {badges.map((badge, idx) => (
               <div key={idx} className="flex flex-col items-center">
                 <span
-                  className={`w-20 h-20 flex items-center justify-center rounded-full ${
+                  className={`w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${
                     badge.earned ? "bg-white" : "bg-[#F2F2F2]"
-                  } border-2 border-[#E0E6ED] mb-2`}
+                  } border-2 border-[#E0E6ED] mb-1.5 sm:mb-2`}
                 >
                   <Image
                     src={badge.image}
                     alt={badge.name}
-                    width={110}
-                    height={110}
+                    width={80}
+                    height={80}
+                    className="sm:w-[110px] sm:h-[110px]"
                     style={
                       badge.earned
                         ? {}
@@ -119,7 +120,7 @@ export default function ProfilePage() {
                   />
                 </span>
                 <span
-                  className={`text-sm lg:text-base font-semibold text-center ${
+                  className={`text-xs sm:text-sm md:text-base font-semibold text-center ${
                     badge.earned ? "text-[#222E3A]" : "text-[#BDC8D5]"
                   }`}
                 >

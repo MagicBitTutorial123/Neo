@@ -120,10 +120,10 @@ export default function ToggleConnectButton({
       >
         <img src={iconSrc} alt={pillText} className="w-5 h-5" />
       </div>
-      {/* Status pill */}
+      {/* Status pill - Hidden on all small screen sizes */}
       <button
         onClick={handleClick}
-        className={`px-4 py-1 rounded-full font-medium text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
+        className={`hidden xl:block px-4 py-1 rounded-full font-medium text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
         style={{ minWidth: 100 }}
         disabled={status === "connecting" || status === "disconnecting"}
       >
