@@ -52,13 +52,13 @@ export default function ProfilePage() {
         onCollapse={setSidebarCollapsed}
       />
       <main
-        className="flex-1 flex flex-col items-center px-4 lg:px-8 py-6 lg:py-12 overflow-x-hidden transition-all duration-300 ease-in-out lg:overflow-y-hidden"
+        className="flex-1 flex flex-col items-center px-4 lg:px-8 py-3 lg:py-6 overflow-hidden transition-all duration-300 ease-in-out"
         style={{
           marginLeft: sidebarCollapsed ? "80px" : "260px",
         }}
       >
-        {/* Profile Card */}
-        <div className="w-full max-w-5xl rounded-2xl lg:rounded-3xl bg-[#F7F8FA] border border-[#E0E6ED] flex flex-col lg:flex-row items-center px-4 sm:px-6 lg:px-12 py-6 sm:py-8 lg:py-10 mb-6 sm:mb-8 lg:mb-12 shadow-sm">
+        {/* Profile Card - Fixed at top */}
+        <div className="w-full max-w-5xl rounded-2xl lg:rounded-3xl bg-[#F7F8FA] border border-[#E0E6ED] flex flex-col lg:flex-row items-center px-4 sm:px-6 lg:px-12 py-6 sm:py-8 lg:py-10 mb-6 sm:mb-8 lg:mb-12 shadow-sm flex-shrink-0">
           <div className="flex flex-col flex-1 gap-1.5 sm:gap-2 text-center lg:text-left">
             <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#222E3A] mb-1.5 sm:mb-2">
               {userData.name}
@@ -93,12 +93,12 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-        {/* Badges Section */}
-        <div className="w-full max-w-5xl">
-          <div className="text-sm sm:text-base md:text-lg font-bold text-[#222E3A] mb-3 sm:mb-4 lg:mb-6">
+        {/* Badges Section - Scrollable */}
+        <div className="w-full max-w-5xl flex-1 overflow-y-auto scrollbar-hide">
+          <div className="text-sm sm:text-base md:text-lg font-bold text-[#222E3A] mb-3 sm:mb-4 lg:mb-6 sticky top-0 bg-white z-10 py-2">
             My badges
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-y-8 lg:gap-x-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-y-6 lg:gap-x-3 pb-4">
             {badges.map((badge, idx) => (
               <div key={idx} className="flex flex-col items-center">
                 <span

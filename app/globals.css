@@ -56,6 +56,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   display: block;
 }
 
+/* Hide scrollbars for specific elements */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 .page-transition-enter {
   opacity: 0;
   transform: translateX(60px);
