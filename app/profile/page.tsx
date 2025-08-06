@@ -79,13 +79,13 @@ export default function ProfilePage() {
           </div>
           {/* Top Badge */}
           <div className="flex flex-col items-center mt-4 sm:mt-6 lg:mt-0 lg:ml-16">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-36 lg:h-36 rounded-full bg-[#FFF6E6] flex items-center justify-center mb-1.5 sm:mb-2">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full bg-[#FFF6E6] flex items-center justify-center mb-1.5 sm:mb-2">
               <Image
                 src={topBadge.image}
                 alt={topBadge.label}
-                width={60}
-                height={60}
-                className="sm:w-[80px] sm:h-[80px] md:w-[90px] md:h-[90px] lg:w-[110px] lg:h-[110px]"
+                width={80}
+                height={80}
+                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28"
               />
             </div>
             <div className="text-xs lg:text-sm text-[#888] font-semibold">
@@ -102,16 +102,16 @@ export default function ProfilePage() {
             {badges.map((badge, idx) => (
               <div key={idx} className="flex flex-col items-center">
                 <span
-                  className={`w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full ${
+                  className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center rounded-full ${
                     badge.earned ? "bg-white" : "bg-[#F2F2F2]"
                   } border-2 border-[#E0E6ED] mb-1.5 sm:mb-2`}
                 >
                   <Image
                     src={badge.image}
                     alt={badge.name}
-                    width={80}
-                    height={80}
-                    className="sm:w-[110px] sm:h-[110px]"
+                    width={60}
+                    height={60}
+                    className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20"
                     style={
                       badge.earned
                         ? {}

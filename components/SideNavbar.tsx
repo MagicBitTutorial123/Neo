@@ -330,13 +330,21 @@ export default function SideNavbar({
         style={{ zIndex: 2 }}
       >
         <div
-          className={`flex flex-row items-center justify-between ${
-            sidebarCollapsed ? "w-12 px-0" : "w-[90%] px-3"
+          className={`${
+            sidebarCollapsed
+              ? "w-12 px-0 flex flex-col items-center"
+              : "w-[90%] px-3 flex flex-row items-center justify-between"
           } bg-white rounded-2xl py-2 mt-2 shadow-sm hover:bg-[#F0F4F8] transition-colors relative`}
           ref={dropdownRef}
           title={sidebarCollapsed ? "Profile" : ""}
         >
-          <div className="flex flex-row items-center gap-2">
+          <div
+            className={`flex ${
+              sidebarCollapsed
+                ? "flex-col items-center"
+                : "flex-row items-center gap-2"
+            }`}
+          >
             <div className="w-10 h-10 rounded-full bg-[#FFFBEA] flex items-center justify-center overflow-hidden">
               <Image
                 src={userAvatar}
@@ -351,25 +359,29 @@ export default function SideNavbar({
               </span>
             )}
           </div>
-          {!sidebarCollapsed && (
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#E0E0E0] transition-colors"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              title="Menu"
-            >
-              <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
-                <circle cx="4" cy="10" r="2" fill="#888" />
-                <circle cx="10" cy="10" r="2" fill="#888" />
-                <circle cx="16" cy="10" r="2" fill="#888" />
-              </svg>
-            </button>
-          )}
+          <button
+            className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#E0E0E0] transition-colors ${
+              sidebarCollapsed ? "mt-2" : ""
+            }`}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            title="Menu"
+          >
+            <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+              <circle cx="4" cy="10" r="2" fill="#888" />
+              <circle cx="10" cy="10" r="2" fill="#888" />
+              <circle cx="16" cy="10" r="2" fill="#888" />
+            </svg>
+          </button>
 
           {/* Dropdown Menu */}
-          {dropdownOpen && !sidebarCollapsed && (
+          {dropdownOpen && (
             <div
               ref={dropdownRef}
-              className="absolute top-0 left-full ml-2 w-48 bg-[#d0eafb] rounded-2xl shadow-xl border border-[#E0E6ED] z-50 overflow-hidden opacity-90"
+              className={`absolute w-48 bg-[#d0eafb] rounded-2xl shadow-xl border border-[#E0E6ED] z-50 overflow-hidden opacity-90 ${
+                sidebarCollapsed
+                  ? "bottom-0 left-full ml-2"
+                  : "top-0 left-full ml-2"
+              }`}
             >
               <div className="py-1">
                 <Link
