@@ -71,9 +71,9 @@ export default function MissionIntro({
         <Image
           src={image}
           alt={title}
-          width={200}
-          height={100}
-          className="mb-3 sm:mb-4 w-[200px] h-[100px] sm:w-[240px] sm:h-[120px]"
+          width={400}
+          height={300}
+          className="mb-3 sm:mb-4 w-[200px] h-[150px] sm:w-[240px] sm:h-[180px] md:w-[320px] md:h-[240px] lg:w-[400px] lg:h-[300px] object-contain"
         />
         <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-[#222E3A] mb-1.5 sm:mb-2 mt-1 sm:mt-2 text-center">
           {title}
