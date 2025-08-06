@@ -44,7 +44,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F8F9FC] overflow-x-hidden">
+    <div className="flex h-screen bg-white overflow-x-hidden">
       <SideNavbar
         avatar={userAvatar}
         name={userName}

@@ -410,6 +410,34 @@ export default function BlocklySplitLayout({
                     </div>
                   )}
 
+                  {/* Navigation buttons after instructions */}
+                  <div className="flex justify-between items-center px-2 mb-6 mt-4">
+                    {currentStep > 0 && (
+                      <button
+                        onClick={handlePrevious}
+                        className="w-24 px-4 py-2 rounded-full font-medium bg-[#E0E6ED] text-[#222E3A] hover:bg-[#D0D6DD] transition-colors"
+                      >
+                        Previous
+                      </button>
+                    )}
+                    {currentStep === 0 && <div></div>}
+                    {currentStep < mission.steps.length - 1 ? (
+                      <button
+                        onClick={handleNext}
+                        className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleFinish}
+                        className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
+                      >
+                        Next
+                      </button>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-center mb-8">
                     {mission.steps[currentStep].image && (
                       <div className="relative w-full max-w-[400px] bg-gray-100 rounded-xl overflow-hidden">
@@ -427,33 +455,6 @@ export default function BlocklySplitLayout({
                   <p className="text-gray-500">Step not found</p>
                 </div>
               )}
-
-              <div className="flex justify-between items-center px-2 mb-4 mt-8">
-                {currentStep > 0 && (
-                  <button
-                    onClick={handlePrevious}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-[#E0E6ED] text-[#222E3A] hover:bg-[#D0D6DD] transition-colors"
-                  >
-                    Previous
-                  </button>
-                )}
-                {currentStep === 0 && <div></div>}{" "}
-                {currentStep < mission.steps.length - 1 ? (
-                  <button
-                    onClick={handleNext}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleFinish}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
-                  >
-                    Next
-                  </button>
-                )}
-              </div>
             </div>
           </div>
 
