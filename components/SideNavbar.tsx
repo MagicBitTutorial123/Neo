@@ -248,10 +248,14 @@ export default function SideNavbar({
           }`}
         >
           <Image
-            src={sidebarCollapsed ? "/logo-small.png" : "/side-logo.png"}
+            src={
+              sidebarCollapsed
+                ? "/BuddyNeo-collapsed.svg"
+                : "/BuddyNeo-expanded.svg"
+            }
             alt="BuddyNeo Logo"
-            width={sidebarCollapsed ? 56 : 150}
-            height={sidebarCollapsed ? 56 : 50}
+            width={sidebarCollapsed ? 48 : 120}
+            height={sidebarCollapsed ? 48 : 40}
           />
         </div>
       </div>

@@ -48,10 +48,10 @@ export default function SignupMain() {
           {/* Logo */}
           <div className="mb-8 mt-8 -ml-40 flex justify-start">
             <Image
-              src="/side-logo.png"
+              src="/BuddyNeo-expanded.svg"
               alt="BuddyNeo Logo"
-              width={400}
-              height={75}
+              width={320}
+              height={60}
               style={{ maxWidth: "100%", height: "auto" }}
             />
           </div>

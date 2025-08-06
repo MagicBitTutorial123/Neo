@@ -57,10 +57,10 @@ export default function SignupEmail() {
       {/* Logo */}
       <div className="absolute ml-12 mt-8 top-8 left-8 z-30">
         <Image
-          src="/side-logo.png"
+          src="/BuddyNeo-expanded.svg"
           alt="BuddyNeo Logo"
-          width={400}
-          height={75}
+          width={320}
+          height={60}
           style={{ maxWidth: "100%", height: "auto" }}
         />
       </div>
