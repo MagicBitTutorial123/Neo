@@ -358,12 +358,9 @@ export default function StandardMissionLayout({
         </div>
       )}
       {showHelpAccepted && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center"
-          onClick={() => setShowHelpAccepted(false)}
-        >
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black opacity-50" />
-          <HelpAcceptedOverlay />
+          <HelpAcceptedOverlay currentMissionId={String(mission.id)} />
         </div>
       )}
       {/* Overlay for PlaygroundUnlockedCard */}

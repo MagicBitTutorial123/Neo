@@ -62,7 +62,7 @@ export default function CountdownTimer({
           setTimeout(() => {
             setIsActive(false);
             onGo?.();
-          }, 1000);
+          }, 2000);
           return 0;
         }
         return 0;

@@ -434,20 +434,8 @@ export default function MissionPage() {
   };
 
   // Navigate to next mission after HelpAccepted overlay
-  useEffect(() => {
-    if (showHelpAccepted) {
-      const timeout = setTimeout(() => {
-        // Navigate to next mission with intro parameter
-        const nextMissionId = String(Number(mission.id) + 1);
-        if ((missions as any)[nextMissionId]) {
-          router.push(`/missions/${nextMissionId}?showIntro=true`);
-        } else {
-          router.push("/missions");
-        }
-      }, 1500);
-      return () => clearTimeout(timeout);
-    }
-  }, [showHelpAccepted, router, mission.id]);
+  // REMOVED: This was overriding the HelpAcceptedOverlay's auto-navigation delay
+  // The overlay now handles its own navigation timing
 
   switch (layoutType) {
     case "standardIntroLayout":
@@ -518,13 +506,13 @@ export default function MissionPage() {
                 <div className="flex gap-6">
                   <button
                     onClick={handleStepQuestionNo}
-                    className="px-8 py-2 rounded-xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
+                    className="px-8 py-2 rounded-3xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
                   >
                     No
                   </button>
                   <button
                     onClick={handleStepQuestionYes}
-                    className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                    className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
                   >
                     Yes
                   </button>
@@ -642,9 +630,8 @@ export default function MissionPage() {
             <div
               className="fixed inset-0 z-[99999] flex items-center justify-center"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
-              onClick={() => setShowHelpAccepted(false)}
             >
-              <HelpAcceptedOverlay />
+              <HelpAcceptedOverlay currentMissionId={String(mission.id)} />
             </div>
           )}
 
@@ -907,9 +894,8 @@ export default function MissionPage() {
             <div
               className="fixed inset-0 z-[99999] flex items-center justify-center"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-              onClick={() => setShowHelpAccepted(false)}
             >
-              <HelpAcceptedOverlay />
+              <HelpAcceptedOverlay currentMissionId={String(mission.id)} />
             </div>
           )}
 

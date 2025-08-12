@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Lottie from "lottie-react";
+import { motion } from "framer-motion";
 import animationData from "../assets/animation.json";
 
 // Debug: Check if animation data is loaded
@@ -38,6 +39,7 @@ export default function CongratsCard({
   nextMissionText = "Mission 2",
 }: CongratsCardProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
     // Play sound when component mounts
@@ -46,6 +48,10 @@ export default function CongratsCard({
         console.log("Audio play failed:", error);
       });
     }
+
+    // Show content after a brief delay for dramatic effect
+    const timer = setTimeout(() => setShowContent(true), 500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -56,7 +62,46 @@ export default function CongratsCard({
         className="fixed inset-0 flex items-center justify-center z-50"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
       >
-        <div
+        {/* Background Bubbles Animation */}
+        {showContent && (
+          <>
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: -100, opacity: [0, 1, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+              className="absolute bottom-0 left-1/4 w-3 h-3 bg-[#00AEEF] rounded-full"
+            />
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: -100, opacity: [0, 1, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
+              className="absolute bottom-0 right-1/3 w-2 h-2 bg-[#FF9C32] rounded-full"
+            />
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: -100, opacity: [0, 1, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 2 }}
+              className="absolute bottom-0 left-1/2 w-1.5 h-1.5 bg-white rounded-full"
+            />
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: -100, opacity: [0, 1, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 2.5 }}
+              className="absolute bottom-0 right-1/4 w-2.5 h-2.5 bg-[#7ED957] rounded-full"
+            />
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: -100, opacity: [0, 1, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 3 }}
+              className="absolute bottom-0 left-1/3 w-1 h-1 bg-[#9C27B0] rounded-full"
+            />
+          </>
+        )}
+
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={showContent ? { scale: 1, opacity: 1 } : {}}
+          transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           className="bg-white rounded-[40px] shadow-lg flex flex-col items-center min-w-[280px] max-w-[90vw] px-0 py-0 overflow-visible"
           style={{ width: 460, position: "relative" }}
         >
@@ -168,7 +213,7 @@ export default function CongratsCard({
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </>
   );
