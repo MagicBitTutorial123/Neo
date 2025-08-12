@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
 interface CountdownTimerProps {
@@ -14,6 +14,40 @@ export default function CountdownTimer({
   const [count, setCount] = useState(3);
   const [showGo, setShowGo] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio on mount and play continuously during countdown
+  useEffect(() => {
+    audioRef.current = new Audio("/countdown.mp3");
+    audioRef.current.volume = 0.7; // Set volume to 70%
+    audioRef.current.loop = true; // Loop the audio continuously
+
+    // Start playing the audio immediately when countdown begins
+    const playAudio = async () => {
+      try {
+        await audioRef.current?.play();
+      } catch (error) {
+        console.log("Audio playback failed:", error);
+      }
+    };
+
+    playAudio();
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Stop audio when countdown completes
+  useEffect(() => {
+    if (!isActive && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [isActive]);
 
   useEffect(() => {
     if (!isActive) return;

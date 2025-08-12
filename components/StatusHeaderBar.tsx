@@ -114,18 +114,36 @@ export default function Header({
           <div className="hidden xl:flex items-center gap-2">
             <div className="relative w-3 h-3">
               {/* Center dot */}
-              <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full" />
-              {/* Radar rings */}
+              <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full z-10" />
+              {/* Radar rings - Enhanced effect */}
               <div
-                className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full opacity-75"
+                className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full opacity-60"
                 style={{
-                  animation: "ping 3s cubic-bezier(0, 0, 0.2, 1) infinite",
+                  animation:
+                    "radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite",
                 }}
               />
               <div
-                className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full opacity-50"
+                className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full opacity-40"
                 style={{
-                  animation: "ping 3s cubic-bezier(0, 0, 0.2, 1) infinite",
+                  animation:
+                    "radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite",
+                  animationDelay: "0.5s",
+                }}
+              />
+              <div
+                className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full opacity-20"
+                style={{
+                  animation:
+                    "radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite",
+                  animationDelay: "1s",
+                }}
+              />
+              <div
+                className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full opacity-10"
+                style={{
+                  animation:
+                    "radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite",
                   animationDelay: "1.5s",
                 }}
               />
@@ -183,6 +201,24 @@ export default function Header({
         className="absolute left-0 bottom-0 w-full h-1"
         style={{ background: "#FF9C32" }}
       />
+
+      {/* Radar animation styles */}
+      <style jsx>{`
+        @keyframes radar-ping {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(2.5);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(3);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }

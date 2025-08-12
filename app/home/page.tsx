@@ -241,7 +241,7 @@ export default function HomePage() {
               <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 mb-1.5 sm:mb-2 md:mb-4">
                 <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black shadow-lg">
                   <Image
-                    src="/project-week-icon.png"
+                    src="/projects.svg"
                     alt="project-week-icon"
                     width={14}
                     height={14}
@@ -326,7 +326,7 @@ export default function HomePage() {
           <div className="rounded-2xl bg-white shadow flex flex-row items-center p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 min-h-[60px] sm:min-h-[70px] md:min-h-[80px] w-full">
             <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#00AEEF] shadow-lg">
               <Image
-                src="/power-icon.png"
+                src="/Battery.svg"
                 alt="Battery"
                 width={12}
                 height={12}
