@@ -74,9 +74,9 @@ export default function SignupMain() {
             <div className="flex items-center gap-8 mt-8">
               <LetsGoButton
                 style={{
-                  width: 361,
-                  height: 77.5,
-                  fontSize: 24,
+                  width: 300,
+                  height: 65,
+                  fontSize: 20,
                 }}
                 onClick={() => {
                   setTimeout(() => router.push("/signup/mobile"), 300);
