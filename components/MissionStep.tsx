@@ -42,10 +42,8 @@ export default function MissionStep({
   stepTitle,
   stepDescription,
   stepImage,
-  stepContent,
   onNext,
   onPrevious,
-  onComplete,
   isConnected = false,
   onConnectToggle,
   onRun,
@@ -63,7 +61,7 @@ export default function MissionStep({
   tryAgainButtonText = "Try Again",
   onTryAgain,
 }: MissionStepProps) {
-  const [currentStep, setCurrentStep] = useState(stepNumber);
+  const [ setCurrentStep] = useState(stepNumber);
 
   const handleNext = () => {
     if (onNext) {

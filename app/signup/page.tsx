@@ -1,29 +1,35 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+//import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect,useState } from "react";
 import { useUser } from "@/context/UserContext";
 import LetsGoButton from "@/components/LetsGoButton";
 
 export default function SignupMain() {
   const router = useRouter();
   const { clearRegistrationData } = useUser();
+  const [name] = useState("");
 
   useEffect(() => {
-    clearRegistrationData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  clearRegistrationData();
+}, []);
 
-  const handleBack = () => {
-    // Animate, then navigate
-    setTimeout(() => router.push("/"), 300);
+  const handleNext = () => {
+    if (!name.trim()) {
+      alert("Please enter your name");
+      return;
+    }
+
+    localStorage.setItem("name", name); 
+    router.push("/signup/age");         
   };
+ 
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center  overflow-hidden">
       {/* Chevron left button on far left, vertically centered */}
       <button
-        onClick={handleBack}
+        onClick={handleNext}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full transition-transform duration-300 ease-out hover:scale-110 group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
         aria-label="Back to login"
@@ -82,7 +88,7 @@ export default function SignupMain() {
                   setTimeout(() => router.push("/signup/mobile"), 300);
                 }}
               >
-                Let's Go
+                Let s Go
               </LetsGoButton>
             </div>
           </div>

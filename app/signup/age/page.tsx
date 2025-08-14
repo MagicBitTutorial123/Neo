@@ -34,6 +34,7 @@ export default function SignupAge() {
     // Save age to UserContext for persistence across signup flow
     updateRegistrationData({ age: Number(age) });
     // Navigate to email input page
+    localStorage.setItem("age", age);
     router.push("/signup/email");
   };
 

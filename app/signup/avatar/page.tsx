@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 
@@ -19,6 +19,15 @@ export default function SignupAvatar() {
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
 
+
+  //DISPLAY NAME
+  const [displayName, setDisplayName] = useState(registrationData.name || "");
+  useEffect(() => {
+    if (!displayName) {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("name") : null;
+      if (saved) setDisplayName(saved);
+    }
+  }, [displayName]);
   const handleBack = () => {
     router.push("/signup/email/setPassword");
   };
@@ -28,7 +37,7 @@ export default function SignupAvatar() {
     if (selected === null) return;
 
     updateRegistrationData({ avatar: avatars[selected] });
-    router.push("/signup/mobile/setMpin");
+    router.push("/home");
   };
 
   return (
@@ -100,7 +109,7 @@ export default function SignupAvatar() {
                 </svg>
               )}
             </div>
-            <div className="text-2xl font-bold text-[#888] mb-2">Name</div>
+            <div className="text-2xl font-bold text-[#888] mb-2">{displayName||"Name"}</div>
           </div>
           <div className="mb-4 mt-2 text-2xl md:text-3xl font-extrabold text-[#222E3A] text-center font-poppins">
             Select your avatar

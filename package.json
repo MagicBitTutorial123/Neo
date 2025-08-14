@@ -11,6 +11,7 @@
   "dependencies": {
     "@blockly/continuous-toolbox": "^5.0.19",
     "@monaco-editor/react": "^4.7.0",
+    "@supabase/supabase-js": "^2.53.0",
     "axios": "^1.10.0",
     "blockly": "^10.4.3",
     "clsx": "^2.1.1",

@@ -12,7 +12,7 @@ function validateEmail(email: string) {
 export default function SignupEmail() {
   const router = useRouter();
   // Get registration data from UserContext for state persistence
-  const { registrationData, updateRegistrationData } = useUser();
+  const { updateRegistrationData } = useUser();
   // Initialize email state with existing data from context or empty string
   const [email, setEmail] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -22,14 +22,14 @@ export default function SignupEmail() {
   };
 
   const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    // Validate email format before proceeding
-    if (!validateEmail(email)) return;
+  e.preventDefault();
+  if (!validateEmail(email)) return;
 
-    // Save email to UserContext for persistence across signup flow
-    updateRegistrationData({ email });
-    router.push("/signup/email/setPassword");
-  };
+  updateRegistrationData({ email });
+  localStorage.setItem("email", email); 
+  router.push("/signup/email/setPassword");
+};
+
 
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">

@@ -55,6 +55,7 @@ export default function SignupName() {
 
     // Save name to UserContext for persistence across signup flow
     updateRegistrationData({ name: name.trim() });
+    localStorage.setItem("name", name.trim());
     // Navigate to age selection page
     router.push("/signup/age");
   };

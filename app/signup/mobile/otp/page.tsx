@@ -3,21 +3,12 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import NextButton from "@/components/NextButton";
-import { useUser } from "@/context/UserContext";
 
-/**
- * OTP verification page component
- *
- * CHANGES MADE:
- * - Integrated with UserContext for state management
- * - Updates UserContext instead of using localStorage directly
- * - Added proper form validation and disabled state for Next button
- * - Maintains consistent styling with other signup pages
- */
+
 export default function SignupOtp() {
   const router = useRouter();
   // Get registration data from UserContext for state persistence
-  const { updateRegistrationData } = useUser();
+  //const { updateRegistrationData } = useUser();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = [
     useRef<HTMLInputElement>(null),
@@ -35,42 +26,47 @@ export default function SignupOtp() {
     router.push("/signup/mobile");
   };
 
-  const verifyOTP = async () => {
-    try {
-      if (!window.confirmationResult) {
-        console.error("No confirmation result found");
-        alert("Session expired. Please go back and try again.");
-        return;
-      }
+ const verifyOTP = async () => {
+  const otpString = otp.join("");
+  const phone = localStorage.getItem("fullPhone");
 
-      const otpString = otp.join("");
+  if (!phone) {
+    alert("Phone number not found. Please go back and try again.");
+    router.push("/signup/mobile");
+    return;
+  }
 
-      // Validate OTP format
-      if (otpString.length !== 6 || !/^\d{6}$/.test(otpString)) {
-        alert("Please enter a valid 6-digit OTP");
-        return;
-      }
+  if (otpString.length !== 6 || !/^\d{6}$/.test(otpString)) {
+    alert("Please enter a valid 6-digit OTP");
+    return;
+  }
 
-      const result = await window.confirmationResult.confirm(otpString);
-      const user = result.user;
+  try {
+    const response = await fetch("http://127.0.0.1:5000/verify-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phone, otp: otpString }),
+    });
 
-      // Save user UID to UserContext for persistence across signup flow
-      updateRegistrationData({ uid: user.uid });
+    const data = await response.json();
 
-      router.push("/signup/name");
-    } catch (err: any) {
-      console.error("Invalid OTP", err);
-
-      // Handle specific Firebase errors
-      if (err.code === "auth/invalid-verification-code") {
-        alert("Invalid OTP. Please check and try again.");
-      } else if (err.code === "auth/code-expired") {
-        alert("OTP has expired. Please request a new one.");
-      } else {
-        alert("Verification failed. Please try again.");
-      }
+    if (!response.ok) {
+      console.error("OTP verification failed:", data.message);
+      alert(data.message || "OTP verification failed");
+      return;
     }
-  };
+
+    console.log("✅ OTP verified successfully");
+    alert("OTP verified successfully!");
+    router.push("/signup/name");
+  } catch (error) {
+    console.error("❌ OTP verification failed:", error);
+    alert("Something went wrong. Please try again.");
+  }
+};
+
 
   /**
    * Handle OTP input changes with validation
@@ -186,7 +182,7 @@ export default function SignupOtp() {
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.preventDefault();
                 if (!isOtpComplete) return;
-                verifyOTP(); // ✅ This verifies and navigates
+                verifyOTP(); 
               }}
             >
               Next
@@ -201,7 +197,7 @@ export default function SignupOtp() {
               }}
               className="text-[#00AEEF] text-sm font-medium hover:underline focus:outline-none"
             >
-              Didn't receive the code? Resend
+              Didnt receive the code? Resend
             </button>
           </form>
         </div>
@@ -209,3 +205,4 @@ export default function SignupOtp() {
     </div>
   );
 }
+//name age email password re enterpassword 
