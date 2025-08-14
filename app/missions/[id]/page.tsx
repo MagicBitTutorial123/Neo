@@ -576,7 +576,7 @@ export default function MissionPage() {
                 />
                 <button
                   onClick={handleDontWorryContinue}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                  className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
                 >
                   Continue
                 </button>
@@ -840,7 +840,7 @@ export default function MissionPage() {
                 />
                 <button
                   onClick={handleDontWorryContinue}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                  className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
                 >
                   Continue
                 </button>

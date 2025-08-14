@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import Lottie from "lottie-react";
 import { motion } from "framer-motion";
 import animationData from "../assets/animation.json";
+import coinsAnimationData from "../assets/Coins Animation.json";
 
 // Debug: Check if animation data is loaded
 console.log("Animation data loaded:", animationData ? "Yes" : "No");
+console.log("Coins animation data loaded:", coinsAnimationData ? "Yes" : "No");
 
 // CSS for scaling animation
 const scalePulseStyle = `
@@ -40,6 +42,8 @@ export default function CongratsCard({
 }: CongratsCardProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [showContent, setShowContent] = useState(false);
+  const [flyCoins, setFlyCoins] = useState(false);
+  const coinAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     // Play sound when component mounts
@@ -54,14 +58,69 @@ export default function CongratsCard({
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (showContent) {
+      // Delay slightly so the card appears first
+      const timer = setTimeout(() => {
+        setFlyCoins(true);
+        coinAudioRef.current?.play();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [showContent]);
+
   return (
     <>
       <style>{scalePulseStyle}</style>
       <audio ref={audioRef} src="/congrats.mp3" preload="auto" />
+      <audio ref={coinAudioRef} src="/coins.wav" preload="auto" />
       <div
         className="fixed inset-0 flex items-center justify-center z-50"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
       >
+        {/* Floating Coins Animation */}
+        {flyCoins && (
+          <>
+            {[...Array(12)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                animate={{
+                  x: window.innerWidth < 768 ? -800 - i * 50 : -580 - i * 35, // responsive leftward movement
+                  y: 350 + i * 15, // going DOWN (positive values)
+                  opacity: 0,
+                  scale: 0.5,
+                  rotate: 350,
+                }}
+                transition={{
+                  duration: 1.2,
+                  delay: i * 0.1, // staggered delay - each coin starts 0.1s after the previous
+                  ease: "easeInOut",
+                }}
+                style={{
+                  position: "absolute",
+                  top: "50%", // starting Y relative to card
+                  left: window.innerWidth < 768 ? "35%" : "44%", // start more left on mobile
+                  width: 100, // increased from 64 to 96
+                  height: 100, // increased from 64 to 96
+                  zIndex: 50,
+                }}
+              >
+                {/* Lottie coin animation */}
+                <Lottie
+                  animationData={coinsAnimationData}
+                  loop={false}
+                  autoplay
+                  style={{ width: "100%", height: "100%" }}
+                  onError={(error) =>
+                    console.error("Coins animation error:", error)
+                  }
+                />
+              </motion.div>
+            ))}
+          </>
+        )}
+
         {/* Background Bubbles Animation */}
         {showContent && (
           <>
@@ -179,18 +238,28 @@ export default function CongratsCard({
             {/* Stats */}
             <div className="flex gap-6 mb-6">
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1">
-                  25
+                <motion.div
+                  className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1"
+                  initial={{ scale: 0 }}
+                  animate={showContent ? { scale: 1 } : {}}
+                  transition={{ duration: 0.6, delay: 1.2, type: "spring" }}
+                >
+                  {points}
                   <span className="text-sm">XP</span>
-                </div>
+                </motion.div>
                 <div className="text-[#A1A6B0] text-xs font-semibold">
                   Points
                 </div>
               </div>
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-lg font-extrabold text-[#232733] mb-1">
+                <motion.div
+                  className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-lg font-extrabold text-[#232733] mb-1"
+                  initial={{ scale: 0 }}
+                  animate={showContent ? { scale: 1 } : {}}
+                  transition={{ duration: 0.6, delay: 1.4, type: "spring" }}
+                >
                   {timeSpent}
-                </div>
+                </motion.div>
                 <div className="text-[#A1A6B0] text-xs font-semibold">
                   Timing
                 </div>
