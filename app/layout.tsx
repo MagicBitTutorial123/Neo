@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
+import { SidebarProvider } from "@/context/SidebarContext";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -26,7 +27,9 @@ export default function RootLayout({
         className={`${poppins.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        <UserProvider>{children}</UserProvider>
+        <UserProvider>
+          <SidebarProvider>{children}</SidebarProvider>
+        </UserProvider>
       </body>
     </html>
   );

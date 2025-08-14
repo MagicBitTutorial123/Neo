@@ -29,12 +29,7 @@ export default function TipOfTheDayCard() {
       <div className="flex flex-row items-center justify-between">
         <span className="flex items-center gap-3">
           <span className="w-10 h-10 flex items-center justify-center rounded-full shadow-lg bg-[#FF9C32] transition-all duration-300">
-            <Image
-              src="/tip-of-the-day-icon.png"
-              alt="Tip"
-              width={22}
-              height={22}
-            />
+            <Image src="/TipOfTheDay.svg" alt="Tip" width={22} height={22} />
           </span>
           <span className="text-lg font-bold text-[#222E3A]">
             Tip of the day

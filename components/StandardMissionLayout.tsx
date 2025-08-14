@@ -155,7 +155,9 @@ export default function StandardMissionLayout({
         return;
       } else {
         // User has already seen the question, go directly to elevation step
-        setCurrentStep(mission.steps.length - 1);
+        const elevationStep = mission.steps.length - 1;
+        setCurrentStep(elevationStep);
+        onCurrentStepChange?.(elevationStep);
         return;
       }
     }
@@ -163,25 +165,37 @@ export default function StandardMissionLayout({
       // Only allow finish/try again here
       return;
     }
-    setCurrentStep((s: number) => s + 1);
+    const newStep = currentStep + 1;
+    setCurrentStep(newStep);
+    onCurrentStepChange?.(newStep);
   };
 
   // Previous handler
   const handlePrevious = () => {
     if (isElevationStep) {
-      setCurrentStep(2); // Go back to step 3
+      // Only Mission 1 has a special elevation step that goes back to step 3
+      if (mission.id === 1) {
+        setCurrentStep(2); // Go back to step 3 (index 2)
+        onCurrentStepChange?.(2);
+      } else {
+        // For other missions, just go back one step
+        const newStep = currentStep - 1;
+        setCurrentStep(newStep);
+        onCurrentStepChange?.(newStep);
+      }
       return;
     }
-    if (currentStep > 0) setCurrentStep((s: number) => s - 1);
+    if (currentStep > 0) {
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+      onCurrentStepChange?.(newStep);
+    }
   };
 
   const handleBack = () => {
     setShowCongrats(false);
-    if (mission.id === 1) {
-      setShowHelpNeo(true);
-      return;
-    }
-    // Optionally: navigate home or to missions list
+    // Show HelpNeo overlay for all missions when back button is clicked
+    setShowHelpNeo(true);
   };
   const handleNextMission = async () => {
     setShowCongrats(false);
@@ -242,11 +256,17 @@ export default function StandardMissionLayout({
   useEffect(() => {
     if (showHelpAccepted) {
       const timeout = setTimeout(() => {
-        router.push("/missions/2");
+        // Navigate to next mission for all missions
+        const nextMissionId = String(Number(mission.id) + 1);
+        if ((missions as any)[nextMissionId]) {
+          router.push(`/missions/${nextMissionId}`);
+        } else {
+          router.push("/missions");
+        }
       }, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [showHelpAccepted, router]);
+  }, [showHelpAccepted, router, mission.id]);
 
   if (showIntro) {
     return (
@@ -262,6 +282,29 @@ export default function StandardMissionLayout({
     );
   }
 
+  // Safety check to ensure mission data is loaded
+  if (!mission.steps || mission.steps.length === 0) {
+    return <div>Loading mission data...</div>;
+  }
+
+  // Ensure currentStep is within valid bounds
+  const validCurrentStep = Math.max(
+    0,
+    Math.min(currentStep, mission.steps.length - 1)
+  );
+  if (validCurrentStep !== currentStep) {
+    console.warn(`Step index ${currentStep} adjusted to ${validCurrentStep}`);
+    setCurrentStep(validCurrentStep);
+    return <div>Loading...</div>;
+  }
+
+  // Get current step data safely
+  const currentStepData = mission.steps[currentStep];
+  if (!currentStepData) {
+    console.error(`Step data not found for index ${currentStep}`);
+    return <div>Error: Step data not found</div>;
+  }
+
   // Always render MissionStep in the background
   return (
     <div className="relative h-full">
@@ -271,9 +314,9 @@ export default function StandardMissionLayout({
         title={mission.title}
         timeAllocated={mission.intro.timeAllocated}
         liveUsers={17}
-        stepTitle={mission.steps[currentStep].title}
-        stepDescription={mission.steps[currentStep].description}
-        stepImage={mission.steps[currentStep].image}
+        stepTitle={currentStepData.title}
+        stepDescription={currentStepData.description}
+        stepImage={currentStepData.image}
         onNext={handleNext}
         onPrevious={handlePrevious}
         onFinish={handleFinish}
@@ -315,12 +358,9 @@ export default function StandardMissionLayout({
         </div>
       )}
       {showHelpAccepted && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center"
-          onClick={() => setShowHelpAccepted(false)}
-        >
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black opacity-50" />
-          <HelpAcceptedOverlay />
+          <HelpAcceptedOverlay currentMissionId={String(mission.id)} />
         </div>
       )}
       {/* Overlay for PlaygroundUnlockedCard */}

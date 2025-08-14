@@ -283,6 +283,7 @@ export default function SideNavbar({
                 className={`flex flex-row items-center gap-3 cursor-not-allowed select-none ${
                   sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3`}
+                title={sidebarCollapsed ? item.label : ""}
               >
                 <Image src={item.icon} alt={item.label} width={25} height={25} style={{ filter: "grayscale(1)", opacity: 1 }} />
                 {!sidebarCollapsed && (

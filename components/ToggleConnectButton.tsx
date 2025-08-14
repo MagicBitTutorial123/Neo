@@ -35,11 +35,14 @@ export default function ToggleConnectButton({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    // Only add event listener when dropdown is open
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [showDropdown]);
 
   const handleClick = () => {
     if (status === "connected") {
@@ -74,6 +77,11 @@ export default function ToggleConnectButton({
       setStatus("disconnected");
       onToggle();
     }, 1000);
+  };
+
+  // Prevent event bubbling when clicking on dropdown
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   let pillColor = "";
@@ -112,10 +120,10 @@ export default function ToggleConnectButton({
       >
         <img src={iconSrc} alt={pillText} className="w-5 h-5" />
       </div>
-      {/* Status pill */}
+      {/* Status pill - Hidden on all small screen sizes */}
       <button
         onClick={handleClick}
-        className={`px-4 py-1 rounded-full font-medium text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
+        className={`hidden xl:block px-4 py-1 rounded-full font-medium text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
         style={{ minWidth: 100 }}
         disabled={status === "connecting" || status === "disconnecting"}
       >
@@ -124,15 +132,18 @@ export default function ToggleConnectButton({
 
       {/* Dropdown Menu */}
       {showDropdown && status === "disconnected" && (
-        <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div
+          className="absolute top-full right-0 xl:left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-[#E0E6ED] z-50 overflow-hidden opacity-92"
+          onClick={handleDropdownClick}
+        >
           <div className="py-1">
             {/* Connection Type Options */}
-            <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+            <div className="px-3 py-2 text-xs font-medium text-[#222E3A] uppercase tracking-wide">
               Select Connection Type
             </div>
             <button
               onClick={() => handleConnectionTypeSelect("bluetooth")}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-[#222E3A] hover:bg-[#d5efff] transition-colors"
             >
               <div className="flex items-center gap-2">
                 <img src="/bluetooth.png" alt="Bluetooth" className="w-4 h-4" />
@@ -141,7 +152,7 @@ export default function ToggleConnectButton({
             </button>
             <button
               onClick={() => handleConnectionTypeSelect("serial")}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-[#222E3A] hover:bg-[#d5efff] transition-colors"
             >
               <div className="flex items-center gap-2">
                 <img src="/usb-port.png" alt="Serial" className="w-4 h-4" />

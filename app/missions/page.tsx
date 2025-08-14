@@ -28,15 +28,15 @@ export default function MissionsPage() {
         }}
       >
         {/* Breadcrumb */}
-        <div className="text-2xl font-extrabold text-[#222E3A] mb-6 flex items-center gap-2 px-8 pt-8">
+        <div className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#222E3A] mb-4 sm:mb-6 flex items-center gap-1 sm:gap-2 px-4 sm:px-6 md:px-8 pt-4 sm:pt-6 md:pt-8">
           <span className="text-[#222E3A]">Missions</span>
           <span className="text-[#222E3A]">&gt;</span>
           <span className="text-[#00AEEF]">
             Mission {String(selectedMissionIdx + 1)}
           </span>
         </div>
-        {/* Mission Progress Bar */}
-        <div className="fixed top-8 right-8 z-50 w-[320px]">
+        {/* Mission Progress Bar - Responsive positioning */}
+        <div className="absolute top-4 right-4 lg:top-8 lg:right-8 z-50 w-[280px] sm:w-[320px]">
           <MissionProgressBar
             missionLabel={`Mission ${String(
               (userData?.missionProgress ?? 0) + 1
@@ -49,7 +49,7 @@ export default function MissionsPage() {
           />
         </div>
         {/* Stepper Progress Bar with Mission Details */}
-        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full">
+        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full px-2 sm:px-4 md:px-6 lg:px-8">
           <StepperMissionProgressBar
             missionList={missionList}
             completed={completed}

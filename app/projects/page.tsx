@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import SideNavbar from "@/components/SideNavbar";
 import Image from "next/image";
 import LetsGoButton from "@/components/LetsGoButton";
@@ -42,49 +43,62 @@ const projects = [
 export default function ProjectsPage() {
   const projectOfTheWeek = projects.find((p) => p.projectOfTheWeek);
   const otherProjects = projects.filter((p) => !p.projectOfTheWeek);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <SideNavbar />
-      <main className="flex-1 flex flex-col items-start px-12 py-8 overflow-hidden">
+    <div className="flex min-h-screen bg-white overflow-x-hidden">
+      <SideNavbar onCollapse={setSidebarCollapsed} />
+      <main
+        className="flex-1 flex flex-col items-start px-4 lg:px-12 py-6 lg:py-8 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+        }}
+      >
         {/* Project of the week */}
         {projectOfTheWeek && (
           <div
-            className="w-full max-w-6xl flex flex-row items-stretch border border-[#E0E6ED] rounded-3xl bg-[#F8F9FC] mb-12"
-            style={{ minHeight: 280 }}
+            className="w-full flex flex-col md:flex-row items-stretch border border-[#E0E6ED] rounded-2xl lg:rounded-3xl bg-[#F8F9FC] mb-6 sm:mb-8 lg:mb-12 transition-all duration-300 ease-in-out"
+            style={{
+              minHeight: 240,
+              maxWidth: sidebarCollapsed
+                ? "calc(100vw - 80px - 32px)"
+                : "calc(100vw - 260px - 32px)",
+            }}
           >
-            <div className="flex flex-col justify-center flex-1 pl-8">
-              <div className="text-3xl md:text-4xl font-extrabold text-[#222E3A] mb-2">
+            <div className="flex flex-col justify-center flex-1 p-4 sm:p-6 lg:pl-8">
+              <div className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#222E3A] mb-1 sm:mb-2">
                 {projectOfTheWeek.title}
               </div>
-              <div className="text-lg font-bold text-[#888] mb-2">
+              <div className="text-sm sm:text-base md:text-lg font-bold text-[#888] mb-1 sm:mb-2">
                 {projectOfTheWeek.subtitle}
               </div>
-              <div className="text-base text-[#222E3A] mb-6">
+              <div className="text-xs sm:text-sm md:text-base text-[#222E3A] mb-3 sm:mb-4 lg:mb-6">
                 {projectOfTheWeek.description}
               </div>
               <LetsGoButton
                 style={{
-                  width: 260,
-                  minWidth: 170,
-                  height: 48,
-                  minHeight: 48,
-                  fontSize: 18,
+                  width: 200,
+                  minWidth: 150,
+                  height: 40,
+                  minHeight: 40,
+                  fontSize: 14,
                   justifyContent: "center",
                 }}
               >
                 Explore Now
               </LetsGoButton>
             </div>
-            <div className="flex-shrink-0 h-full w-[450px] relative overflow-hidden rounded-r-3xl">
+            <div className="flex-shrink-0 h-48 md:h-full w-full md:w-[350px] lg:w-[450px] relative overflow-hidden rounded-b-2xl md:rounded-r-3xl md:rounded-br-3xl md:rounded-b-none">
               <Image
                 src={projectOfTheWeek.image}
                 alt={projectOfTheWeek.title}
                 fill
                 className="object-cover h-full w-full"
                 style={{
-                  borderTopRightRadius: 24,
-                  borderBottomRightRadius: 24,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
+                  borderTopRightRadius: 0,
+                  borderTopLeftRadius: 0,
                   display: "block",
                 }}
               />
@@ -92,12 +106,22 @@ export default function ProjectsPage() {
           </div>
         )}
         {/* Explore other projects */}
-        <div className="w-full max-w-6xl flex-1 flex flex-col overflow-hidden">
-          <div className="text-2xl md:text-3xl font-extrabold text-[#22AEEF] mb-4">
+        <div
+          className="w-full flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+          style={{
+            maxWidth: sidebarCollapsed
+              ? "calc(100vw - 80px - 32px)"
+              : "calc(100vw - 260px - 32px)",
+          }}
+        >
+          <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold text-[#22AEEF] mb-3 sm:mb-4">
             Explore other projects
           </div>
           <div className="flex-1 overflow-hidden">
-            <ProjectsCarousel projects={otherProjects} />
+            <ProjectsCarousel
+              projects={otherProjects}
+              sidebarCollapsed={sidebarCollapsed}
+            />
           </div>
         </div>
       </main>

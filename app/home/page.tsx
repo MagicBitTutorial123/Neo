@@ -171,18 +171,18 @@ export default function HomePage() {
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
-    <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
+    <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0 min-h-screen">
       {/* Mobile Mission Progress Bar - Top of page */}
-      <div className="lg:hidden w-full flex flex-col items-center mb-4">
-        <div className="w-full flex flex-row items-center justify-between mb-2">
-          <span className="text-sm sm:text-base font-bold text-[#00AEEF]">
+      <div className="lg:hidden w-full flex flex-col items-center mb-2 sm:mb-4">
+        <div className="w-full flex flex-row items-center justify-between mb-1 sm:mb-2">
+          <span className="text-xs sm:text-sm font-bold text-[#00AEEF]">
             {missionLabel}
           </span>
-          <span className="text-sm sm:text-base font-bold text-[#00AEEF]">
+          <span className="text-xs sm:text-sm font-bold text-[#00AEEF]">
             {xpPoints} XP
           </span>
         </div>
-        <div className="w-full h-2 sm:h-3 rounded-full bg-[#E5EAF1] flex overflow-hidden">
+        <div className="w-full h-1.5 sm:h-2 rounded-full bg-[#E5EAF1] flex overflow-hidden">
           <div
             className="bg-[#00AEEF] h-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
@@ -190,14 +190,14 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-start justify-between w-full max-w-7xl mx-auto gap-6 lg:gap-0">
+      <div className="flex flex-col lg:flex-row items-start justify-start w-full max-w-7xl mx-auto gap-6 lg:gap-0 h-full">
         {/* Left: Welcome and Mission */}
-        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px]">
+        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px] h-full">
           <div className="mb-2">
-            <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#FF9C32]">
+            <span className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#FF9C32]">
               Welcome back!
             </span>
-            <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
+            <div className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
               {userData?.name}{" "}
               {/* <span className="inline-block">
                 <Image src="/User.png" alt="User" width={32} height={32} />
@@ -213,13 +213,13 @@ export default function HomePage() {
               height={300}
               className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
             />
-            <button className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition">
+            <button className="absolute bottom-2 sm:bottom-4 md:bottom-6 right-2 sm:right-4 md:right-6 bg-black text-white font-bold rounded-full px-2 sm:px-4 md:px-6 lg:px-8 py-1 sm:py-2 md:py-3 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base lg:text-lg shadow-lg hover:bg-[#222] transition">
               Continue mission{" "}
               <span className="inline-block">
                 <svg
-                  width="20"
-                  height="20"
-                  className="sm:w-6 sm:h-6"
+                  width="16"
+                  height="16"
+                  className="sm:w-5 sm:h-5 md:w-6 md:h-6"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -235,32 +235,32 @@ export default function HomePage() {
             </button>
           </div>
           {/* Project of the week - new layout */}
-          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full">
+          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full min-h-[160px] sm:min-h-[200px]">
             {/* Left: Text */}
-            <div className="flex flex-col justify-center p-4 sm:p-6 md:p-8 flex-1 min-w-0 sm:min-w-[220px] h-full">
-              <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-4">
-                <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-black shadow-lg">
+            <div className="flex flex-col justify-center p-3 sm:p-4 md:p-6 lg:p-8 flex-1 min-w-0 sm:min-w-[220px] h-full">
+              <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 mb-1.5 sm:mb-2 md:mb-4">
+                <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-black shadow-lg">
                   <Image
-                    src="/project-week-icon.png"
+                    src="/projects.svg"
                     alt="project-week-icon"
-                    width={18}
-                    height={18}
-                    className="sm:w-[22px] sm:h-[22px]"
+                    width={14}
+                    height={14}
+                    className="sm:w-[18px] sm:h-[18px] md:w-[22px] md:h-[22px]"
                   />
                 </span>
-                <span className="text-sm sm:text-base md:text-lg font-medium text-[#222E3A]">
+                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-medium text-[#222E3A]">
                   Project of the week
                 </span>
               </div>
-              <div className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#222E3A] mb-1 sm:mb-2">
+              <div className="text-sm sm:text-lg md:text-xl lg:text-2xl font-extrabold text-[#222E3A] mb-1 sm:mb-2">
                 Boxing Champ
               </div>
-              <div className="text-sm sm:text-base text-[#555] font-normal">
+              <div className="text-xs sm:text-sm md:text-base text-[#555] font-normal">
                 Lorem ipsum dolor sit amet consectetur.
               </div>
             </div>
             {/* Right: Image */}
-            <div className="flex-shrink-0 w-full sm:w-[260px] md:w-[320px] lg:w-[340px] h-full relative overflow-hidden m-0 p-0">
+            <div className="flex-shrink-0 w-full sm:w-[260px] md:w-[320px] lg:w-[340px] h-full relative overflow-hidden m-0 p-0 min-h-[200px]">
               <Image
                 src="/project-image-4.png"
                 alt="Project of the Week"
@@ -279,7 +279,7 @@ export default function HomePage() {
           </div>
         </div>
         {/* Right: Mission Progress, Badges, Battery, Tip */}
-        <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full">
+        <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full flex-shrink-0">
           {/* Mission Progress Bar - Desktop Only */}
           <div className="hidden lg:flex w-full flex-col items-center mb-2">
             <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -299,19 +299,19 @@ export default function HomePage() {
           </div>
 
           {/* Badges */}
-          <div className="rounded-2xl border border-[#E0E6ED] bg-white p-3 sm:p-4 flex flex-col mt-6 sm:mt-8 lg:mt-10">
-            <div className="font-bold text-[#222E3A] mb-2 text-sm sm:text-base">
+          <div className="rounded-2xl border border-[#E0E6ED] bg-white p-2 sm:p-3 md:p-4 flex flex-col mt-4 sm:mt-6 md:mt-8 lg:mt-10">
+            <div className="font-bold text-[#222E3A] mb-1.5 sm:mb-2 text-xs sm:text-sm md:text-base">
               My Badges
             </div>
-            <div className="grid grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 md:gap-3">
               {badges.map((badge, idx) => (
                 <span key={idx} className="flex items-center justify-center">
                   <Image
                     src={badge.src}
                     alt={badge.alt}
-                    width={50}
-                    height={50}
-                    className="sm:w-[65px] sm:h-[65px]"
+                    width={40}
+                    height={40}
+                    className="sm:w-[50px] sm:h-[50px] md:w-[65px] md:h-[65px]"
                     style={
                       badge.earned
                         ? {}
@@ -323,33 +323,30 @@ export default function HomePage() {
             </div>
           </div>
           {/* Battery */}
-          <div className="rounded-2xl bg-white shadow flex flex-row items-center p-4 sm:p-6 gap-4 sm:gap-6 min-h-[70px] sm:min-h-[80px] w-full">
-            <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-[#00AEEF] shadow-lg">
+          <div className="rounded-2xl bg-white shadow flex flex-row items-center p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 min-h-[60px] sm:min-h-[70px] md:min-h-[80px] w-full">
+            <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#00AEEF] shadow-lg">
               <Image
-                src="/power-icon.png"
+                src="/Battery.svg"
                 alt="Battery"
-                width={16}
-                height={16}
-                className="sm:w-5 sm:h-5"
+                width={12}
+                height={12}
+                className="sm:w-4 sm:h-4 md:w-5 md:h-5"
               />
             </span>
-            <div className="text-lg sm:text-xl font-bold text-[#222E3A] ml-2">
+            <div className="text-sm sm:text-lg md:text-xl font-bold text-[#222E3A] ml-1 sm:ml-2">
               Battery
             </div>
             <div className="flex-1 flex justify-end items-center">
               {/* Battery Icon */}
-              <div
-                className="relative flex items-center sm:w-[120px] sm:h-[48px]"
-                style={{ width: 100, height: 40 }}
-              >
+              <div className="relative flex items-center w-[80px] h-[32px] sm:w-[100px] sm:h-[40px] md:w-[120px] md:h-[48px]">
                 {/* Battery outline */}
                 <div
-                  className="absolute left-0 top-0 w-full h-full rounded-[10px] sm:rounded-[12px] border-2 border-[#E5EAF1] bg-white"
+                  className="absolute left-0 top-0 w-full h-full rounded-[8px] sm:rounded-[10px] md:rounded-[12px] border-2 border-[#E5EAF1] bg-white"
                   style={{ boxShadow: "0 2px 8px #0001" }}
                 ></div>
                 {/* Battery fill */}
                 <div
-                  className="absolute left-0 top-0 h-full rounded-l-[8px] sm:rounded-l-[10px] bg-gradient-to-b from-[#B6FF7A] to-[#7ED957]"
+                  className="absolute left-0 top-0 h-full rounded-l-[6px] sm:rounded-l-[8px] md:rounded-l-[10px] bg-gradient-to-b from-[#B6FF7A] to-[#7ED957]"
                   style={{
                     width: `${Math.max(0, Math.min(100, batteryLevel))}%`,
                     transition: "width 0.5s",
@@ -358,12 +355,12 @@ export default function HomePage() {
                 ></div>
                 {/* Battery tip */}
                 <div
-                  className="absolute right-[-10px] sm:right-[-12px] top-1/4 w-5 h-1/2 sm:w-6 sm:h-1/2 bg-white border-2 border-[#E5EAF1] rounded-r-[5px] sm:rounded-r-[6px]"
+                  className="absolute right-[-8px] sm:right-[-10px] md:right-[-12px] top-1/4 w-4 h-1/2 sm:w-5 sm:h-1/2 md:w-6 md:h-1/2 bg-white border-2 border-[#E5EAF1] rounded-r-[4px] sm:rounded-r-[5px] md:rounded-r-[6px]"
                   style={{ zIndex: 2 }}
                 ></div>
                 {/* Battery percentage */}
                 <span
-                  className="absolute left-0 top-0 w-full h-full flex items-center justify-center text-sm sm:text-lg font-bold"
+                  className="absolute left-0 top-0 w-full h-full flex items-center justify-center text-xs sm:text-sm md:text-lg font-bold"
                   style={{
                     zIndex: 3,
                     color: batteryLevel > 20 ? "#222E3A" : "#FF4D4F",
@@ -405,7 +402,7 @@ export default function HomePage() {
       <SideNavbar onCollapse={setSidebarCollapsed} />
       {/* Main Content */}
       <main
-        className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
+        className="flex-1 flex flex-col items-start relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen w-full"
         style={{
           marginLeft: sidebarCollapsed ? "80px" : "260px",
         }}
@@ -415,7 +412,6 @@ export default function HomePage() {
     </div>
   );
 }
-
 // Add a simple fade-in animation
 // In your global CSS (e.g., app/globals.css), add:
 // .animate-fade-in { animation: fadeIn 0.6s; }

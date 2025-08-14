@@ -4,11 +4,11 @@ export const missions = {
     title: "Assemble the robot",
     intro: {
       image: "/MissionIntroImage-1.png",
-      description: "Some instructions for the mission. Lorem ipsum dolor sit amet consectetur...",
+      description: "Follow simple steps to build your robot piece by piece. Let’s get your robot ready for action!",
       timeAllocated: "15 mins",
     },
     missionPageImage: "/mission1-missionPageImage.png",
-    missionDescription: "Neque sit sed amet adipiscing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
+    missionDescription: "Get ready to build your very own robot! In this mission, you’ll connect parts step by step and bring your robot to life. Learn how each component fits together and complete the build to activate your robot.",
     steps: [
       {
         image: "/mission1-step1-image.png",
@@ -21,7 +21,7 @@ export const missions = {
         description: "Start by attaching the robot's arm to the main body. Make sure it is secure and moves freely.",
       },
       {
-        image: "/mission1-step2-image.png",
+        image: "/mission1-step3-image.png",
         title: "Assemble the Arm",
         description: "Start by attaching the robot's arm to the main body. Make sure it is secure and moves freely.",
       },
@@ -39,18 +39,18 @@ export const missions = {
     intro: {
       image: "/MissionIntroImage-2.png",
       description: "Your next mission is to build the robot's arm. Follow the instructions carefully to complete the assembly.",
-      timeAllocated: "10 mins",
+      timeAllocated: "30 secs",
     },
     missionPageImage: "/mission2-missionPageImage.png",
-    missionDescription: "cing urna faucibus nulla porttitor.Lorem ipsum dolor sit amet consectetur. Orci nulla non odio amet posuere. Lectus tortor et natoque cursus id. Lacus penatibus proin rhoncus pellentesque a scelerisque. Neque sit sed amet adipiscing urna faucibus nulla porttitor.",
+    missionDescription: "Time to power up! In this mission, you’ll link your robot to the system and make sure all connections are working. Watch the lights turn on and check if your robot is ready to follow your commands!",
     steps: [
       {
-        image: "/mission1-step2-image.png",
+        image: "/mission2-step1-image.png",
         title: "Attach the Arm",
         description: "Start by attaching the robot's arm to the main body. Make sure it is secure and moves freely.",
       },
       {
-        image: "/mission1-step1-image.png",
+        image: "/mission2-step2-image.png",
         title: "Test the Arm",
         description: "Test the arm's movement and ensure all connections are tight. Complete the mission by verifying the arm works as expected.",
       },

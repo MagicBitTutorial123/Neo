@@ -54,10 +54,10 @@ export default function SignupMain() {
           {/* Logo */}
           <div className="mb-8 mt-8 -ml-40 flex justify-start">
             <Image
-              src="/side-logo.png"
+              src="/BuddyNeo-expanded.svg"
               alt="BuddyNeo Logo"
-              width={400}
-              height={75}
+              width={320}
+              height={60}
               style={{ maxWidth: "100%", height: "auto" }}
             />
           </div>
@@ -80,9 +80,9 @@ export default function SignupMain() {
             <div className="flex items-center gap-8 mt-8">
               <LetsGoButton
                 style={{
-                  width: 361,
-                  height: 77.5,
-                  fontSize: 24,
+                  width: 300,
+                  height: 65,
+                  fontSize: 20,
                 }}
                 onClick={() => {
                   setTimeout(() => router.push("/signup/mobile"), 300);

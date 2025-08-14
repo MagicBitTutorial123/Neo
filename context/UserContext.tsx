@@ -24,6 +24,7 @@ type UserData = {
   firebaseUid?: string;
   isNewUser?: boolean;
   hasCompletedMission2?: boolean;
+  hasCompletedMission3?: boolean;
   createdAt?: string;
   missionProgress?: number;
   xp?: number;
