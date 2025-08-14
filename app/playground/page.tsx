@@ -13,6 +13,7 @@ import { usbUpload } from "@/utils/usbUpload";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import { useState } from "react";
+import Header from "@/components/StatusHeaderBar";
 
 Blockly.setLocale(En);
 
@@ -20,6 +21,8 @@ export default function Playground() {
   const [generatedCode, setGeneratedCode] = useState("");
   const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionType,setConnectionType] = useState("serial")
+  const [connectionStatus,setConnectionStatus] = useState("disconnected");
 
   const portRef = useRef(null);
   const bluetoothDeviceRef = useRef(null);
@@ -85,6 +88,15 @@ export default function Playground() {
     }
   };
 
+  const clearWorkspace = () => {
+    console.log("test")
+  const workspace = Blockly.getMainWorkspace();
+  if (workspace) {
+    workspace.clear();
+    setGeneratedCode(""); // Clear the generated code state too, if desired
+  }
+};
+
   // connect ble when bluetooth is enabled
   useEffect(() => {
     if (bluetoothEnabled) {
@@ -117,37 +129,46 @@ export default function Playground() {
   const onConnectToggle = () => {
     if (bluetoothEnabled) {
       connectBluetooth();
-    } else {
-      usbUpload(generatedCode, portRef);
-    }
+    } 
   };
 
+  const onConnectionTypeChange = (e) => {
+    if (e != connectionType){
+      setConnectionType(e)
+    }
+  }
+
+  useEffect(() => {
+    console.log("connection type changed")
+  },[connectionType])
   return (
     <div className="app-wrapper">
       <div>
         <div className="h-screen bg-white flex flex-row w-screen">
           <SideNavbar />
           <div className="flex flex-col w-full h-full">
-            <StatusHeaderBar
-              missionNumber={2}
-              title={"test"}
-              timeAllocated={"1"}
+            <Header
               liveUsers={17}
               isPlayground={true}
               onRun={uploadCode}
+              timeAllocated="100"
               isConnected={isConnected}
-              // setIsConnected={setIsConnected}
+              setIsConnected={setIsConnected}
               onConnectToggle={onConnectToggle}
-              // onErase={clearWorkspace}
+              connectionStatus={connectionStatus}
+              setConnectionStatus={setConnectionStatus}
+              onErase={clearWorkspace}
+              onConnectionTypeChange={onConnectionTypeChange}
+
             />
 
             <BlocklyComponent
               generatedCode={generatedCode}
               setGeneratedCode={setGeneratedCode}
             />
-          </div>
+            </div>
         </div>
-      </div>
+    </div>
     </div>
   );
 }

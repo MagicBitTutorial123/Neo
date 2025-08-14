@@ -19,6 +19,9 @@ interface HeaderProps {
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
   isPlayground?: boolean;
+  onConnectionTypeChange: (e:string) => void;
+  setConnectionStatus: React.Dispatch<string>;
+  connectionStatus: string;
 }
 
 export default function Header({
@@ -26,25 +29,28 @@ export default function Header({
   title,
   timeAllocated,
   liveUsers,
-  isConnected = false,
+  isConnected,
   setIsConnected,
   onConnectToggle,
   onRun,
   onPause,
   onErase,
-  playground = false,
   isRunning = false,
   sidebarCollapsed = false,
   enableTimerPersistence = false,
-  isPlayground = false
+  isPlayground = false,
+  onConnectionTypeChange,
+  connectionStatus,
+  setConnectionStatus,
 }: HeaderProps) {
-  const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
   const parseTimeAllocated = (str: string) => {
-    const match = str.match(/(\d+)/);
-    return match ? parseInt(match[1], 10) * 60 : 0;
+    if (str){
+      const match = str.match(/(\d+)/);
+      return match ? parseInt(match[1], 10) * 60 : 0;
+    }
   };
   const allocatedSeconds = parseTimeAllocated(timeAllocated);
 
@@ -82,7 +88,7 @@ export default function Header({
           </div>
 
         {/* Center: Timer pill */}
-        {! playground && (
+        {!isPlayground && (
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center h-full">
           <div className="flex items-center gap-3 bg-[#222A36] rounded-full px-6 py-1 min-w-[120px] shadow-inner border border-[#222A36] h-full">
             <span
@@ -148,6 +154,10 @@ export default function Header({
             <ToggleConnectButton
               isConnected={isConnected}
               onToggle={handleConnectToggle}
+              onConnectionTypeChange={onConnectionTypeChange}
+              connectionStatus={connectionStatus}
+              setConnectionStatus={setConnectionStatus}
+
             />
           )}
         </div>

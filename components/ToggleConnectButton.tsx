@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect } from "react";
 interface ToggleConnectButtonProps {
   isConnected: boolean;
   onToggle: () => void;
+  connectionStatus: string;
+  setConnectionStatus: React.Dispatch<string>;
   onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
 }
 
@@ -10,10 +12,11 @@ export default function ToggleConnectButton({
   isConnected,
   onToggle,
   onConnectionTypeChange,
+  connectionStatus,
+  setConnectionStatus
+
 }: ToggleConnectButtonProps) {
-  const [status, setStatus] = useState<
-    "connected" | "disconnected" | "connecting" | "disconnecting"
-  >(isConnected ? "connected" : "disconnected");
+  
   const [showDropdown, setShowDropdown] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
     "bluetooth"
@@ -21,7 +24,7 @@ export default function ToggleConnectButton({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    setStatus(isConnected ? "connected" : "disconnected");
+      setConnectionStatus(isConnected ? "connected" : "disconnected");
   }, [isConnected]);
 
   // Close dropdown when clicking outside
@@ -41,15 +44,16 @@ export default function ToggleConnectButton({
     };
   }, []);
 
-  const handleClick = () => {
-    if (status === "connected") {
-      // Disconnect immediately when connected
-      setStatus("disconnecting");
-      setTimeout(() => {
-        setStatus("disconnected");
-        onToggle();
-      }, 1000);
-    } else if (status === "disconnected") {
+  const handleConnectionTypeClick = () => {
+    // if (connectionStatus  === "connected") {
+    //   // Disconnect immediately when connected
+    //   setConnectionStatus("disconnecting");
+    //   setTimeout(() => {
+    //   setConnectionStatus("disconnected");
+    //     onToggle();
+    //   }, 1000);
+    // }
+    if (connectionStatus === "disconnected") {
       // Show dropdown to select connection type
       setShowDropdown(!showDropdown);
     }
@@ -60,18 +64,18 @@ export default function ToggleConnectButton({
     setShowDropdown(false);
     onConnectionTypeChange?.(type);
     // Start connecting with selected type
-    setStatus("connecting");
-    setTimeout(() => {
-      setStatus("connected");
-      onToggle();
-    }, 1000);
+    // setStatus("connecting");
+    // setTimeout(() => {
+    //   setStatus("connected");
+    //   onToggle();
+    // }, 1000);
   };
 
   const handleDisconnect = () => {
     setShowDropdown(false);
-    setStatus("disconnecting");
+    setConnectionStatus("disconnecting");
     setTimeout(() => {
-      setStatus("disconnected");
+    setConnectionStatus("disconnected");
       onToggle();
     }, 1000);
   };
@@ -82,13 +86,13 @@ export default function ToggleConnectButton({
   let pillText = "";
   let textColor = "";
 
-  if (status === "connected") {
+  if (connectionStatus === "connected") {
     pillColor = "bg-[#00EF34] border-[#00EF34]";
     iconBg = "bg-[#00EF34] border-[#00EF34]";
     iconSrc = "/connected-icon.png";
     pillText = "Connected";
     textColor = "text-black";
-  } else if (status === "disconnected") {
+  } else if (connectionStatus === "disconnected") {
     pillColor = "bg-[#FF4D4F] border-[#FF4D4F]";
     iconBg = "bg-[#FF4D4F] border-[#FF4D4F]";
     iconSrc = "/disconnected-icon.png";
@@ -98,7 +102,7 @@ export default function ToggleConnectButton({
     pillColor = "bg-[#FF9C32] border-[#FF9C32]";
     iconBg = "bg-[#FF9C32] border-[#FF9C32]";
     iconSrc = "/connecting.gif";
-    pillText = status === "connecting" ? "Connecting..." : "Disconnecting...";
+    pillText = connectionStatus === "connecting" ? "Connecting..." : "Disconnecting...";
     textColor = "text-black";
   }
 
@@ -107,23 +111,23 @@ export default function ToggleConnectButton({
       {/* Icon circle */}
       <div
         className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors cursor-pointer border-2 ${iconBg}`}
-        onClick={handleClick}
+        onClick={handleConnectionTypeClick}
         title={pillText}
       >
         <img src={iconSrc} alt={pillText} className="w-5 h-5" />
       </div>
       {/* Status pill */}
       <button
-        onClick={handleClick}
+        onClick={handleConnectClick}
         className={`px-4 py-1 rounded-full font-medium text-base focus:outline-none transition-colors border-2 shadow-sm ${pillColor} ${textColor}`}
         style={{ minWidth: 100 }}
-        disabled={status === "connecting" || status === "disconnecting"}
+        disabled={connectionStatus === "connecting" || connectionStatus === "disconnecting"}
       >
         {pillText}
       </button>
 
       {/* Dropdown Menu */}
-      {showDropdown && status === "disconnected" && (
+      {showDropdown && connectionStatus === "disconnected" && (
         <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="py-1">
             {/* Connection Type Options */}
