@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import MissionHeader from "./MissionHeader";
 
 interface MissionStepProps {
   missionNumber: number;
@@ -80,31 +79,24 @@ export default function MissionStep({
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FC]">
+    <div className="flex h-full bg-white relative">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Mission Header */}
-        <MissionHeader
-          missionNumber={missionNumber}
-          title={title}
-          timeAllocated={timeAllocated}
-          liveUsers={liveUsers}
-          isConnected={isConnected}
-          onConnectToggle={onConnectToggle}
-          onRun={onRun}
-          onPause={onPause}
-          onErase={onErase}
-          isRunning={isRunning}
-        />
+      <div
+        className="flex-1 flex flex-col h-full"
+        style={{ marginTop: "65px" }}
+      >
         {/* Main Step Content */}
-        <div className="flex flex-1 w-full max-w-7xl mx-auto mt-4 gap-6">
+        <div
+          className="flex w-full max-w-7xl mx-auto mt-4 gap-6"
+          style={{ flex: "0 1 auto" }}
+        >
           {/* Main Image/Tools Area */}
           <div
-            className="flex-1] w-full max-w-7xl mx-auto relative flex flex-col"
-            style={{ minHeight: 400 }}
+            className="flex-1 w-full max-w-7xl mx-auto relative flex flex-col"
+            style={{ minHeight: 300 }}
           >
             {/* Main image/tools placeholder */}
-            <div className="flex-1 flex items-center justify-center p-8">
+            <div className="flex-1 flex items-center justify-center p-4">
               {stepImage && (
                 <img
                   src={stepImage}
@@ -115,8 +107,11 @@ export default function MissionStep({
             </div>
           </div>
         </div>
-        {/* Step Info Bar (Bottom) */}
-        <div className="w-full bg-white border-t border-[#E0E6ED] px-8 py-4 flex items-center justify-between max-w-7xl mx-auto mt-6 rounded-b-2xl">
+      </div>
+
+      {/* Instructions Container - Fixed at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#E0E6ED] py-6">
+        <div className="w-full px-8 flex items-center justify-between max-w-7xl mx-auto h-16">
           <div>
             <div className="text-lg font-bold text-[#222E3A]">
               Step {stepNumber}
@@ -125,7 +120,7 @@ export default function MissionStep({
               {stepDescription}
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-12">
             {showPreviousButton && (
               <button
                 onClick={handlePrevious}

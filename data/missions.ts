@@ -70,7 +70,7 @@ export const missions = {
     steps: [
       {
         image: "/mission3-step1-image.png",
-        title: "Forward March (2 XP)",
+        title: "Forward March",
         blocks: [
           {
             name: "When (Up) key pressed",           
@@ -82,10 +82,24 @@ export const missions = {
         ],
         tryThis: "Make your robot move forward when you press the UP arrow. ",
         whyItWorks: "Both wheels spin forward together = straight movement.",
+        mcq: {
+          question: "When you pressed the UP arrow key, what did your robot do?",
+          options: [
+            "It moved forward.",
+            "It moved backward.",
+            "It turned left.",
+            "It did nothing."
+          ],
+          correctAnswer: 0,
+          feedback: {
+            success: "Yay, Awesome!",
+            retry: "Hmm… that doesn't look correct. Try again!"
+          }
+        }
       },
       {
         image: "/mission3-step2-image.png",
-        title: "Reverse Gear (2 XP)",
+        title: "Reverse Gear",
         blocks: [
           {
             name: "When (Down) key pressed",           
@@ -96,7 +110,106 @@ export const missions = {
           
         ],
         tryThis: "Make the robot back up when you press the DOWN arrow.",
-        whyItWorks: "Both wheels spin backward, just like reversing a car.",      },
+        whyItWorks: "Both wheels spin backward, just like reversing a car.",
+        mcq: {
+          question: "When you pressed the DOWN arrow key, what did your robot do?",
+          options: [
+            "It moved backward.",
+            "It moved forward.", 
+            "It turned right.",
+            "It didn't move at all."
+          ],
+          correctAnswer: 0,
+          feedback: {
+            success: "Your robot is reversing like a boss!",
+            retry: "Ah! That's not quite correct. Try again, you'll get it!"
+          }
+        }
+      },
+      {
+        image: "/mission3-step3-image.png",
+        title: "Left Turn Training",
+        blocks: [
+          {
+            name: " When (Left) key pressed",           
+          },
+          {
+            name: "Turn robot (left) in 50%",
+          },
+          
+        ],
+        tryThis: "Turn the robot left when you press the LEFT arrow.",
+        whyItWorks: "One wheel slows down — the other keeps moving = smooth turn.",
+        mcq: {
+          question: "When you pressed the LEFT arrow key, what did your robot do?",
+          options: [
+            "It turned left.",
+            "It turned right.",
+            "It moved straight forward.",
+            "It stopped moving completely."
+          ],
+          correctAnswer: 0,
+          feedback: {
+            success: "Look at that! Your robot just took a cool left!",
+            retry: "Ah! That's not quite correct. Try again, you'll get it!"
+          }
+        }
+      },
+      {
+        image: "/mission3-step4-image.png",
+        title: "Right Spin Mastery",
+        blocks: [
+          {
+            name: "When (Right) key pressed",           
+          },
+          {
+            name: "Turn robot (right) in 50%",
+          },
+          
+        ],
+        tryThis: "Make the robot turn right when you press the RIGHT arrow",
+        whyItWorks: "It's just like the left turn — but in the other direction!",
+        mcq: {
+          question: "What is the main difference between a left turn and a right turn?",
+          options: [
+            "The speed of the wheels",
+            "The direction of the turn",
+            "The number of wheels used",
+            "The type of movement block used"
+          ],
+          correctAnswer: 0,
+          feedback: {
+            success: "Whoa! Your robot's doing a right-spin twirl!",
+            retry: "Ah! That's not quite correct. Try again, you'll get it!"
+          }
+        }
+      },
+      {
+        image: "/mission3-step5-image.png",
+        title: "Turbo Time!",
+        blocks: [
+          {
+            name: "Any motion block with speed",           
+          },
+          
+        ],
+        tryThis: "Experiment with different speeds. Try 100%, then 20%.",
+        whyItWorks: "Speed control helps you master movement precision.",
+        mcq: {
+          question: "What does changing the speed percentage in a motion block do?",
+          options: [
+            "Changes the robot's color",
+            "Changes how fast the robot moves",
+            "Changes the robot's direction",
+            "Changes the robot's size"
+          ],
+          correctAnswer: 1,
+          feedback: {
+            success: "Fantastic! You've learned that speed control affects movement velocity!",
+            retry: "Think about what happened when you changed the speed from 50% to 100% or 20%."
+          }
+        }
+      },
     ],
     overlays: [],
   },

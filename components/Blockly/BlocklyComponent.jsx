@@ -23,11 +23,10 @@ Blockly.setLocale(En);
 
 export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
   const [activeTab, setActiveTab] = useState("Blocks");
-  const workspaceRef = useRef(null);
   const [expandMenu, setexpandMenu] = useState(false);
-  const blocklyDivRef = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [workspaceInitialized, setWorkspaceInitialized] = useState(false);
+  const workspaceRef = useRef(null)
 
   const toolboxConfig = useMemo(() => ({
     kind: "categoryToolbox",
@@ -250,7 +249,6 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
       });
     }
   }, []);
-
 
   useEffect(() => {
     const blocklyBgDiv = document.querySelector(".blocklyMainBackground");
@@ -484,19 +482,17 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
     workspaceRef.current = workspace;
 
     workspaceRef.current.addChangeListener((event) => {
-      if (event.type == "create" || event.type == "move") {
         const xml = Blockly.Xml.workspaceToDom(workspace);
         const xmlText = Blockly.Xml.domToText(xml);
         localStorage.setItem("blocklyWorkspace", xmlText);
         const code = pythonGenerator.workspaceToCode(workspace);
         setGeneratedCode(code);
-      }
     });
   };
 
   return (
     <>
-      <div className="relative h-full bg-white flex flex-col ">
+      <div className="h-full bg-white flex flex-col ">
         <div
           className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
           style={{ borderRadius: "48px" }}
@@ -515,7 +511,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
               <Image src={blocksTabIcon} alt="Blocks" className="w-5 h-5" />
               <span className="ml-1 font-bold">Blocks</span>
             </button>
-            <AIChatbot />
+            {/* <AIChatbot /> */}
             <button
               onClick={()=> setActiveTab("Code")}
               className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150
@@ -544,7 +540,7 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
               <span className="ml-1 font-bold">Dashboard</span>
             </button>
           </div>
-          <div className="relative z-5 flex-grow w-full">
+          <div className="relative z-5 flex-grow w-full ">
             {activeTab === "Blocks" && (
               <div
                 ref={(el) => {

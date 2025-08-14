@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import LetsGoButton from "@/components/LetsGoButton";
-import CountdownTimer from "@/components/CountdownTimer";
 
 interface MissionIntroProps {
   missionNumber: number;
@@ -53,7 +52,7 @@ export default function MissionIntro({
         <h1 className="text-3xl md:text-4xl font-extrabold text-[#222E3A]">
           Mission {missionNumber.toString().padStart(2, "0")}
         </h1>
-        <div className="flex items-center gap-2 text-lg font-poppins text-[#222E3A]">
+        <div className="flex items-center gap-2 text-lg text-[#222E3A]">
           <Image src="/gala_clock.png" alt="Clock" width={32} height={32} />
           <span>
             Time Allocated: <span className="font-bold">{timeAllocated}</span>
@@ -70,7 +69,7 @@ export default function MissionIntro({
           height={120}
           className="mb-4"
         />
-        <div className="text-2xl md:text-3xl font-extrabold text-[#222E3A] mb-2 mt-2 text-center">
+        <div className="text-2xl md:text-3xl font-semibold text-[#222E3A] mb-2 mt-2 text-center">
           {title}
         </div>
         <div className="text-center text-[#888] text-base md:text-lg mb-8 max-w-2xl">
@@ -102,20 +101,12 @@ export default function MissionIntro({
         </div>
       </div>
 
-      {/* Countdown Overlay */}
-      {showCountdown && !missionStarted && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
-        >
-          <CountdownTimer onGo={handleGo} />
-        </div>
-      )}
+      {/* Countdown is now handled at page level */}
 
       {/* Mission Started Overlay */}
       {missionStarted && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
+          className="fixed inset-0 flex items-center justify-center z-[60]"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.9)" }}
         >
           <div className="text-center text-white">

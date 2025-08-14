@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { TimerPersistence } from "@/utils/timerPersistence";
 
 export function formatTime(s: number) {
   const abs = Math.abs(s);
@@ -16,6 +17,8 @@ interface MissionTimerProps {
   autoStart?: boolean;
   onTick?: (secondsLeft: number) => void;
   showText?: boolean;
+  missionId?: string;
+  enablePersistence?: boolean;
 }
 
 export default function MissionTimer({
@@ -24,6 +27,8 @@ export default function MissionTimer({
   autoStart = true,
   onTick,
   showText = true,
+  missionId,
+  enablePersistence = false,
 }: MissionTimerProps) {
   const [secondsLeft, setSecondsLeft] = useState(allocatedTime);
   const [isActive, setIsActive] = useState(autoStart);
@@ -33,21 +38,53 @@ export default function MissionTimer({
   const beepRef = useRef<HTMLAudioElement | null>(null);
   const timeoutTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Only render timer after mount (fix hydration error)
+  // Initialize timer with persistence on mount
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    if (enablePersistence && missionId) {
+      const savedTimeLeft = TimerPersistence.getCurrentTimeLeft(
+        missionId,
+        allocatedTime
+      );
+      setSecondsLeft(savedTimeLeft);
+
+      // If timer was active before, resume it
+      const state = TimerPersistence.loadTimerState();
+      if (state && state.missionId === missionId && state.isActive) {
+        setIsActive(true);
+      } else if (autoStart) {
+        // Start new timer if autoStart is true
+        TimerPersistence.startTimer(missionId, allocatedTime);
+      }
+    }
+  }, [enablePersistence, missionId, allocatedTime, autoStart]);
 
   // Start/stop timer
   useEffect(() => {
     if (!isActive || !mounted) return;
+
     intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => prev - 1);
+      setSecondsLeft((prev) => {
+        const newValue = prev - 1;
+
+        // Update persistence if enabled
+        if (enablePersistence && missionId) {
+          const state = TimerPersistence.loadTimerState();
+          if (state && state.missionId === missionId) {
+            state.startTime = Date.now() - (allocatedTime - newValue) * 1000;
+            TimerPersistence.saveTimerState(state);
+          }
+        }
+
+        return newValue;
+      });
     }, 1000);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive, mounted]);
+  }, [isActive, mounted, enablePersistence, missionId, allocatedTime]);
 
   // Timeout logic: beep and show message for 3s, then continue negative time
   useEffect(() => {
@@ -71,18 +108,57 @@ export default function MissionTimer({
   }, [secondsLeft, onTimeout, onTick]);
 
   // Progress for circle (0-1, clamp at 0 for negative)
-  const progress = Math.max(0, secondsLeft / allocatedTime);
+  const progress = Math.max(0, secondsLeft / (allocatedTime || 1));
   // Color logic
   let color = "#00AEEF"; // Normal (blue)
-  if (secondsLeft <= allocatedTime * 0.2 && secondsLeft > allocatedTime * 0.1)
+  if (
+    secondsLeft <= (allocatedTime || 1) * 0.2 &&
+    secondsLeft > (allocatedTime || 1) * 0.1
+  )
     color = "#FF9C32"; // Warning (orange)
-  if (secondsLeft <= allocatedTime * 0.1 || secondsLeft < 0) color = "#FF4D4F"; // Critical (red)
+  if (secondsLeft <= (allocatedTime || 1) * 0.1 || secondsLeft < 0)
+    color = "#FF4D4F"; // Critical (red)
 
   // SVG circle params
   const radius = 16;
   const stroke = 4;
   const circumference = 2 * Math.PI * radius;
   const dash = circumference * progress;
+  const strokeDashoffset = Math.max(0, circumference - dash); // Ensure it's not negative
+
+  // Expose timer control methods
+  const pauseTimer = () => {
+    if (enablePersistence && missionId) {
+      TimerPersistence.pauseTimer();
+    }
+    setIsActive(false);
+  };
+
+  const resumeTimer = () => {
+    if (enablePersistence && missionId) {
+      TimerPersistence.resumeTimer();
+    }
+    setIsActive(true);
+  };
+
+  const resetTimer = () => {
+    if (enablePersistence && missionId) {
+      TimerPersistence.resetTimer(missionId, allocatedTime);
+    }
+    setSecondsLeft(allocatedTime);
+    setIsActive(autoStart);
+  };
+
+  // Expose methods to parent component
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).missionTimerControls = {
+        pause: pauseTimer,
+        resume: resumeTimer,
+        reset: resetTimer,
+      };
+    }
+  }, [enablePersistence, missionId, allocatedTime, autoStart]);
 
   if (!mounted) return null;
 
@@ -106,7 +182,7 @@ export default function MissionTimer({
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={circumference}
-          strokeDashoffset={circumference - dash}
+          strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           style={{ transition: "stroke-dashoffset 0.5s, stroke 0.3s" }}
         />

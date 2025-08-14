@@ -114,7 +114,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
           <div className="flex-1 bg-[#F8F9FC] rounded-2xl p-10 shadow border border-[#E0E6ED] flex flex-col min-h-[320px] max-h-[320px] justify-between overflow-hidden max-w-full">
             <div className="flex flex-col flex-1 justify-between h-full overflow-hidden max-w-full">
               <div className="flex-1 overflow-y-auto min-h-0 max-h-[200px] scrollbar-hide">
-                <div className="text-2xl text-black font-bold mb-4">
+                <div className="text-2xl text-black font-semibold mb-4">
                   {selectedMission.title}
                 </div>
                 <div
@@ -227,7 +227,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                 {/* Time */}
                 <div className="flex items-center gap-2 bg-[#222E3A] rounded-full px-3 py-1 self-start">
                   <Image
-                    src="/missionPageCardClock-icon.png"
+                    src="/missionCardClock.png"
                     alt="clock"
                     width={18}
                     height={18}

@@ -16,10 +16,6 @@ export default function StepQuestionCard({
   noLabel = "No",
 }: StepQuestionCardProps) {
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
-    >
       <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
         <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
           {question}
@@ -37,7 +33,6 @@ export default function StepQuestionCard({
           >
             {yesLabel}
           </button>
-        </div>
       </div>
     </div>
   );

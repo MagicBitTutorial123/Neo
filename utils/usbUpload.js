@@ -1,6 +1,6 @@
 const usbUpload = async (code, portRef) => {
-
   const currentCode = code.trim();
+  console.log(currentCode);
   if (!currentCode) {
     console.error("No code to upload");
     return;
@@ -20,11 +20,12 @@ const usbUpload = async (code, portRef) => {
     }
 
     if (port.writable.locked) {
-      toast({
-        title: "Busy",
-        description: "Port is currently busy.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Busy",
+      //   description: "Port is currently busy.",
+      //   variant: "destructive",
+      // });
+      console.log("port busy");
       return;
     }
 
@@ -36,21 +37,24 @@ const usbUpload = async (code, portRef) => {
     await new Promise((r) => setTimeout(r, 500));
 
     await writer.write("f = open('main.py', 'w')\r\n");
-    await txChar.writeValue(encoder.encode(`def mainLoop():\n`));
-    await new Promise((r) => setTimeout(r, 20));
+    await writer.write("f.write('async def mainLoop():\\n')\r\n");
+
 
     for (const line of currentCode.split("\n")) {
-      await writer.write(`f.write(${JSON.stringify("\t" + line + "\n")})\r\n`);
+      const sanitized = JSON.stringify("\t"+line + "\n");
+      await writer.write(`f.write(${sanitized})\r\n`);
       await new Promise((r) => setTimeout(r, 20));
     }
 
     await writer.write("f.close()\r\n");
     await writer.write("\x04"); // Ctrl+D
+    await writer.write("import machine\r\n");
+    await writer.write("machine.soft_reset()\r\n"); // OR machine.reset()
 
     await writer.close();
     await outputDone;
-    alert("Upload complete!");
 
+    alert("Upload complete!");
   } catch (error) {
     console.error("Error uploading code:", error);
   }

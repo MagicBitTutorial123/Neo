@@ -45,7 +45,7 @@ export default function LetsGoButton({
       }}
     >
       <button
-        className={`flex items-center justify-center rounded-full text-2xl font-bold font-poppins transition-all duration-300 ease-in-out focus:outline-none relative overflow-visible letsgo-btn ${
+        className={`flex items-center justify-center rounded-full text-2xl font-medium transition-all duration-300 ease-in-out focus:outline-none relative overflow-visible letsgo-btn ${
           locked
             ? "bg-[#333] text-white opacity-90 cursor-not-allowed"
             : "text-white bg-[#F28B20] hover:bg-[#F76B1C]"
