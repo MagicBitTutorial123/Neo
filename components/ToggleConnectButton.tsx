@@ -2,82 +2,49 @@ import React, { useState, useRef, useEffect } from "react";
 
 interface ToggleConnectButtonProps {
   isConnected: boolean;
-  onToggle: () => void;
+  onToggle: (connected: boolean) => void;
   connectionStatus: string;
   setConnectionStatus: React.Dispatch<string>;
   onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
+  connectionType: "bluetooth" | "serial";
 }
 
 export default function ToggleConnectButton({
-  isConnected,
   onToggle,
   onConnectionTypeChange,
   connectionStatus,
-  setConnectionStatus
-
+  connectionType
 }: ToggleConnectButtonProps) {
-  
   const [showDropdown, setShowDropdown] = useState(false);
-  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
-    "bluetooth"
-  );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-      setConnectionStatus(isConnected ? "connected" : "disconnected");
-  }, [isConnected]);
-
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleConnectionTypeClick = () => {
-    // if (connectionStatus  === "connected") {
-    //   // Disconnect immediately when connected
-    //   setConnectionStatus("disconnecting");
-    //   setTimeout(() => {
-    //   setConnectionStatus("disconnected");
-    //     onToggle();
-    //   }, 1000);
-    // }
     if (connectionStatus === "disconnected") {
-      // Show dropdown to select connection type
       setShowDropdown(!showDropdown);
     }
   };
 
   const handleConnectionTypeSelect = (type: "bluetooth" | "serial") => {
-    setConnectionType(type);
     setShowDropdown(false);
     onConnectionTypeChange?.(type);
-    // Start connecting with selected type
-    // setStatus("connecting");
-    // setTimeout(() => {
-    //   setStatus("connected");
-    //   onToggle();
-    // }, 1000);
   };
 
-  const handleDisconnect = () => {
-    setShowDropdown(false);
-    setConnectionStatus("disconnecting");
-    setTimeout(() => {
-    setConnectionStatus("disconnected");
-      onToggle();
-    }, 1000);
+  const handleConnectClick = () => {
+    if (connectionStatus === "connected") {
+      onToggle(false);
+    } else if (connectionStatus === "disconnected") {
+      onToggle(true);
+    }
   };
 
   let pillColor = "";
@@ -94,8 +61,7 @@ export default function ToggleConnectButton({
     textColor = "text-black";
   } else if (connectionStatus === "disconnected") {
     pillColor = "bg-[#FF4D4F] border-[#FF4D4F]";
-    iconBg = "bg-[#FF4D4F] border-[#FF4D4F]";
-    iconSrc = "/disconnected-icon.png";
+    iconBg = "bg-transparent border-[#FF4D4F]";
     pillText = "Disconnected";
     textColor = "text-white";
   } else {
@@ -108,14 +74,28 @@ export default function ToggleConnectButton({
 
   return (
     <div className="flex items-center gap-2 relative" ref={dropdownRef}>
-      {/* Icon circle */}
-      <div
-        className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors cursor-pointer border-2 ${iconBg}`}
-        onClick={handleConnectionTypeClick}
-        title={pillText}
-      >
-        <img src={iconSrc} alt={pillText} className="w-5 h-5" />
-      </div>
+             {/* Icon circle */}
+       <div
+         className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors cursor-pointer border-2 ${iconBg}`}
+         onClick={handleConnectionTypeClick}
+         title={pillText}
+       >
+                   {connectionStatus === "connected" ? (
+            <img src={iconSrc} alt={pillText} className="w-5 h-5" />
+          ) : connectionStatus === "disconnected" ? (
+            connectionType === "bluetooth" ? (
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M7 12l-2-2-2 2 2 2 2-2zm10.71-4.29L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15 7v4h1v2h-3V5h2l-3-4-3 4h2v8H8v-2.07c.7-.37 1.2-1.08 1.2-1.93 0-1.21-.99-2.2-2.2-2.2S4.8 7.79 4.8 9c0 .85.5 1.56 1.2 1.93V13c0 1.11.89 2 2 2h3v3.05c-.71.37-1.2 1.1-1.2 1.95 0 1.22.99 2.2 2.2 2.2s2.2-.98 2.2-2.2c0-.85-.49-1.58-1.2-1.95V15h3c1.11 0 2-.89 2-2V9h-1V7z"/>
+              </svg>
+            )
+          ) : (
+            <img src={iconSrc} alt={pillText} className="w-5 h-5" />
+          )}
+       </div>
       {/* Status pill */}
       <button
         onClick={handleConnectClick}

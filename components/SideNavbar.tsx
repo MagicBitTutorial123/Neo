@@ -10,11 +10,15 @@ export default function SideNavbar({
   name,
   playgroundActive = true,
   onCollapse,
+  onDashboardClick,
+  dashboardActive = false,
 }: {
   avatar?: string;
   name?: string;
   playgroundActive?: boolean;
   onCollapse?: (collapsed: boolean) => void;
+  onDashboardClick?: () => void;
+  dashboardActive?: boolean;
 }) {
   const { registrationData, userData } = useUser();
 
@@ -68,7 +72,7 @@ export default function SideNavbar({
           icon: "/playground-active.png",
           label: "Playground",
           href: "/playground",
-          active: pathname === "/playground",
+          active: pathname === "/playground" && !dashboardActive,
         }
       : {
           icon: "/playground-icon-dissabled.png",
@@ -76,6 +80,15 @@ export default function SideNavbar({
           href: "#",
           disabled: true,
         },
+    // Dashboard button (non-navigation)
+    {
+      icon: "/dashboardIcon.svg",
+      label: "Dashboard",
+      onClick: onDashboardClick,
+      active: dashboardActive,
+      isButton: true,
+      disabled: !hasCompletedMission2,
+    },
     {
       icon: "/demo-icon.png",
       label: "Demo",
@@ -88,7 +101,7 @@ export default function SideNavbar({
       href: "/projects",
       active: pathname === "/projects",
     },
-  ];
+  ] as const;
 
   return (
     <aside
@@ -144,34 +157,67 @@ export default function SideNavbar({
             collapsed ? "gap-4" : "gap-6"
           } items-start w-full ${collapsed ? "pl-2" : "pl-8"}`}
         >
-          {navItems.map((item) =>
-            item.disabled ? (
-              <div
-                key={item.label}
-                className={`flex flex-row items-center gap-3 cursor-not-allowed select-none ${
-                  collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
-                } py-3`}
-              >
-                <Image
-                  src={item.icon}
-                  alt={item.label}
-                  width={24}
-                  height={24}
-                  style={{ filter: "grayscale(1)", opacity: 1 }}
-                />
-                {!collapsed && (
-                  <span
-                    className="text-base font-semibold"
-                    style={{ color: "#BDC8D5" }}
-                  >
-                    {item.label}
-                  </span>
-                )}
-              </div>
-            ) : item.active ? (
+          {navItems.map((item) => {
+            if ("isButton" in item && item.isButton) {
+              return (
+                <button
+                  key={item.label}
+                  className={`flex flex-row items-center gap-3 ${
+                    collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
+                  } py-3 rounded-2xl ${
+                    item.active
+                      ? "border border-[#00AEEF] bg-white shadow-sm"
+                      : "hover:bg-[#F0F4F8] transition-colors"
+                  } ${item.disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                  onClick={() => !item.disabled && item.onClick?.()}
+                  disabled={item.disabled}
+                >
+                  <Image
+                    src={item.icon}
+                    alt={item.label}
+                    width={24}
+                    height={24}
+                  />
+                  {!collapsed && (
+                    <span className="text-base font-semibold text-[#222E3A]">
+                      {item.label}
+                    </span>
+                  )}
+                </button>
+              );
+            }
+
+            if ((item as any).disabled) {
+              return (
+                <div
+                  key={item.label}
+                  className={`flex flex-row items-center gap-3 cursor-not-allowed select-none ${
+                    collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
+                  } py-3`}
+                >
+                  <Image
+                    src={(item as any).icon}
+                    alt={item.label}
+                    width={24}
+                    height={24}
+                    style={{ filter: "grayscale(1)", opacity: 1 }}
+                  />
+                  {!collapsed && (
+                    <span
+                      className="text-base font-semibold"
+                      style={{ color: "#BDC8D5" }}
+                    >
+                      {item.label}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+
+            return item.active ? (
               <Link
                 key={item.label}
-                href={item.href}
+                href={(item as any).href}
                 className={`flex flex-row items-center gap-3 ${
                   collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3 rounded-2xl ${
@@ -181,7 +227,7 @@ export default function SideNavbar({
                 }`}
               >
                 <Image
-                  src={item.icon}
+                  src={(item as any).icon}
                   alt={item.label}
                   width={24}
                   height={24}
@@ -195,13 +241,13 @@ export default function SideNavbar({
             ) : (
               <Link
                 key={item.label}
-                href={item.href}
+                href={(item as any).href}
                 className={`flex flex-row items-center gap-3 ${
                   collapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3 rounded-2xl hover:bg-[#F0F4F8] transition-colors`}
               >
                 <Image
-                  src={item.icon}
+                  src={(item as any).icon}
                   alt={item.label}
                   width={24}
                   height={24}
@@ -212,8 +258,8 @@ export default function SideNavbar({
                   </span>
                 )}
               </Link>
-            )
-          )}
+            );
+          })}
         </nav>
       </div>
       {/* User/avatar section at the bottom */}

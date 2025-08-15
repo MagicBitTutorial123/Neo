@@ -13,15 +13,15 @@ interface HeaderProps {
   onConnectToggle?: (connected: boolean) => void;
   setIsConnected: any,
   onRun?: () => void;
-  onPause?: () => void;
   onErase?: () => void;
-  isRunning?: boolean;
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
   isPlayground?: boolean;
-  onConnectionTypeChange: (e:string) => void;
+  onConnectionTypeChange: (e:"bluetooth" | "serial") => void;
   setConnectionStatus: React.Dispatch<string>;
   connectionStatus: string;
+  connectionType?: "bluetooth" | "serial";
+  isUploading?: boolean;
 }
 
 export default function Header({
@@ -33,15 +33,15 @@ export default function Header({
   setIsConnected,
   onConnectToggle,
   onRun,
-  onPause,
   onErase,
-  isRunning = false,
   sidebarCollapsed = false,
   enableTimerPersistence = false,
   isPlayground = false,
   onConnectionTypeChange,
   connectionStatus,
   setConnectionStatus,
+  connectionType = "bluetooth",
+  isUploading = false,
 }: HeaderProps) {
   const [timerValue, setTimerValue] = useState(0);
 
@@ -65,7 +65,6 @@ export default function Header({
     <div
       className="w-full bg-[#181E2A] px-8 pb-0 relative"
       style={{ height: "65px", pointerEvents: "auto" }}
-      onClick={() => console.log("🎯 MissionHeader container clicked!")}
     >
       <div
         className="flex items-center justify-between max-w-8xl mx-auto relative h-full"
@@ -115,23 +114,47 @@ export default function Header({
 
         {/* Right: Live users, Control buttons (for mission 3+), and ToggleConnectButton (for mission 2+) */}
         <div className="flex items-center gap-8 ml-auto h-full">
-          {/* Control buttons for mission 3+ */}
-          {(missionNumber >= 3 || isPlayground) && (
-            <div className="flex items-center gap-3">
-              {/* Play/Pause button */}
-              <button
-                onClick={isRunning ? onPause : onRun}
-                className="p-2 bg-[#599CFF] hover:bg-[#8ebbff] rounded-full transition-colors cursor-pointer"
-                title={isRunning ? "Pause" : "Play"}
-              >
-                <Image
-                  src={isRunning ? "/stop button.png" : "/play button.png"}
-                  alt={isRunning ? "Pause" : "Play"}
-                  width={15}
-                  height={15}
-                  className="text-white"
-                />
-              </button>
+                     {/* Control buttons for mission 3+ */}
+           {(missionNumber >= 3 || isPlayground) && (
+             <div className="flex items-center gap-3">
+               {/* Play button with loading state */}
+               <button
+                 onClick={onRun}
+                 disabled={isUploading}
+                 className="p-2 bg-[#599CFF] hover:bg-[#8ebbff] rounded-full transition-colors cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
+                 title="Play"
+               >
+                 {isUploading ? (
+                   <svg
+                     className="animate-spin h-4 w-4 text-white"
+                     xmlns="http://www.w3.org/2000/svg"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                   >
+                     <circle
+                       className="opacity-25"
+                       cx="12"
+                       cy="12"
+                       r="10"
+                       stroke="currentColor"
+                       strokeWidth="4"
+                     ></circle>
+                     <path
+                       className="opacity-75"
+                       fill="currentColor"
+                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                     ></path>
+                   </svg>
+                 ) : (
+                   <Image
+                     src="/play button.png"
+                     alt="Play"
+                     width={15}
+                     height={15}
+                     className="text-white"
+                   />
+                 )}
+               </button>
 
               {/* Erase/Reset button */}
               <button
@@ -157,7 +180,7 @@ export default function Header({
               onConnectionTypeChange={onConnectionTypeChange}
               connectionStatus={connectionStatus}
               setConnectionStatus={setConnectionStatus}
-
+              connectionType={connectionType}
             />
           )}
         </div>
