@@ -465,6 +465,22 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
     }
   }, [activeTab]);
 
+  // Listen for clearWorkspace event
+  useEffect(() => {
+    const handleClearWorkspace = () => {
+      if (workspaceRef.current) {
+        workspaceRef.current.clear();
+        setGeneratedCode("");
+        localStorage.removeItem("blocklyWorkspace");
+      }
+    };
+
+    window.addEventListener("clearBlocklyWorkspace", handleClearWorkspace);
+    return () => {
+      window.removeEventListener("clearBlocklyWorkspace", handleClearWorkspace);
+    };
+  }, []);
+
   const updateWorkspace = (el) => {
     const workspace = Blockly.inject(el, {
       toolbox: toolboxConfig,

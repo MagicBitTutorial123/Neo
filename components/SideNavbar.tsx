@@ -34,9 +34,17 @@ const ErrorIcon = ({ size = 16 }: { size?: number }) => (
 export default function SideNavbar({
   avatar,
   name,
+  playgroundActive = true,
+  onCollapse,
+  onDashboardClick,
+  dashboardActive = false,
 }: {
   avatar?: string;
   name?: string;
+  playgroundActive?: boolean;
+  onCollapse?: (collapsed: boolean) => void;
+  onDashboardClick?: () => void;
+  dashboardActive?: boolean;
 }) {
   const { registrationData, userData, updateUserData } = useUser();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -294,7 +302,7 @@ export default function SideNavbar({
             ) : (
               <Link
                 key={item.label}
-                href={item.href}
+                href={(item as any).href}
                 className={`flex flex-row items-center gap-3 ${
                   sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
                 } py-3 rounded-2xl ${

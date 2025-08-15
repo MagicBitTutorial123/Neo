@@ -1,150 +1,235 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import "blockly/javascript";
 import "@/components/Blockly/customblocks/magicbitblocks";
 import "@/components/Blockly/customblocks/keyboardBlocks";
 import SideNavbar from "@/components/SideNavbar";
-import StatusHeaderBar from "@/components/StatusHeaderBar";
 import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
 import * as En from "blockly/msg/en";
 import { usbUpload } from "@/utils/usbUpload";
-import { keyboardSendBLE } from "@/utils/keyboardPress";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
-import { useState } from "react";
+import Header from "@/components/StatusHeaderBar";
+
+// Simple type declarations
+interface BluetoothGATT {
+  connected: boolean;
+  connect: () => Promise<BluetoothGATTServer>;
+  disconnect: () => void;
+}
+
+interface BluetoothGATTServer {
+  connected: boolean;
+  getPrimaryService: (serviceId: string) => Promise<BluetoothGATTService>;
+}
+
+interface BluetoothGATTService {
+  getCharacteristic: (characteristicId: string) => Promise<BluetoothRemoteGATTCharacteristic>;
+}
+
+interface BluetoothRemoteGATTCharacteristic {
+  writeValue: (value: BufferSource) => Promise<void>;
+}
+
+interface BluetoothDevice {
+  gatt?: BluetoothGATT;
+  addEventListener: (event: string, callback: () => void) => void;
+}
+
+declare global {
+  interface Navigator {
+    bluetooth: {
+      requestDevice: (options: { filters: Array<{ name: string }>; optionalServices: string[] }) => Promise<BluetoothDevice>;
+    };
+  }
+}
 
 Blockly.setLocale(En);
 
 export default function Playground() {
   const [generatedCode, setGeneratedCode] = useState("");
-  const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
+    "bluetooth"
+  );
+  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [dashboardActive, setDashboardActive] = useState(false);
+  const [tryingToConnect, setTryingToConnect] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const portRef = useRef(null);
-  const bluetoothDeviceRef = useRef(null);
-  const txChar = useRef(null);
-  const serviceUUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-  const txCharUUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+  const portRef = useRef<any>(null);
+  const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
+  const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const server = useRef<BluetoothGATTServer | null>(null);
 
-  // Bluetooth connection
-  const connectBluetooth = async (maxRetries = 10, isUserInitiated = false) => {
-    if (isConnected) return; // already connected or connecting
+  // Simple cleanup
+  useEffect(() => {
+    return () => {
+      if (bluetoothDeviceRef.current?.gatt?.connected) {
+        bluetoothDeviceRef.current.gatt.disconnect();
+      }
+    };
+  }, []);
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // Try to reconnect if we have a device reference
-        if (bluetoothDeviceRef.current) {
-          const server = await bluetoothDeviceRef.current.gatt.connect();
-          const service = await server.getPrimaryService(serviceUUID);
-          txChar.current = await service.getCharacteristic(txCharUUID);
-          setIsConnected(true);
+  // Simple Bluetooth connection
+  const connectBluetooth = async () => {
+    try {
+      setConnectionStatus("connecting");
+      // Request device
+      if (!bluetoothDeviceRef.current) {
+        bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
+          filters: [{ name: "Neo" }],
+          optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
+        });
 
-          bluetoothDeviceRef.current.addEventListener(
-            "gattserverdisconnected",
-            () => {
-              console.log("Bluetooth disconnected, reconnecting...");
-              setIsConnected(false);
-              connectBluetooth();
-            }
-          );
-          return;
-        }
+        // Handle disconnection
+        bluetoothDeviceRef.current.addEventListener(
+          "gattserverdisconnected",
+          async () => {
+            setIsConnected(false);
+            setConnectionStatus("disconnected");    
+          }
+        );
+      }
 
-        // Only request new device if user initiated or we have no device
-        if (isUserInitiated || !bluetoothDeviceRef.current) {
-          bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
-            filters: [{ name: "ESP32-BLE" }],
-            optionalServices: [serviceUUID],
-          });
+      if (!server.current?.connected) {
+        console.log("Connecting to server");
+        server.current = await bluetoothDeviceRef.current.gatt!.connect();
+        console.log(server.current)
+        const service = await server.current?.getPrimaryService(
+          "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+        );
+        console.log("service: ",service)
+        const characteristic = await service.getCharacteristic(
+          "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+        );
 
-          const server = await bluetoothDeviceRef.current.gatt.connect();
-          const service = await server.getPrimaryService(serviceUUID);
-          txChar.current = await service.getCharacteristic(txCharUUID);
-          setIsConnected(true);
-
-          bluetoothDeviceRef.current.addEventListener(
-            "gattserverdisconnected",
-            () => {
-              console.log("Bluetooth disconnected, reconnecting...");
-              setIsConnected(false);
-              connectBluetooth();
-            }
-          );
-          return;
-        }
-
-        throw new Error("No device available for reconnection");
-      } catch (error) {
-        console.error(`Connection attempt ${attempt} failed:`, error);
-        if (attempt === maxRetries) {
-          setIsConnected(false);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        writeCharacteristicRef.current = characteristic;
+        setConnectionStatus("connected");
+        setIsConnected(true);
+        setTryingToConnect(false);
+      }
+    } catch (error) {
+      console.error("Connection failed:", error);
+      if (tryingToConnect) {
+        setTimeout(async () => {
+          setTryingToConnect(false);
+          await connectBluetooth();
+        }, 2000);
       }
     }
   };
 
-  // connect ble when bluetooth is enabled
-  useEffect(() => {
-    if (bluetoothEnabled) {
-      if (bluetoothDeviceRef.current) {
-        connectBluetooth();
-      }
+  const clearWorkspace = () => {
+    console.log("test");
+    const workspace = Blockly.getMainWorkspace();
+    if (workspace) {
+      workspace.clear();
+      setGeneratedCode(""); // Clear the generated code state too, if desired
     }
-  }, [bluetoothEnabled]);
+  };
 
-  // Upload code based on current mode
+  // Simple upload code
   const uploadCode = async () => {
     if (!generatedCode) return;
+
+    setIsUploading(true);
     try {
-      if (bluetoothEnabled) {
-        if (!isConnected) {
-          await connectBluetooth();
-        }
-        await bluetoothUpload(generatedCode, txChar.current);
+      if (connectionType === "bluetooth") {
+        if (!isConnected) await connectBluetooth();
+        await bluetoothUpload(generatedCode, writeCharacteristicRef.current);
       } else {
         await usbUpload(generatedCode, portRef);
-        if (!isConnected) {
-          setIsConnected(true);
-        }
+        setIsConnected(true);
       }
     } catch (error) {
       console.error("Upload failed:", error);
+      alert(
+        `Upload failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const onConnectToggle = () => {
-    if (bluetoothEnabled) {
-      connectBluetooth();
+  const onConnectToggle = async (connected: boolean) => {
+    if (connected) {
+      try {
+        if (connectionType === "bluetooth") {
+          setTryingToConnect(true);
+        } else {
+          setIsConnected(true);
+          setConnectionStatus("connected");
+        }
+      } catch {
+        setConnectionStatus("disconnected");
+        setIsConnected(false);
+      }
     } else {
-      usbUpload(generatedCode, portRef);
+      setConnectionStatus("disconnecting");
+      if (bluetoothDeviceRef.current?.gatt?.connected) {
+        bluetoothDeviceRef.current.gatt.disconnect();
+      }
+      bluetoothDeviceRef.current = null;
+      writeCharacteristicRef.current = null;
+      portRef.current = null;
+      setIsConnected(false);
+      setConnectionStatus("disconnected");
     }
   };
+
+  const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
+    if (isConnected) onConnectToggle(false);
+    setConnectionType(type);
+  };
+
+  useEffect(() => {
+    async function connect() {
+      if (tryingToConnect) {
+        await connectBluetooth();
+      }
+    }
+    connect();
+  }, [tryingToConnect]);
 
   return (
     <div className="app-wrapper">
       <div>
         <div className="h-screen bg-white flex flex-row w-screen">
-          <SideNavbar />
+          <SideNavbar
+            onDashboardClick={() => setDashboardActive((v) => !v)}
+            dashboardActive={dashboardActive}
+          />
           <div className="flex flex-col w-full h-full">
-            <StatusHeaderBar
-              missionNumber={2}
-              title={"test"}
-              timeAllocated={"1"}
+            <Header
+              missionNumber={0}
+              title="Playground"
               liveUsers={17}
               isPlayground={true}
               onRun={uploadCode}
+              timeAllocated="100"
               isConnected={isConnected}
-              // setIsConnected={setIsConnected}
+              setIsConnected={setIsConnected}
               onConnectToggle={onConnectToggle}
-              // onErase={clearWorkspace}
+              connectionStatus={connectionStatus}
+              setConnectionStatus={setConnectionStatus}
+              onErase={clearWorkspace}
+              onConnectionTypeChange={onConnectionTypeChange}
+              connectionType={connectionType}
+              isUploading={isUploading}
             />
 
-            <BlocklyComponent
-              generatedCode={generatedCode}
-              setGeneratedCode={setGeneratedCode}
-            />
+            {dashboardActive ? (
+              <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]"></div>
+            ) : (
+              <BlocklyComponent
+                generatedCode={generatedCode}
+                setGeneratedCode={setGeneratedCode}
+              />
+            )}
           </div>
         </div>
       </div>
