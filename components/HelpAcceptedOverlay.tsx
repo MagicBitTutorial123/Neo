@@ -13,7 +13,7 @@ interface HelpAcceptedOverlayProps {
 export default function HelpAcceptedOverlay({
   message = `Yahooooo!\nThat's the spirit of an\ninnovator`,
   onAutoNavigate,
-  autoNavigateDelay = 6000, // 6 seconds default
+  autoNavigateDelay = 0, // Disable auto-navigation by default
   currentMissionId = "1", // Add current mission ID prop
 }: HelpAcceptedOverlayProps) {
   const [showContent, setShowContent] = useState(false);
@@ -34,26 +34,31 @@ export default function HelpAcceptedOverlay({
       });
     }, 1000);
 
-    // Auto navigate after specified delay
-    const autoNavigateTimer = setTimeout(() => {
-      if (onAutoNavigate) {
-        onAutoNavigate();
-      } else {
-        // Navigate to next mission instead of home
-        const nextMissionId = String(Number(currentMissionId) + 1);
-        if (nextMissionId <= "12") {
-          // Assuming there are 12 missions
-          router.push(`/missions/${nextMissionId}?showIntro=true`);
+    // Auto navigate after specified delay (only if delay > 0)
+    if (autoNavigateDelay > 0) {
+      const autoNavigateTimer = setTimeout(() => {
+        if (onAutoNavigate) {
+          onAutoNavigate();
         } else {
-          // If no more missions, go to missions page
-          router.push("/missions");
+          // Navigate to next mission instead of home
+          const nextMissionId = String(Number(currentMissionId) + 1);
+          if (nextMissionId <= "12") {
+            // Assuming there are 12 missions
+            router.push(`/missions/${nextMissionId}?showIntro=true`);
+          } else {
+            // If no more missions, go to missions page
+            router.push("/missions");
+          }
         }
-      }
-    }, autoNavigateDelay);
+      }, autoNavigateDelay);
+
+      return () => {
+        clearTimeout(autoNavigateTimer);
+      };
+    }
 
     return () => {
       clearTimeout(showTimer);
-      clearTimeout(autoNavigateTimer);
       clearInterval(countdownTimer);
     };
   }, [onAutoNavigate, autoNavigateDelay, router, currentMissionId]);
@@ -117,7 +122,7 @@ export default function HelpAcceptedOverlay({
           <motion.div
             initial={{ opacity: 0 }}
             animate={showContent ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 1.5 }}
+            transition={{ duration: 0.6, delay: 5 }}
             className="text-white/70 text-sm mt-4 text-center"
           >
             Continuing in {timeLeft} seconds...

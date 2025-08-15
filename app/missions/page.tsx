@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import MissionProgressBar from "@/components/MissionProgressBar";
 import StepperMissionProgressBar from "@/components/StepperMissionProgressBar";
 import SideNavbar from "@/components/SideNavbar";
+import { useSidebar } from "@/context/SidebarContext";
 
 export default function MissionsPage() {
   const { userData } = useUser();
@@ -16,11 +17,11 @@ export default function MissionsPage() {
   const missionList = Object.values(missions);
   // Track the selected mission index for both the stepper and the breadcrumb
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed } = useSidebar();
 
   return (
     <div className="flex min-h-screen min-w-screen h-screen w-screen bg-white overflow-hidden max-w-screen max-h-screen">
-      <SideNavbar onCollapse={setSidebarCollapsed} />
+      <SideNavbar />
       <main
         className="flex-1 flex flex-col overflow-hidden max-w-screen max-h-screen h-screen w-full p-0 m-0 transition-all duration-300 ease-in-out"
         style={{
@@ -28,15 +29,16 @@ export default function MissionsPage() {
         }}
       >
         {/* Breadcrumb */}
-        <div className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#222E3A] mb-4 sm:mb-6 flex items-center gap-1 sm:gap-2 px-4 sm:px-6 md:px-8 pt-4 sm:pt-6 md:pt-8">
+        <div className="text-2xl font-extrabold text-[#222E3A] mb-8 flex items-center gap-2 px-8 pt-8">
           <span className="text-[#222E3A]">Missions</span>
           <span className="text-[#222E3A]">&gt;</span>
           <span className="text-[#00AEEF]">
             Mission {String(selectedMissionIdx + 1)}
           </span>
         </div>
-        {/* Mission Progress Bar - Responsive positioning */}
-        <div className="absolute top-4 right-4 lg:top-8 lg:right-8 z-50 w-[280px] sm:w-[320px]">
+
+        {/* Mission Progress Bar */}
+        <div className="fixed top-8 right-8 z-50 w-[320px]">
           <MissionProgressBar
             missionLabel={`Mission ${String(
               (userData?.missionProgress ?? 0) + 1
@@ -48,8 +50,9 @@ export default function MissionsPage() {
             }
           />
         </div>
+
         {/* Stepper Progress Bar with Mission Details */}
-        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full px-2 sm:px-4 md:px-6 lg:px-8">
+        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full mt-6">
           <StepperMissionProgressBar
             missionList={missionList}
             completed={completed}

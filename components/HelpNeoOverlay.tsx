@@ -34,13 +34,13 @@ export default function HelpNeoOverlay({
           <div className="flex gap-8 mt-8 justify-center">
             <button
               onClick={onLater}
-              className="px-6 py-2 rounded-full bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#B3E6FF] transition-all duration-200 hover:bg-gray-800 hover:scale-105 hover:shadow-lg"
+              className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-gray-600 text-white font-bold text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 hover:bg-gray-700 hover:scale-105 hover:shadow-lg"
             >
               {laterText}
             </button>
             <button
               onClick={onHelp}
-              className="px-6 py-2 rounded-full bg-white text-black font-bold text-base focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200 hover:bg-gray-100 hover:scale-105 hover:shadow-lg"
+              className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-white text-black font-bold text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-white transition-all duration-200 hover:bg-gray-100 hover:scale-105 hover:shadow-lg"
             >
               {helpText}
             </button>

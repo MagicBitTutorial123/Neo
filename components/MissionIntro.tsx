@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import LetsGoButton from "@/components/LetsGoButton";
+import { useSidebar } from "@/context/SidebarContext";
 
 interface MissionIntroProps {
   missionNumber: number;
@@ -28,10 +29,15 @@ export default function MissionIntro({
   const [showCountdown, setShowCountdown] = useState(false);
   const [missionStarted, setMissionStarted] = useState(false);
   const router = useRouter();
+  const { sidebarCollapsed } = useSidebar();
 
   const handleStart = () => {
     setShowCountdown(true);
     onStart?.();
+    // Only call handleGo if onMissionStart is not provided (standalone usage)
+    if (!onMissionStart) {
+      handleGo();
+    }
   };
 
   const handleGo = () => {
@@ -40,13 +46,20 @@ export default function MissionIntro({
       onMissionStart();
     } else {
       setTimeout(() => {
-        router.push(`/missions/mission${missionNumber}/steps`);
+        router.push(`/missions/${missionNumber}`);
       }, 1000);
     }
   };
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center relative bg-white px-8">
+    <main
+      className="flex-1 flex flex-col items-center justify-center relative bg-white px-8"
+      style={{
+        marginLeft: sidebarCollapsed ? "80px" : "260px",
+        marginRight: "0px",
+        paddingTop: "60px", // Move content down to account for header
+      }}
+    >
       {/* Top Row: Title and Time */}
       <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center lg:justify-between mt-8 sm:mt-10 md:mt-12 mb-3 sm:mb-4 max-w-4xl mx-auto gap-2 sm:gap-3 lg:gap-0">
         <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#222E3A]">
@@ -67,7 +80,7 @@ export default function MissionIntro({
       </div>
 
       {/* Mission Content */}
-      <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
+      <div className="flex flex-col items-center w-full max-w-2xl mx-auto text-center">
         <Image
           src={image}
           alt={title}

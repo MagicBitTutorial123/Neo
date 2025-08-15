@@ -13,10 +13,12 @@ import { usbUpload } from "@/utils/usbUpload";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import { useState } from "react";
+import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
 export default function Playground() {
+  const { sidebarCollapsed } = useSidebar();
   const [generatedCode, setGeneratedCode] = useState("");
   const [bluetoothEnabled, setBluetoothEnabled] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -136,15 +138,22 @@ export default function Playground() {
               isPlayground={true}
               onRun={uploadCode}
               isConnected={isConnected}
-              // setIsConnected={setIsConnected}
+              setIsConnected={setIsConnected}
               onConnectToggle={onConnectToggle}
               // onErase={clearWorkspace}
             />
 
-            <BlocklyComponent
-              generatedCode={generatedCode}
-              setGeneratedCode={setGeneratedCode}
-            />
+            <div
+              className="flex flex-col w-full h-full transition-all duration-300 ease-in-out"
+              style={{
+                marginLeft: sidebarCollapsed ? "80px" : "260px",
+              }}
+            >
+              <BlocklyComponent
+                generatedCode={generatedCode}
+                setGeneratedCode={setGeneratedCode}
+              />
+            </div>
           </div>
         </div>
       </div>

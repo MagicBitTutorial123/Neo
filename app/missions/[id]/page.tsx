@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
@@ -17,6 +17,7 @@ import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { TimerPersistence } from "@/utils/timerPersistence";
+import { useSidebar } from "@/context/SidebarContext";
 
 const validMissionIds = [
   "1",
@@ -37,7 +38,6 @@ type MissionId = (typeof validMissionIds)[number];
 export default function MissionPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   let id = params.id;
   if (Array.isArray(id)) id = id[0];
   id = String(id);
@@ -49,11 +49,10 @@ export default function MissionPage() {
 
   // State for mission header buttons
   const [isRunning, setIsRunning] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
 
   // Overlay states - moved to page level
   const [showStepQuestion, setShowStepQuestion] = useState(false);
@@ -101,24 +100,21 @@ export default function MissionPage() {
     setCurrentRetryImage(getRandomImage(retryImages));
   };
 
-  // Check for showIntro query parameter and reset state if needed
+  // Navigate to next mission after HelpAcceptedOverlay
   useEffect(() => {
-    const showIntroParam = searchParams.get("showIntro");
-    if (showIntroParam === "true") {
-      console.log(
-        "🔄 showIntro=true detected, resetting mission state to show intro"
-      );
-      setForceHideIntro(false);
-      setShowHeader(false);
-      setShowCountdown(false);
-      setIsRunning(false);
-      setFromNo(false);
-      setCompletedMCQSteps(new Set());
-      // Clear saved state to force intro display
-      MissionStatePersistence.clearMissionState();
-      TimerPersistence.clearTimerState();
+    if (showHelpAccepted) {
+      const timeout = setTimeout(() => {
+        // Navigate to the next mission intro (not directly to steps)
+        const nextMissionId = String(Number(mission.id) + 1);
+        if ((missions as any)[nextMissionId]) {
+          router.push(`/missions/${nextMissionId}`);
+        } else {
+          router.push("/missions");
+        }
+      }, 5000); // 5 seconds timeout
+      return () => clearTimeout(timeout);
     }
-  }, [searchParams]);
+  }, [showHelpAccepted, router, mission.id]);
 
   // Load mission state on mount
   useEffect(() => {
@@ -433,10 +429,6 @@ export default function MissionPage() {
     console.log("✅ setShowHeader(true) called");
   };
 
-  // Navigate to next mission after HelpAccepted overlay
-  // REMOVED: This was overriding the HelpAcceptedOverlay's auto-navigation delay
-  // The overlay now handles its own navigation timing
-
   switch (layoutType) {
     case "standardIntroLayout":
       return (
@@ -455,18 +447,12 @@ export default function MissionPage() {
                 isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
-                setIsConnected={setIsConnected}
               />
             </div>
           )}
 
-          <SideNavbar onCollapse={setSidebarCollapsed} />
-          <div
-            className="flex-1 overflow-hidden relative z-30 transition-all duration-300 ease-in-out"
-            style={{
-              marginLeft: sidebarCollapsed ? "80px" : "260px",
-            }}
-          >
+          <SideNavbar />
+          <div className="flex-1 overflow-hidden relative z-30">
             <StandardMissionLayout
               mission={mission}
               onStateChange={handleStateChange}
@@ -537,11 +523,11 @@ export default function MissionPage() {
                 </div>
 
                 {/* Right Side - Message and Button */}
-                <div className="flex flex-col flex-1">
+                <div className="flex flex-col flex-1 ">
                   <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
                     Nice!
                   </div>
-                  <div className="mb-6 text-base font-medium text-[#222E3A] leading-relaxed">
+                  <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
                     Let's see if you are correct or wrong.
                   </div>
                   <div className="flex justify-start">
@@ -563,7 +549,7 @@ export default function MissionPage() {
               style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
             >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center text-[#222E3A]">
+                <div className="mb-4 text-3xl font-extrabold text-center">
                   Don't worry!
                 </div>
                 <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
@@ -576,7 +562,7 @@ export default function MissionPage() {
                 />
                 <button
                   onClick={handleDontWorryContinue}
-                  className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
                 >
                   Continue
                 </button>
@@ -630,8 +616,9 @@ export default function MissionPage() {
             <div
               className="fixed inset-0 z-[99999] flex items-center justify-center"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
+              onClick={() => setShowHelpAccepted(false)}
             >
-              <HelpAcceptedOverlay currentMissionId={String(mission.id)} />
+              <HelpAcceptedOverlay />
             </div>
           )}
 
@@ -681,20 +668,15 @@ export default function MissionPage() {
                 isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
-                setIsConnected={setIsConnected}
               />
             </div>
           )}
 
-          <SideNavbar onCollapse={setSidebarCollapsed} />
-          <div
-            className="flex-1 overflow-hidden relative z-30 transition-all duration-300 ease-in-out"
-            style={{
-              marginLeft: sidebarCollapsed ? "80px" : "260px",
-            }}
-          >
+          <SideNavbar />
+          <div className="flex-1 overflow-hidden relative z-30">
             <BlocklySplitLayout
               mission={mission}
+              sidebarCollapsed={sidebarCollapsed}
               onStateChange={handleStateChange}
               forceHideIntro={forceHideIntro}
               fromNo={fromNo}
@@ -784,13 +766,13 @@ export default function MissionPage() {
                 <div className="flex gap-6">
                   <button
                     onClick={handleStepQuestionNo}
-                    className="px-8 py-2 rounded-xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
+                    className="px-8 py-2 rounded-3xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
                   >
                     No
                   </button>
                   <button
                     onClick={handleStepQuestionYes}
-                    className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                    className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
                   >
                     Yes
                   </button>
@@ -804,19 +786,33 @@ export default function MissionPage() {
               className="fixed inset-0 z-[99999] flex items-center justify-center"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
             >
-              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
-                  Nice!
+              <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
+                {/* Left Side - Happy Robot */}
+                <div className="mr-8">
+                  <img
+                    src="/happy-robot-correct-3.png"
+                    alt="Happy Robot"
+                    className="w-64 h-64 object-contain"
+                  />
                 </div>
-                <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
-                  Let's see if you are correct or wrong.
+
+                {/* Right Side - Message and Button */}
+                <div className="flex flex-col flex-1">
+                  <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
+                    Nice!
+                  </div>
+                  <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
+                    Let's see if you are correct or wrong.
+                  </div>
+                  <div className="flex justify-start">
+                    <button
+                      onClick={handleNiceContinue}
+                      className="px-6 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800"
+                    >
+                      Continue
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={handleNiceContinue}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                >
-                  Continue
-                </button>
               </div>
             </div>
           )}
@@ -840,7 +836,7 @@ export default function MissionPage() {
                 />
                 <button
                   onClick={handleDontWorryContinue}
-                  className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
                 >
                   Continue
                 </button>
@@ -894,8 +890,9 @@ export default function MissionPage() {
             <div
               className="fixed inset-0 z-[99999] flex items-center justify-center"
               style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
+              onClick={() => setShowHelpAccepted(false)}
             >
-              <HelpAcceptedOverlay currentMissionId={String(mission.id)} />
+              <HelpAcceptedOverlay />
             </div>
           )}
 
