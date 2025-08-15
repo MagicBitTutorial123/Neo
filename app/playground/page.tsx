@@ -11,6 +11,7 @@ import * as En from "blockly/msg/en";
 import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import Header from "@/components/StatusHeaderBar";
+import { keyboardSendBLE } from "@/utils/keyboardPress";
 
 // Simple type declarations
 interface BluetoothGATT {
@@ -71,6 +72,34 @@ export default function Playground() {
       }
     };
   }, []);
+
+
+  useEffect(() => {
+    const handleKeyDown = async (e) => {
+      const keyMap = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      const action = keyMap[e.key];
+      if (action) {
+        try {
+          await keyboardSendBLE(action, writeCharacteristicRef.current);
+        } catch (error) {
+          console.error("Failed to send key:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [connectionStatus]);
+
+
+
 
   // Simple Bluetooth connection
   const connectBluetooth = async () => {

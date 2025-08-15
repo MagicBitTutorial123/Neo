@@ -58,11 +58,10 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
       {
         kind: "category",
         name: "Keyboard",
-        colour: "#D96AC2",
-        id: "cat_keyboard",
-        expanded: expandMenu,
-
-        contents: [{ kind: "block", type: "keyboard_when_key_pressed" }],
+        colour: "#FF33CC",
+        contents: [
+          { kind: "block", type: "keyboard_when_key_pressed" },
+        ],
       },
       {
         kind: "category",
@@ -501,8 +500,16 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
         const xml = Blockly.Xml.workspaceToDom(workspace);
         const xmlText = Blockly.Xml.domToText(xml);
         localStorage.setItem("blocklyWorkspace", xmlText);
-        const code = pythonGenerator.workspaceToCode(workspace);
-        setGeneratedCode(code);
+        // Reset keyboard handlers before generation to avoid stale/duplicate entries
+        pythonGenerator.keyboardEventHandlers = {};
+        const mainCode = pythonGenerator.workspaceToCode(workspace);
+        let finalCode = mainCode;
+        const handlers = pythonGenerator.keyboardEventHandlers || {};
+        const handlerList = Object.values(handlers);
+        if (handlerList.length > 0) {
+          finalCode = `${mainCode}\n#Event Handlers\n${handlerList.join("\n")}`;
+        }
+        setGeneratedCode(finalCode);
     });
   };
 
