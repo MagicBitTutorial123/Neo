@@ -27,8 +27,11 @@ Blockly.Blocks['keyboard_when_key_pressed'] = {
 pythonGenerator['keyboard_when_key_pressed'] = function(block) {
   const key = block.getFieldValue("KEY");
   const statements = pythonGenerator.statementToCode(block, 'DO');
-  if (!pythonGenerator.eventHandlers_) pythonGenerator.eventHandlers_ = [];
-  pythonGenerator.eventHandlers_.push(`#Event Handlers\ndef key_${key}_pressed():\n${statements || '  pass'}\n`);
+  if (!pythonGenerator.keyboardEventHandlers) {
+    pythonGenerator.keyboardEventHandlers = {};
+  }
+  const body = (statements && statements.trim().length > 0) ? statements : '  pass\n';
+  pythonGenerator.keyboardEventHandlers[key] = `def key_${key}_pressed():\n${body.endsWith('\n') ? body : body + '\n'}`;
   return '';
 };
 

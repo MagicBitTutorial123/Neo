@@ -25,7 +25,7 @@ Blockly.Blocks['magicbit_set_pwm'] = {
   init: function () {
     this.appendDummyInput()
       .appendField("Set PWM Pin")
-      .appendField(new Blockly.FieldNumber(15), "PIN")
+      .appendField(new Blockly.FieldNumber(16), "PIN")
       .appendField("as")
       .appendField(new Blockly.FieldNumber(50), "VALUE");
     this.setPreviousStatement(true, null);
@@ -76,21 +76,6 @@ pythonGenerator['magicbit_read_analog'] = block => {
   return [`ADC(Pin(${pin})).read()`, pythonGenerator.ORDER_FUNCTION_CALL];
 };
 
-// 5. Touch Sensor
-Blockly.Blocks['magicbit_touch'] = {
-  init: function () {
-    this.appendDummyInput()
-      .appendField("Sense Touch on Pin")
-      .appendField(new Blockly.FieldNumber(2), "PIN");
-    this.setOutput(true, "Boolean");
-    this.setColour("#9B51E0");
-  }
-};
-pythonGenerator['magicbit_touch'] = block => {
-  const pin = block.getFieldValue("PIN");
-  pythonGenerator.definitions_['import_machine_touch'] = 'from machine import TouchPad, Pin';
-  return [`TouchPad(Pin(${pin})).read() < 400`, pythonGenerator.ORDER_FUNCTION_CALL];
-};
 
 // 6. Read Button
 Blockly.Blocks['magicbit_read_button'] = {
@@ -127,21 +112,7 @@ pythonGenerator['magicbit_ultrasonic'] = block => {
   return [`read_ultrasonic(${pin})`, pythonGenerator.ORDER_FUNCTION_CALL];
 };
 
-// 8. Read Humidity
-Blockly.Blocks['magicbit_read_humidity'] = {
-  init: function () {
-    this.appendDummyInput()
-      .appendField("Read Humidity at Pin")
-      .appendField(new Blockly.FieldNumber(33), "PIN");
-    this.setOutput(true, "Number");
-    this.setColour("#9B51E0");
-  }
-};
-pythonGenerator['magicbit_read_humidity'] = block => {
-  const pin = block.getFieldValue("PIN");
-  pythonGenerator.definitions_['import_dht'] = 'import dht\nfrom machine import Pin';
-  return [`dht.DHT11(Pin(${pin})).humidity()`, pythonGenerator.ORDER_FUNCTION_CALL];
-};
+
 
 // 9. NeoPixel RGB
 Blockly.Blocks['magicbit_neopixel_rgb'] = {
@@ -153,24 +124,19 @@ Blockly.Blocks['magicbit_neopixel_rgb'] = {
       .appendField(new Blockly.FieldNumber(100), "G")
       .appendField("B")
       .appendField(new Blockly.FieldNumber(100), "B")
-      .appendField("at Pin")
-      .appendField(new Blockly.FieldNumber(26), "PIN")
-      .appendField("Index")
-      .appendField(new Blockly.FieldNumber(1), "INDEX");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour("#9B51E0");
   }
 };
+
 pythonGenerator['magicbit_neopixel_rgb'] = block => {
   const r = block.getFieldValue("R");
   const g = block.getFieldValue("G");
   const b = block.getFieldValue("B");
-  const pin = block.getFieldValue("PIN");
-  const index = block.getFieldValue("INDEX");
   pythonGenerator.definitions_['import_neopixel'] = 'import neopixel\nfrom machine import Pin';
-  pythonGenerator.definitions_['neopixel_obj'] = `np = neopixel.NeoPixel(Pin(${pin}), 8)`;
-  return `np[${index}] = (${r}, ${g}, ${b})\nnp.write()\n`;
+  pythonGenerator.definitions_['neopixel_obj'] = `np = neopixel.NeoPixel(Pin(13), 1)`;
+  return `np[0] = (${r}, ${g}, ${b})\nnp.write()\n`;
 };
 
 // 10. Display Text
@@ -215,7 +181,7 @@ pythonGenerator['magicbit_play_tone'] = block => {
   const freq = block.getFieldValue("FREQ");
   const duration = block.getFieldValue("DURATION");
   pythonGenerator.definitions_['import_machine_tone'] = 'from machine import Pin, PWM';
-  return `buzzer = PWM(Pin(27), freq=${freq}, duty=512)\ntime.sleep(${duration})\nbuzzer.deinit()\n`;
+  return `buzzer = PWM(Pin(25), freq=${freq}, duty=512)\ntime.sleep(${duration})\nbuzzer.deinit()\n`;
 };
 
 // 12. Clear Display
@@ -251,4 +217,37 @@ pythonGenerator['delay_block'] = function (block) {
   const delay = block.getFieldValue("DELAY");
   pythonGenerator.definitions_['import_time'] = 'import time';
   return `time.sleep(${delay})\n`;
+};
+
+// 13. Motor (Left/Right)
+Blockly.Blocks['magicbit_motor'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("Motor")
+      .appendField(new Blockly.FieldDropdown([["Left", "LEFT"], ["Right", "RIGHT"]]), "SIDE")
+      .appendField(new Blockly.FieldDropdown([["Forward", "FWD"], ["Backward", "BWD"]]), "DIR")
+      .appendField("speed")
+      .appendField(new Blockly.FieldNumber(0, 0, 1023, 1), "SPEED");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#9B51E0");
+  }
+};
+pythonGenerator['magicbit_motor'] = block => {
+  const side = block.getFieldValue('SIDE');
+  const dir = block.getFieldValue('DIR');
+  const speed = block.getFieldValue('SPEED');
+  if (side === 'LEFT') {
+    if (dir === 'FWD') {
+      return `import machine\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)\nM1_IN1.duty(${speed})\nM1_IN2.duty(0)\n`;
+    } else {
+      return `import machine\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)\nM1_IN1.duty(0)\nM1_IN2.duty(${speed})\n`;
+    }
+  } else {
+    if (dir === 'FWD') {
+      return `import machine\nM2_IN1 = machine.PWM(18, freq=1000)\nM2_IN2 = machine.PWM(27, freq=1000)\nM2_IN1.duty(${speed})\nM2_IN2.duty(0)\n`;
+    } else {
+      return `import machine\nM2_IN1 = machine.PWM(18, freq=1000)\nM2_IN2 = machine.PWM(27, freq=1000)\nM2_IN1.duty(0)\nM2_IN2.duty(${speed})\n`;
+    }
+  }
 };

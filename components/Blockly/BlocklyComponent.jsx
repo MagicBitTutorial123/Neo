@@ -43,26 +43,22 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
           { kind: "block", type: "magicbit_set_digital" },
           { kind: "block", type: "magicbit_set_pwm" },
           { kind: "block", type: "magicbit_set_servo" },
+          { kind: "block", type: "magicbit_motor" },
           { kind: "block", type: "magicbit_read_analog" },
-          { kind: "block", type: "magicbit_touch" },
           { kind: "block", type: "magicbit_read_button" },
           { kind: "block", type: "magicbit_ultrasonic" },
-          { kind: "block", type: "magicbit_read_humidity" },
           { kind: "block", type: "magicbit_neopixel_rgb" },
-          { kind: "block", type: "magicbit_display_text" },
           { kind: "block", type: "magicbit_play_tone" },
-          { kind: "block", type: "magicbit_clear_display" },
           { kind: "block", type: "delay_block" },
         ],
       },
       {
         kind: "category",
         name: "Keyboard",
-        colour: "#D96AC2",
-        id: "cat_keyboard",
-        expanded: expandMenu,
-
-        contents: [{ kind: "block", type: "keyboard_when_key_pressed" }],
+        colour: "#FF33CC",
+        contents: [
+          { kind: "block", type: "keyboard_when_key_pressed" },
+        ],
       },
       {
         kind: "category",
@@ -465,6 +461,22 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
     }
   }, [activeTab]);
 
+  // Listen for clearWorkspace event
+  useEffect(() => {
+    const handleClearWorkspace = () => {
+      if (workspaceRef.current) {
+        workspaceRef.current.clear();
+        setGeneratedCode("");
+        localStorage.removeItem("blocklyWorkspace");
+      }
+    };
+
+    window.addEventListener("clearBlocklyWorkspace", handleClearWorkspace);
+    return () => {
+      window.removeEventListener("clearBlocklyWorkspace", handleClearWorkspace);
+    };
+  }, []);
+
   const updateWorkspace = (el) => {
     const workspace = Blockly.inject(el, {
       toolbox: toolboxConfig,
@@ -485,8 +497,16 @@ export default function BlocklyComponent({generatedCode,setGeneratedCode}) {
         const xml = Blockly.Xml.workspaceToDom(workspace);
         const xmlText = Blockly.Xml.domToText(xml);
         localStorage.setItem("blocklyWorkspace", xmlText);
-        const code = pythonGenerator.workspaceToCode(workspace);
-        setGeneratedCode(code);
+        // Reset keyboard handlers before generation to avoid stale/duplicate entries
+        pythonGenerator.keyboardEventHandlers = {};
+        const mainCode = pythonGenerator.workspaceToCode(workspace);
+        let finalCode = mainCode;
+        const handlers = pythonGenerator.keyboardEventHandlers || {};
+        const handlerList = Object.values(handlers);
+        if (handlerList.length > 0) {
+          finalCode = `${mainCode}\n#Event Handlers\n${handlerList.join("\n")}`;
+        }
+        setGeneratedCode(finalCode);
     });
   };
 

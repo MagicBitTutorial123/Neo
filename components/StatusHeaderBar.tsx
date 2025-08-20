@@ -13,12 +13,15 @@ interface HeaderProps {
   onConnectToggle?: (connected: boolean) => void;
   setIsConnected: any;
   onRun?: () => void;
-  onPause?: () => void;
   onErase?: () => void;
-  isRunning?: boolean;
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
   isPlayground?: boolean;
+  onConnectionTypeChange: (e:"bluetooth" | "serial") => void;
+  setConnectionStatus: React.Dispatch<string>;
+  connectionStatus: string;
+  connectionType?: "bluetooth" | "serial";
+  isUploading?: boolean;
 }
 
 export default function Header({
@@ -26,25 +29,28 @@ export default function Header({
   title,
   timeAllocated,
   liveUsers,
-  isConnected = false,
+  isConnected,
   setIsConnected,
   onConnectToggle,
   onRun,
-  onPause,
   onErase,
-
-  isRunning = false,
   sidebarCollapsed = false,
   enableTimerPersistence = false,
   isPlayground = false,
+  onConnectionTypeChange,
+  connectionStatus,
+  setConnectionStatus,
+  connectionType = "bluetooth",
+  isUploading = false,
 }: HeaderProps) {
-  const [connected, setConnected] = useState(isConnected);
   const [timerValue, setTimerValue] = useState(0);
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
   const parseTimeAllocated = (str: string) => {
-    const match = str.match(/(\d+)/);
-    return match ? parseInt(match[1], 10) * 60 : 0;
+    if (str){
+      const match = str.match(/(\d+)/);
+      return match ? parseInt(match[1], 10) * 60 : 0;
+    }
   };
   const allocatedSeconds = parseTimeAllocated(timeAllocated);
 
@@ -59,7 +65,6 @@ export default function Header({
     <div
       className="w-full bg-[#181E2A] px-4 md:px-8 pb-0 relative"
       style={{ height: "65px", pointerEvents: "auto" }}
-      onClick={() => console.log("🎯 MissionHeader container clicked!")}
     >
       <div
         className="flex items-center justify-between max-w-8xl mx-auto relative h-full transition-all duration-300 ease-in-out"
@@ -192,6 +197,10 @@ export default function Header({
             <ToggleConnectButton
               isConnected={isConnected}
               onToggle={handleConnectToggle}
+              onConnectionTypeChange={onConnectionTypeChange}
+              connectionStatus={connectionStatus}
+              setConnectionStatus={setConnectionStatus}
+              connectionType={connectionType}
             />
           )}
         </div>

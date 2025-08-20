@@ -1,6 +1,6 @@
 "use client";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { missions } from "@/data/missions";
 import { missionLayoutMap } from "@/data/missionLayoutMap";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
@@ -17,6 +17,26 @@ import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { TimerPersistence } from "@/utils/timerPersistence";
+import { usbUpload } from "@/utils/usbUpload";
+import { bluetoothUpload } from "@/utils/bluetoothUpload";
+
+// Simple type declarations
+interface BluetoothDevice {
+  gatt?: {
+    connected: boolean;
+    connect: () => Promise<any>;
+    disconnect: () => void;
+  };
+  addEventListener: (event: string, callback: () => void) => void;
+}
+
+declare global {
+  interface Navigator {
+    bluetooth: {
+      requestDevice: (options: any) => Promise<BluetoothDevice>;
+    };
+  }
+}
 
 const validMissionIds = [
   "1",
@@ -48,12 +68,25 @@ export default function MissionPage() {
   const layoutType = missionLayoutMap[id as MissionId] || "standardIntroLayout";
 
   // State for mission header buttons
-  const [isRunning, setIsRunning] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showHeader, setShowHeader] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
+
+  // BLE Connection states
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
+    "bluetooth"
+  );
+  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [tryingToConnect, setTryingToConnect] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // BLE Connection refs
+  const portRef = useRef<any>(null);
+  const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
+  const writeCharacteristicRef = useRef<any>(null);
+  const server = useRef<any>(null);
 
   // Overlay states - moved to page level
   const [showStepQuestion, setShowStepQuestion] = useState(false);
@@ -111,7 +144,6 @@ export default function MissionPage() {
       setForceHideIntro(false);
       setShowHeader(false);
       setShowCountdown(false);
-      setIsRunning(false);
       setFromNo(false);
       setCompletedMCQSteps(new Set());
       // Clear saved state to force intro display
@@ -119,6 +151,129 @@ export default function MissionPage() {
       TimerPersistence.clearTimerState();
     }
   }, [searchParams]);
+
+  // Simple cleanup
+  useEffect(() => {
+    return () => {
+      if (bluetoothDeviceRef.current?.gatt?.connected) {
+        bluetoothDeviceRef.current.gatt.disconnect();
+      }
+    };
+  }, []);
+
+  // Simple Bluetooth connection
+  const connectBluetooth = async () => {
+    try {
+      setConnectionStatus("connecting");
+      // Request device
+      if (!bluetoothDeviceRef.current) {
+        bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
+          filters: [{ name: "Neo" }],
+          optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
+        });
+
+        // Handle disconnection
+        bluetoothDeviceRef.current.addEventListener(
+          "gattserverdisconnected",
+          async () => {
+            setIsConnected(false);
+            setConnectionStatus("disconnected");
+          }
+        );
+      }
+
+      if (!server.current?.connected) {
+        console.log("Connecting to server");
+        server.current = await bluetoothDeviceRef.current.gatt!.connect();
+        console.log(server.current);
+        const service = await server.current?.getPrimaryService(
+          "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+        );
+        console.log("service: ", service);
+        const characteristic = await service.getCharacteristic(
+          "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+        );
+
+        writeCharacteristicRef.current = characteristic;
+        setConnectionStatus("connected");
+        setIsConnected(true);
+        setTryingToConnect(false);
+      }
+    } catch (error) {
+      console.error("Connection failed:", error);
+      if (tryingToConnect) {
+        setTimeout(async () => {
+          setTryingToConnect(false);
+          await connectBluetooth();
+        }, 1000);
+      }
+    }
+  };
+
+  // Simple upload code
+  const uploadCode = async (generatedCode: string) => {
+    if (!generatedCode) return;
+
+    setIsUploading(true);
+    try {
+      if (connectionType === "bluetooth") {
+        if (!isConnected) await connectBluetooth();
+        await bluetoothUpload(generatedCode, writeCharacteristicRef.current);
+      } else {
+        await usbUpload(generatedCode, portRef);
+        setIsConnected(true);
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert(
+        `Upload failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const onConnectToggle = async (connected: boolean) => {
+    if (connected) {
+      try {
+        if (connectionType === "bluetooth") {
+          setTryingToConnect(true);
+        } else {
+          setIsConnected(true);
+          setConnectionStatus("connected");
+        }
+      } catch {
+        setConnectionStatus("disconnected");
+        setIsConnected(false);
+      }
+    } else {
+      setConnectionStatus("disconnecting");
+      if (bluetoothDeviceRef.current?.gatt?.connected) {
+        bluetoothDeviceRef.current.gatt.disconnect();
+      }
+      bluetoothDeviceRef.current = null;
+      writeCharacteristicRef.current = null;
+      portRef.current = null;
+      setIsConnected(false);
+      setConnectionStatus("disconnected");
+    }
+  };
+
+  const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
+    if (isConnected) onConnectToggle(false);
+    setConnectionType(type);
+  };
+
+  useEffect(() => {
+    async function connect() {
+      if (tryingToConnect) {
+        await connectBluetooth();
+      }
+    }
+    connect();
+  }, [tryingToConnect]);
 
   // Load mission state on mount
   useEffect(() => {
@@ -128,7 +283,6 @@ export default function MissionPage() {
       setShowHeader(savedState.showHeader);
       setForceHideIntro(savedState.forceHideIntro);
       setShowCountdown(savedState.showCountdown);
-      setIsRunning(savedState.isRunning);
       setFromNo(savedState.fromNo);
       setCompletedMCQSteps(new Set(savedState.completedMCQSteps));
 
@@ -195,7 +349,6 @@ export default function MissionPage() {
       showHeader,
       forceHideIntro,
       showCountdown,
-      isRunning,
       fromNo,
       completedMCQSteps: Array.from(completedMCQSteps),
     });
@@ -204,7 +357,6 @@ export default function MissionPage() {
     showHeader,
     forceHideIntro,
     showCountdown,
-    isRunning,
     fromNo,
     completedMCQSteps,
   ]);
@@ -226,25 +378,26 @@ export default function MissionPage() {
 
   const handleRun = () => {
     console.log("🚀 Run button clicked from page level!");
-    setIsRunning(true);
     // Resume timer if persistence is enabled
     if (typeof window !== "undefined" && (window as any).missionTimerControls) {
       (window as any).missionTimerControls.resume();
     }
-  };
 
-  const handlePause = () => {
-    console.log("⏸️ Pause button clicked from page level!");
-    setIsRunning(false);
-    // Pause timer if persistence is enabled
-    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
-      (window as any).missionTimerControls.pause();
+    // If we're in blocklySplitLayout, trigger code upload
+    if (layoutType === "blocklySplitLayout") {
+      // We need to get the generated code from BlocklySplitLayout
+      // For now, we'll dispatch an event that BlocklySplitLayout can listen to
+      window.dispatchEvent(new CustomEvent("triggerCodeUpload"));
     }
   };
 
   const handleErase = () => {
     console.log("🧹 Erase button clicked from page level!");
-    // Add erase functionality here
+    // If we're in blocklySplitLayout, clear the workspace
+    if (layoutType === "blocklySplitLayout") {
+      // Dispatch an event to clear the Blockly workspace
+      window.dispatchEvent(new CustomEvent("clearWorkspace"));
+    }
   };
 
   // Overlay handlers
@@ -450,12 +603,17 @@ export default function MissionPage() {
                 timeAllocated={mission.intro.timeAllocated}
                 liveUsers={17}
                 onRun={handleRun}
-                onPause={handlePause}
                 onErase={handleErase}
-                isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
+                isConnected={isConnected}
                 setIsConnected={setIsConnected}
+                onConnectToggle={onConnectToggle}
+                connectionStatus={connectionStatus}
+                setConnectionStatus={setConnectionStatus}
+                onConnectionTypeChange={onConnectionTypeChange}
+                connectionType={connectionType}
+                isUploading={isUploading}
               />
             </div>
           )}
@@ -676,12 +834,17 @@ export default function MissionPage() {
                 timeAllocated={mission.intro.timeAllocated}
                 liveUsers={17}
                 onRun={handleRun}
-                onPause={handlePause}
                 onErase={handleErase}
-                isRunning={isRunning}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
+                isConnected={isConnected}
                 setIsConnected={setIsConnected}
+                onConnectToggle={onConnectToggle}
+                connectionStatus={connectionStatus}
+                setConnectionStatus={setConnectionStatus}
+                onConnectionTypeChange={onConnectionTypeChange}
+                connectionType={connectionType}
+                isUploading={isUploading}
               />
             </div>
           )}
@@ -708,6 +871,8 @@ export default function MissionPage() {
               onMCQChange={handleMCQChange}
               onCurrentStepChange={handleCurrentStepChange}
               onFinish={stopTimerAndCalculateTime}
+              onUploadCode={uploadCode}
+              isUploading={isUploading}
             />
           </div>
 

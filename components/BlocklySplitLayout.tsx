@@ -30,6 +30,8 @@ export default function BlocklySplitLayout({
   fromNo = false,
   onCurrentStepChange,
   onFinish,
+  onUploadCode,
+  isUploading = false,
 }: {
   mission: any;
   sidebarCollapsed?: boolean;
@@ -49,6 +51,8 @@ export default function BlocklySplitLayout({
   fromNo?: boolean;
   onCurrentStepChange?: (step: number) => void;
   onFinish?: () => void;
+  onUploadCode?: (code: string) => void;
+  isUploading?: boolean;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
@@ -134,11 +138,28 @@ export default function BlocklySplitLayout({
       setCurrentStep((s: number) => s + 1);
     };
 
+    const handleTriggerCodeUpload = () => {
+      if (onUploadCode && generatedCode) {
+        onUploadCode(generatedCode);
+      }
+    };
+
+    const handleClearWorkspace = () => {
+      // Clear the generated code
+      setGeneratedCode("");
+      // Dispatch an event to clear the Blockly workspace
+      window.dispatchEvent(new CustomEvent("clearBlocklyWorkspace"));
+    };
+
     window.addEventListener("goToNextStep", handleGoToNextStep);
+    window.addEventListener("triggerCodeUpload", handleTriggerCodeUpload);
+    window.addEventListener("clearWorkspace", handleClearWorkspace);
     return () => {
       window.removeEventListener("goToNextStep", handleGoToNextStep);
+      window.removeEventListener("triggerCodeUpload", handleTriggerCodeUpload);
+      window.removeEventListener("clearWorkspace", handleClearWorkspace);
     };
-  }, []);
+  }, [onUploadCode, generatedCode]);
 
   // Store the user's preferred width
   const [userPanelWidth, setUserPanelWidth] = useState(200); // Initial size set to minimum
