@@ -2,14 +2,21 @@
 import { useState } from "react";
 import SideNavbar from "@/components/SideNavbar";
 import PlaygroundUnlocked from "@/components/PlaygroundUnlocked";
+import { useSidebar } from "@/context/SidebarContext";
 
 export default function DemoPage() {
   const [showOverlay, setShowOverlay] = useState(false);
+  const { sidebarCollapsed } = useSidebar();
 
   return (
     <div className="flex h-screen bg-[#F8F9FC]">
       <SideNavbar playgroundActive={showOverlay} />
-      <div className="flex-1 flex items-center justify-center">
+      <div 
+        className="flex-1 flex items-center justify-center transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+        }}
+      >
         <div className="text-center">
           <h1 className="text-4xl font-bold text-[#222E3A] mb-4">Demo</h1>
           <p className="text-lg text-gray-600 mb-8">

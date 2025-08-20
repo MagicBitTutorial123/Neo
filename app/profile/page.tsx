@@ -1,12 +1,12 @@
 "use client";
-import { useState } from "react";
 import SideNavbar from "@/components/SideNavbar";
 import Image from "next/image";
 import { useUser } from "@/context/UserContext";
+import { useSidebar } from "@/context/SidebarContext";
 
 export default function ProfilePage() {
   const { registrationData, userData } = useUser();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed } = useSidebar();
 
   // Use context data or fallback to registrationData or defaults
   const userAvatar = userData?.avatar || registrationData.avatar || "/User.png";
@@ -48,8 +48,6 @@ export default function ProfilePage() {
       <SideNavbar
         avatar={userAvatar}
         name={userName}
-        playgroundActive={true} //{playgroundActive}
-        onCollapse={setSidebarCollapsed}
       />
       <main
         className="flex-1 flex flex-col items-center px-4 lg:px-8 py-3 lg:py-6 overflow-hidden transition-all duration-300 ease-in-out"

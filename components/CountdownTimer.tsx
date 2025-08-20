@@ -74,7 +74,7 @@ export default function CountdownTimer({
 
   if (showGo) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] mt-55">
+      <div className="flex items-center justify-center min-h-[400px] mt-65">
         <Image
           src="/count-go.png"
           alt="GO!"
@@ -87,7 +87,7 @@ export default function CountdownTimer({
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[400px] mt-55">
+    <div className="flex items-center justify-center min-h-[400px] mt-65">
       <Image
         src={`/count-0${count}.png`}
         alt={`${count}`}

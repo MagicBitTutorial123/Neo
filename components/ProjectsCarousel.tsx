@@ -14,7 +14,7 @@ interface ProjectsCarouselProps {
   sidebarCollapsed?: boolean;
 }
 
-const CARDS_PER_VIEW_DESKTOP = 3;
+const CARDS_PER_VIEW_DESKTOP = 2; // Reduced from 3 to accommodate larger cards
 const CARDS_PER_VIEW_TABLET = 2;
 const CARDS_PER_VIEW_MOBILE = 1;
 
@@ -50,14 +50,21 @@ export default function ProjectsCarousel({
   const getCardWidth = () => {
     if (typeof window !== "undefined") {
       if (window.innerWidth >= 1024) {
-        return sidebarCollapsed ? 336 : 306; // Desktop
+        const width = sidebarCollapsed ? 480 : 380; // Increased difference for testing
+        console.log(
+          "Desktop card width:",
+          width,
+          "sidebarCollapsed:",
+          sidebarCollapsed
+        );
+        return width;
       }
       if (window.innerWidth >= 768) {
-        return 280; // Tablet
+        return 340; // Tablet - increased from 280
       }
-      return 280; // Mobile
+      return 320; // Mobile - increased from 280
     }
-    return sidebarCollapsed ? 336 : 306;
+    return sidebarCollapsed ? 480 : 380;
   };
 
   const cardWidth = getCardWidth();

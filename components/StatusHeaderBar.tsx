@@ -3,6 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import MissionTimer, { formatTime } from "./MissionTimer";
 import ToggleConnectButton from "@/components/ToggleConnectButton";
+import { useSidebar } from "@/context/SidebarContext";
 
 interface HeaderProps {
   missionNumber: number;
@@ -34,7 +35,8 @@ export default function Header({
   onConnectToggle,
   onRun,
   onErase,
-  sidebarCollapsed = false,
+
+  sidebarCollapsed: propSidebarCollapsed = false,
   enableTimerPersistence = false,
   isPlayground = false,
   onConnectionTypeChange,
@@ -44,6 +46,10 @@ export default function Header({
   isUploading = false,
 }: HeaderProps) {
   const [timerValue, setTimerValue] = useState(0);
+  const { sidebarCollapsed: contextSidebarCollapsed } = useSidebar();
+
+  // Use context sidebar state if available, otherwise fall back to prop
+  const sidebarCollapsed = contextSidebarCollapsed ?? propSidebarCollapsed;
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
   const parseTimeAllocated = (str: string) => {
@@ -207,8 +213,12 @@ export default function Header({
       </div>
       {/* Orange line at the bottom */}
       <div
-        className="absolute left-0 bottom-0 w-full h-1"
-        style={{ background: "#FF9C32" }}
+        className="absolute bottom-0 h-1"
+        style={{
+          background: "#FF9C32",
+          left: sidebarCollapsed ? "80px" : "260px",
+          right: "0px",
+        }}
       />
 
       {/* Radar animation styles */}

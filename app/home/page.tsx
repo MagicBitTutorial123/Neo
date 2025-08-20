@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
 import { useUser } from "@/context/UserContext";
+import { useSidebar } from "@/context/SidebarContext";
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -31,7 +32,7 @@ function useTypingEffect(text: string, speed = 30) {
 export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
   const [step, setStep] = useState(0);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed } = useSidebar();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userData } = useUser();
@@ -190,10 +191,17 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-start justify-start w-full max-w-7xl mx-auto gap-6 lg:gap-0 h-full">
+      <div
+        className="flex flex-col lg:flex-row items-start justify-start w-full mx-auto gap-6 lg:gap-0 h-full"
+        style={{
+          maxWidth: sidebarCollapsed
+            ? "calc(100vw - 120px)"
+            : "calc(100vw - 320px)",
+        }}
+      >
         {/* Left: Welcome and Mission */}
-        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[400px] h-full">
-          <div className="mb-2">
+        <div className="flex-1 flex flex-col gap-6 sm:gap-7 md:gap-8 min-w-0 lg:min-w-[450px] h-full">
+          <div className="mb-4">
             <span className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#FF9C32]">
               Welcome back!
             </span>
@@ -205,13 +213,13 @@ export default function HomePage() {
             </div>
           </div>
           {/* Mission Card */}
-          <div className="rounded-2xl overflow-hidden shadow bg-white relative flex flex-col max-w-3xl w-full">
+          <div className="rounded-2xl overflow-hidden shadow bg-white relative flex flex-col w-full">
             <Image
               src="/continue mission-image.png"
               alt="Mission"
               width={500}
-              height={300}
-              className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
+              height={320}
+              className="object-cover w-full h-[220px] sm:h-[270px] md:h-[320px]"
             />
             <button className="absolute bottom-2 sm:bottom-4 md:bottom-6 right-2 sm:right-4 md:right-6 bg-black text-white font-bold rounded-full px-2 sm:px-4 md:px-6 lg:px-8 py-1 sm:py-2 md:py-3 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base lg:text-lg shadow-lg hover:bg-[#222] transition">
               Continue mission{" "}
@@ -235,7 +243,7 @@ export default function HomePage() {
             </button>
           </div>
           {/* Project of the week - new layout */}
-          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden max-w-3xl w-full min-h-[160px] sm:min-h-[200px]">
+          <div className="rounded-2xl bg-white shadow flex flex-col sm:flex-row items-stretch p-0 mt-0 overflow-hidden w-full min-h-[180px] sm:min-h-[220px]">
             {/* Left: Text */}
             <div className="flex flex-col justify-center p-3 sm:p-4 md:p-6 lg:p-8 flex-1 min-w-0 sm:min-w-[220px] h-full">
               <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 mb-1.5 sm:mb-2 md:mb-4">
@@ -260,7 +268,12 @@ export default function HomePage() {
               </div>
             </div>
             {/* Right: Image */}
-            <div className="flex-shrink-0 w-full sm:w-[260px] md:w-[320px] lg:w-[340px] h-full relative overflow-hidden m-0 p-0 min-h-[200px]">
+            <div
+              className="flex-shrink-0 w-full h-full relative overflow-hidden m-0 p-0 min-h-[200px]"
+              style={{
+                width: sidebarCollapsed ? "400px" : "360px",
+              }}
+            >
               <Image
                 src="/project-image-4.png"
                 alt="Project of the Week"
@@ -279,7 +292,14 @@ export default function HomePage() {
           </div>
         </div>
         {/* Right: Mission Progress, Badges, Battery, Tip */}
-        <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 min-w-0 lg:min-w-[340px] lg:ml-12 lg:w-[380px] justify-start w-full flex-shrink-0">
+        <div
+          className="flex flex-col gap-6 sm:gap-7 md:gap-8 min-w-0 justify-start w-full flex-shrink-0"
+          style={{
+            minWidth: sidebarCollapsed ? "380px" : "420px",
+            marginLeft: sidebarCollapsed ? "32px" : "64px",
+            width: sidebarCollapsed ? "520px" : "480px",
+          }}
+        >
           {/* Mission Progress Bar - Desktop Only */}
           <div className="hidden lg:flex w-full flex-col items-center mb-2">
             <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -299,11 +319,11 @@ export default function HomePage() {
           </div>
 
           {/* Badges */}
-          <div className="rounded-2xl border border-[#E0E6ED] bg-white p-2 sm:p-3 md:p-4 flex flex-col mt-4 sm:mt-6 md:mt-8 lg:mt-10">
-            <div className="font-bold text-[#222E3A] mb-1.5 sm:mb-2 text-xs sm:text-sm md:text-base">
+          <div className="rounded-2xl border border-[#E0E6ED] bg-white p-4 sm:p-5 md:p-7 flex flex-col mt-4 sm:mt-6 md:mt-8 lg:mt-10">
+            <div className="font-bold text-[#222E3A] mb-3 sm:mb-4 text-xs sm:text-sm md:text-base">
               My Badges
             </div>
-            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 md:gap-3">
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4">
               {badges.map((badge, idx) => (
                 <span key={idx} className="flex items-center justify-center">
                   <Image
@@ -323,7 +343,7 @@ export default function HomePage() {
             </div>
           </div>
           {/* Battery */}
-          <div className="rounded-2xl bg-white shadow flex flex-row items-center p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 min-h-[60px] sm:min-h-[70px] md:min-h-[80px] w-full">
+          <div className="rounded-2xl bg-white shadow flex flex-row items-center p-4 sm:p-5 md:p-7 gap-3 sm:gap-4 md:gap-6 min-h-[80px] sm:min-h-[90px] md:min-h-[100px] w-full">
             <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#00AEEF] shadow-lg">
               <Image
                 src="/Battery.svg"
@@ -399,7 +419,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
       {/* Side Navbar */}
-      <SideNavbar onCollapse={setSidebarCollapsed} />
+      <SideNavbar />
       {/* Main Content */}
       <main
         className="flex-1 flex flex-col items-start relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen w-full"

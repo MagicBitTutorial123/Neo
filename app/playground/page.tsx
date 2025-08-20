@@ -45,10 +45,12 @@ declare global {
     };
   }
 }
+import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
 export default function Playground() {
+  const { sidebarCollapsed } = useSidebar();
   const [generatedCode, setGeneratedCode] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
@@ -251,14 +253,17 @@ export default function Playground() {
               isUploading={isUploading}
             />
 
-            {dashboardActive ? (
-              <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]"></div>
-            ) : (
+            <div
+              className="flex flex-col w-full h-full transition-all duration-300 ease-in-out"
+              style={{
+                marginLeft: sidebarCollapsed ? "80px" : "260px",
+              }}
+            >
               <BlocklyComponent
                 generatedCode={generatedCode}
                 setGeneratedCode={setGeneratedCode}
               />
-            )}
+            </div>
           </div>
         </div>
       </div>

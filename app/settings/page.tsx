@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import SideNavbar from "@/components/SideNavbar";
+import { useSidebar } from "@/context/SidebarContext";
 
 const splitName = (full: string) => {
   const parts = (full || "").trim().split(/\s+/);
@@ -14,10 +15,12 @@ const joinName = (first: string, last: string) =>
   [first.trim(), last.trim()].filter(Boolean).join(" ");
 
 export default function SettingsPage() {
+  const { sidebarCollapsed } = useSidebar();
+
   // Header
   const [displayName, setDisplayName] = useState("User");
 
-  // 
+  //
   const [avatar, setAvatar] = useState<string>(() => {
     if (typeof window === "undefined") return "/Avatar01.png";
     try {
@@ -46,11 +49,11 @@ export default function SettingsPage() {
     try {
       const n = (localStorage.getItem("name") || "").trim();
       const e = (localStorage.getItem("email") || "").trim();
-      const p =
-        (localStorage.getItem("fullPhone") ||
-          localStorage.getItem("phone") ||
-          ""
-        ).trim();
+      const p = (
+        localStorage.getItem("fullPhone") ||
+        localStorage.getItem("phone") ||
+        ""
+      ).trim();
       const b = localStorage.getItem("bio") || "";
 
       if (n) {
@@ -96,12 +99,8 @@ export default function SettingsPage() {
     () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
     [email]
   );
-  const phoneValid = useMemo(
-    () => /^[0-9+\s-]{7,}$/.test(phone),
-    [phone]
-  );
-  const canSave =
-    !!firstName.trim() && emailValid && phoneValid && !saving;
+  const phoneValid = useMemo(() => /^[0-9+\s-]{7,}$/.test(phone), [phone]);
+  const canSave = !!firstName.trim() && emailValid && phoneValid && !saving;
 
   const handleSave = async () => {
     setError(null);
@@ -157,7 +156,12 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen bg-[#F6F8FC]">
       <SideNavbar />
-      <main className="flex-1 px-6 lg:px-8 xl:px-10 py-8">
+      <main
+        className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+        }}
+      >
         <div className="w-full flex flex-col lg:flex-row gap-6">
           {/* Left tabs */}
           <aside className="lg:w-[280px] w-full shrink-0">
