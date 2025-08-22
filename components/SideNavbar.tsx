@@ -5,6 +5,8 @@ import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
+
 import smallLogo from "@/assets/logo-small.png";
 import sideLogo from "@/assets/side-logo.png";
 
@@ -31,17 +33,20 @@ const ErrorIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-export default function SideNavbar({
-  avatar,
-  name,
-}: {
-  avatar?: string;
-  name?: string;
-}) {
+export default function SideNavbar() {
   const { registrationData, userData, updateUserData } = useUser();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Expose collapse state to parent components via custom event
+  useEffect(() => {
+    const event = new CustomEvent('sidebarCollapsed', { 
+      detail: { collapsed: sidebarCollapsed } 
+    });
+    window.dispatchEvent(event);
+  }, [sidebarCollapsed]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+
 
   // Contact modal state
   const [contactOpen, setContactOpen] = useState(false);
@@ -52,9 +57,25 @@ export default function SideNavbar({
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendOk, setSendOk] = useState<string | null>(null);
 
+  // Function to close contact modal and reset form
+  const closeContactModal = () => {
+    setContactOpen(false);
+    setContactEmail("");
+    setContactMessage("");
+    setContactFile(null);
+    setSendError(null);
+    setSendOk(null);
+  };
+
   // localStorage-backed values
   const [lsName, setLsName] = useState<string | null>(null);
   const [lsAvatar, setLsAvatar] = useState<string | null>(null);
+  
+  // Supabase user data
+  const [supabaseUserData, setSupabaseUserData] = useState<{
+    full_name?: string;
+    avatar?: string;
+  } | null>(null);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -62,11 +83,137 @@ export default function SideNavbar({
   const helpMenuRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLLabelElement>(null);
 
+  // Fetch user data from Supabase table
+  const fetchUserDataFromSupabase = async () => {
+    try {
+      console.log('🔍 Fetching user data from Supabase...');
+      
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.log('❌ No authenticated user found in Supabase Auth');
+        return;
+      }
+
+      console.log('✅ Found authenticated user:', user.id);
+      
+      // Fetch user profile from user_profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('full_name, avatar')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('❌ Error fetching user profile:', profileError);
+        
+        // If profile doesn't exist, try to get user metadata from auth
+        if (profileError.code === 'PGRST116') {
+          console.log('🔄 Profile not found, trying to get user metadata from auth...');
+          
+          const userMetadata = user.user_metadata;
+          if (userMetadata && (userMetadata.full_name || userMetadata.avatar)) {
+            const fallbackProfile = {
+              full_name: userMetadata.full_name || null,
+              avatar: userMetadata.avatar || null
+            };
+            setSupabaseUserData(fallbackProfile);
+            console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
+            return;
+          }
+        }
+        return;
+      }
+
+      if (profile) {
+        setSupabaseUserData(profile);
+        console.log('✅ User profile fetched from Supabase:', profile);
+      } else {
+        console.log('❌ No profile found for user');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching user data from Supabase:', error);
+    }
+  };
+
+  // Fetch user data when component mounts
+  useEffect(() => {
+    fetchUserDataFromSupabase();
+  }, []);
+
+  // Try to create user profile if it doesn't exist
+  const createUserProfileIfNeeded = async () => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) return;
+
+      // Check if profile exists
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileCheckError && profileCheckError.code === 'PGRST116') {
+        console.log('🔄 Creating missing user profile...');
+        
+        // Try to get data from localStorage or context
+        const name = localStorage.getItem('name') || userData?.name || registrationData?.name;
+        const avatar = localStorage.getItem('avatar') || userData?.avatar || registrationData?.avatar;
+        const email = localStorage.getItem('email') || userData?.email || registrationData?.email;
+        
+        if (name && avatar && email) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('user_profiles')
+            .insert([{
+              user_id: user.id,
+              email: email,
+              full_name: name,
+              avatar: avatar,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }])
+            .select('full_name, avatar')
+            .single();
+
+          if (createError) {
+            console.error('❌ Failed to create profile:', createError);
+          } else {
+            console.log('✅ Created user profile:', newProfile);
+            setSupabaseUserData(newProfile);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error creating user profile:', error);
+    }
+  };
+
+  // Try to create profile after fetching data
+  useEffect(() => {
+    if (supabaseUserData === null) {
+      // Wait a bit then try to create profile
+      const timer = setTimeout(createUserProfileIfNeeded, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [supabaseUserData]);
+
+  // We'll use the user data from Supabase table (what user selected during signup)
+  console.log('🔍 Using user data from Supabase table:', {
+    supabaseUserData,
+    userData,
+    registrationData
+  });
+
   // ---- load from localStorage
   const refreshFromLocalStorage = () => {
     try {
       const n = localStorage.getItem("name");
       const a = localStorage.getItem("avatar");
+      
+      console.log('🔍 localStorage raw values:', { name: n, avatar: a });
+      
       setLsName(n && n.trim() ? n.trim() : null);
 
       // normalize avatar path
@@ -78,11 +225,15 @@ export default function SideNavbar({
         setLsAvatar(null);
       }
 
+      console.log('🔍 localStorage processed values:', { lsName: n && n.trim() ? n.trim() : null, lsAvatar: av });
+
       // seed contact email from localStorage if present
       const e = localStorage.getItem("email");
-      if (e && e.trim() && !contactEmail) setContactEmail(e.trim());
-    } catch {
-      /* noop */
+      if (e && e.trim()) {
+        setContactEmail(e.trim());
+      }
+    } catch (error) {
+      console.error('❌ Error reading localStorage:', error);
     }
   };
 
@@ -95,12 +246,29 @@ export default function SideNavbar({
   useEffect(() => {
     const onFocus = () => refreshFromLocalStorage();
     const onStorage = () => refreshFromLocalStorage();
+    const onAvatarChanged = (event: CustomEvent) => {
+      console.log('🔄 Avatar changed event received:', event.detail);
+      refreshFromLocalStorage();
+    };
+    
     window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
+    window.addEventListener("avatarChanged", onAvatarChanged as EventListener);
+    
     return () => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("avatarChanged", onAvatarChanged as EventListener);
     };
+  }, []);
+
+  // Check localStorage periodically to catch avatar changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshFromLocalStorage();
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
   }, []);
 
   // close menus on outside click / Esc
@@ -124,12 +292,27 @@ export default function SideNavbar({
     };
   }, []);
 
-  // final sources (prefer localStorage → props → context → default)
+  // final sources (prefer Supabase table → context → localStorage → default)
   const userAvatar =
-    lsAvatar || avatar || userData?.avatar || registrationData.avatar || "/User.png";
+    supabaseUserData?.avatar || userData?.avatar || registrationData?.avatar || lsAvatar || "/Avatar01.png";
 
   const userName =
-    lsName || name || userData?.name || registrationData.name || "User";
+    supabaseUserData?.full_name || userData?.name || registrationData?.name || lsName || "User";
+
+  // If we have partial data from Supabase, try to fill in missing pieces
+  const finalAvatar = userAvatar || "/Avatar01.png";
+  const finalName = userName || "User";
+
+  // Debug logging
+  console.log('🔍 SideNavbar data sources:', {
+    supabaseUserData,
+    lsAvatar,
+    lsName,
+    userData: { avatar: userData?.avatar, name: userData?.name },
+    registrationData: { avatar: registrationData.avatar, name: registrationData.name },
+    finalAvatar: finalAvatar,
+    finalName: finalName
+  });
 
   const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
 
@@ -155,6 +338,17 @@ export default function SideNavbar({
     setHelpMenuOpen(false);
     setSendError(null);
     setSendOk(null);
+    
+    // Always refresh email from localStorage when opening modal
+    const storedEmail = localStorage.getItem("email");
+    console.log('🔍 Opening contact modal, stored email:', storedEmail);
+    if (storedEmail && storedEmail.trim()) {
+      setContactEmail(storedEmail.trim());
+      console.log('✅ Set contact email to:', storedEmail.trim());
+    } else {
+      console.log('❌ No email found in localStorage');
+    }
+    
     setContactOpen(true);
   };
 
@@ -225,8 +419,8 @@ export default function SideNavbar({
       form.append("message", contactMessage.trim());
       if (contactFile) form.append("file", contactFile);
 
-      // 👉 Adjust URL if your backend is different
-      const res = await fetch("http://127.0.0.1:5000/support/contact", {
+      // Use the local API route
+      const res = await fetch("/api/support/contact", {
         method: "POST",
         body: form,
       });
@@ -240,6 +434,7 @@ export default function SideNavbar({
 
       setSendOk("Your message has been sent. We’ll get back to you soon.");
       // reset fields
+      setContactEmail("");
       setContactMessage("");
       setContactFile(null);
     } catch {
@@ -253,8 +448,8 @@ export default function SideNavbar({
     <aside
       className={`flex flex-col justify-between items-center h-screen ${
         sidebarCollapsed ? "w-[80px]" : "w-[260px]"
-      } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl z-50`}
-      style={{ position: "relative", zIndex: 10 }}
+      } bg-[#F8F9FC] rounded-r-3xl py-6 px-2 shadow-2xl z-[100]`}
+      style={{ position: "relative" }}
     >
       {/* rounded-corner fillers */}
       <div
@@ -327,7 +522,7 @@ export default function SideNavbar({
               <div
                 className={`absolute ${
                   sidebarCollapsed ? "left-full ml-2 top-0" : "left-0 bottom-full mb-2"
-                } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50`}
+                } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-[200]`}
                 role="menu"
               >
                 {/* tiny arrow */}
@@ -382,10 +577,10 @@ export default function SideNavbar({
             className={`flex ${sidebarCollapsed ? "flex-col items-center gap-1" : "flex-row items-center gap-2"} py-2`}
           >
             <div className="w-10 h-10 rounded-full bg-[#FFFBEA] flex items-center justify-center overflow-hidden">
-              <Image src={userAvatar} alt="User Avatar" width={36} height={36} />
+              <Image src={finalAvatar} alt="User Avatar" width={36} height={36} />
             </div>
             {!sidebarCollapsed && (
-              <span className="text-base font-semibold text-[#222E3A]">{userName}</span>
+              <span className="text-base font-semibold text-[#222E3A]">{finalName}</span>
             )}
           </Link>
 
@@ -408,7 +603,7 @@ export default function SideNavbar({
                 sidebarCollapsed
                   ? "left-1/2 -translate-x-1/2 bottom-14"
                   : "right-2 bottom-12"
-              } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden`}
+              } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-[200]`}
               role="menu"
             >
               {/* tiny arrow */}
@@ -456,7 +651,7 @@ export default function SideNavbar({
         }`}
         onClick={() => setSidebarCollapsed((c) => !c)}
         aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        style={{ outline: "none", border: "none", background: "transparent", cursor: "pointer", zIndex: 3 }}
+        style={{ outline: "none", border: "none", background: "transparent", cursor: "pointer", zIndex: 150 }}
       >
         <div className="w-2 h-8 bg-[#E0E6ED] rounded-full shadow-inner group-hover:bg-[#00AEEF] transition-colors" />
       </button>
@@ -464,20 +659,20 @@ export default function SideNavbar({
       {/* Contact Us Modal */}
       {contactOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
           role="dialog"
           aria-modal="true"
         >
           {/* backdrop */}
-          <div className="absolute inset-0 bg-black/30" onClick={() => setContactOpen(false)} />
+          <div className="absolute inset-0 bg-black/30" onClick={closeContactModal} />
           {/* card */}
-          <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 w-[92vw] max-w-[520px] p-6">
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 w-[92vw] max-w-[520px] p-6 z-[10000]">
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-xl font-extrabold text-[#0F172A]">Contact Support</h3>
               <button
                 aria-label="Close"
                 className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
-                onClick={() => setContactOpen(false)}
+                onClick={closeContactModal}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M6 6l12 12M18 6L6 18" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
@@ -506,7 +701,7 @@ export default function SideNavbar({
                 <label className="text-sm text-[#6B7280]">Your email</label>
                 <input
                   type="email"
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                  className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
                   placeholder="you@example.com"
@@ -556,7 +751,7 @@ export default function SideNavbar({
               <div className="mt-2 flex items-center justify-end gap-3">
                 <button
                   className="px-4 py-2 rounded-xl border border-[#E5E7EB] hover:bg-gray-50"
-                  onClick={() => setContactOpen(false)}
+                  onClick={closeContactModal}
                 >
                   Cancel
                 </button>

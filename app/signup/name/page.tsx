@@ -24,10 +24,10 @@ export default function SignupName() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   /**
-   * Navigate back to the OTP step
+   * Navigate back to the phone step
    */
   const handleBack = () => {
-    router.push("/signup/mobile/otp");
+    router.push("/signup/phone");
   };
 
   /**
@@ -67,7 +67,7 @@ export default function SignupName() {
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
-        aria-label="Back to OTP step"
+        aria-label="Back to phone step"
       >
         <svg
           width="48"

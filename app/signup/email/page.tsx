@@ -11,25 +11,41 @@ function validateEmail(email: string) {
 
 export default function SignupEmail() {
   const router = useRouter();
-  // Get registration data from UserContext for state persistence
   const { updateRegistrationData } = useUser();
-  // Initialize email state with existing data from context or empty string
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleBack = () => {
-    router.push("/signup/age");
+    router.push("/signup");
   };
 
-  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  if (!validateEmail(email)) return;
+  const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!validateEmail(email)) return;
 
-  updateRegistrationData({ email });
-  localStorage.setItem("email", email); 
-  router.push("/signup/email/setPassword");
-};
+    setLoading(true);
+    setError(null);
 
+    try {
+      console.log("Collecting email for signup:", email);
+      
+      // Just collect email - no user creation yet
+      updateRegistrationData({ email });
+      localStorage.setItem("signupEmail", email);
+      localStorage.setItem("userEmail", email);
+      
+      // Redirect to phone page
+      router.push("/signup/phone");
+      
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">
@@ -37,7 +53,7 @@ export default function SignupEmail() {
       <button
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
-        aria-label="Back to age step"
+        aria-label="Back to signup"
       >
         <svg
           width="48"
@@ -65,8 +81,8 @@ export default function SignupEmail() {
         />
       </div>
 
-      {/* Form Container */}
       <div className="w-full h-full max-w-full max-h-full bg-[#F8F9FC] flex items-center justify-center relative p-8">
+        {/* Centered overlay content */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-full max-w-[600px] px-4 z-10">
           <div className="flex flex-col items-center mb-2">
             <Image
@@ -103,9 +119,16 @@ export default function SignupEmail() {
               autoComplete="email"
             />
 
+            {error && (
+              <div className="text-red-500 text-sm text-center w-full mb-2">{error}</div>
+            )}
+
             {/* Next Button - Disabled until valid email is entered */}
-            <NextButton disabled={!validateEmail(email)} onClick={handleNext}>
-              Next
+            <NextButton 
+              disabled={!validateEmail(email) || loading}
+              onClick={handleNext}
+            >
+              {loading ? "Processing..." : "Next"}
             </NextButton>
           </form>
         </div>

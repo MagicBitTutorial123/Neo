@@ -50,6 +50,19 @@ export default function MissionPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showHeader, setShowHeader] = useState(false);
+
+  // Listen for sidebar collapse state changes
+  useEffect(() => {
+    const handleSidebarCollapsed = (event: CustomEvent) => {
+      setSidebarCollapsed(event.detail.collapsed);
+    };
+
+    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    
+    return () => {
+      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    };
+  }, []);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
 
@@ -446,7 +459,7 @@ export default function MissionPage() {
             </div>
           )}
 
-          <SideNavbar onCollapse={setSidebarCollapsed} />
+          <SideNavbar />
           <div className="flex-1 overflow-hidden relative z-30">
             <StandardMissionLayout
               mission={mission}
@@ -653,7 +666,7 @@ export default function MissionPage() {
             </div>
           )}
 
-          <SideNavbar onCollapse={setSidebarCollapsed} />
+          <SideNavbar />
           <div className="flex-1 overflow-hidden relative z-30">
             <BlocklySplitLayout
               mission={mission}

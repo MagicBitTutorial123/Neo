@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import SideNavbar from "@/components/SideNavbar";
+import { useUser } from "@/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
 
 const splitName = (full: string) => {
   const parts = (full || "").trim().split(/\s+/);
@@ -10,25 +12,20 @@ const splitName = (full: string) => {
   const last = parts.join(" ");
   return { first, last };
 };
+
 const joinName = (first: string, last: string) =>
   [first.trim(), last.trim()].filter(Boolean).join(" ");
 
 export default function SettingsPage() {
+  const { registrationData, userData, updateUserData } = useUser();
+  
   // Header
   const [displayName, setDisplayName] = useState("User");
 
-  // 
-  const [avatar, setAvatar] = useState<string>(() => {
-    if (typeof window === "undefined") return "/Avatar01.png";
-    try {
-      const a = (localStorage.getItem("avatar") || "").trim();
-      return a ? (a.startsWith("/") ? a : `/${a}`) : "/Avatar01.png";
-    } catch {
-      return "/Avatar01.png";
-    }
-  });
+  // Avatar state - read-only, shows selected avatar from sidebar
+  const [avatar, setAvatar] = useState<string>("/Avatar01.png");
 
-  // form fields
+  // Form fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,66 +37,292 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  
+  // Supabase user data
+  const [supabaseUserData, setSupabaseUserData] = useState<{
+    full_name?: string;
+    avatar?: string;
+    email?: string;
+    phone?: string;
+    bio?: string;
+  } | null>(null);
 
-  // Prefill from localStorage once
-  useEffect(() => {
+  // localStorage-backed values (same as sidebar)
+  const [lsName, setLsName] = useState<string | null>(null);
+  const [lsAvatar, setLsAvatar] = useState<string | null>(null);
+
+  // Fetch user data from Supabase
+  const fetchUserDataFromSupabase = async () => {
     try {
-      const n = (localStorage.getItem("name") || "").trim();
-      const e = (localStorage.getItem("email") || "").trim();
-      const p =
-        (localStorage.getItem("fullPhone") ||
-          localStorage.getItem("phone") ||
-          ""
-        ).trim();
-      const b = localStorage.getItem("bio") || "";
+      console.log('🔍 Fetching user data from Supabase...');
+      
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.log('❌ No authenticated user found in Supabase Auth');
+        return;
+      }
 
-      if (n) {
-        const { first, last } = splitName(n);
-        setFirstName(first);
-        setLastName(last);
-        setDisplayName(n);
+      console.log('✅ Found authenticated user:', user.id);
+      
+      // Fetch user profile from user_profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('full_name, avatar, email, phone, bio')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('❌ Error fetching user profile:', profileError);
+        
+        // If profile doesn't exist, try to get user metadata from auth
+        if (profileError.code === 'PGRST116') {
+          console.log('🔄 Profile not found, trying to get user metadata from auth...');
+          
+          const userMetadata = user.user_metadata;
+          if (userMetadata && (userMetadata.full_name || userMetadata.avatar)) {
+            const fallbackProfile = {
+              full_name: userMetadata.full_name || undefined,
+              avatar: userMetadata.avatar || undefined,
+              email: user.email || undefined,
+              phone: undefined,
+              bio: undefined
+            };
+            setSupabaseUserData(fallbackProfile);
+            console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
+            return;
+          }
+        }
+        return;
       }
-      if (e) {
-        setEmail(e);
-        setWhereEmail(e);
+
+      if (profile) {
+        setSupabaseUserData(profile);
+        console.log('✅ User profile fetched from Supabase:', profile);
+      } else {
+        console.log('❌ No profile found for user');
       }
-      if (p) setPhone(p);
-      if (b) setBio(b);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      console.error('❌ Error fetching user data from Supabase:', error);
     }
+  };
+
+  // ---- load from localStorage (same as sidebar)
+  const refreshFromLocalStorage = () => {
+    try {
+      const n = localStorage.getItem("name");
+      const a = localStorage.getItem("avatar");
+      setLsName(n && n.trim() ? n.trim() : null);
+
+      // normalize avatar path
+      let av = a && a.trim() ? a.trim() : null;
+      if (av) {
+        if (!av.startsWith("/") && !av.startsWith("http")) av = `/${av}`;
+        setLsAvatar(av);
+      } else {
+        setLsAvatar(null);
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  // Fetch user data when component mounts
+  useEffect(() => {
+    fetchUserDataFromSupabase();
+    refreshFromLocalStorage();
   }, []);
 
-  // ✅ Keep avatar in sync if another page/tab updates it
+  // refresh when window regains focus or another tab updates storage
   useEffect(() => {
-    const load = () => {
+    const onFocus = () => refreshFromLocalStorage();
+    const onStorage = () => refreshFromLocalStorage();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  // Check localStorage periodically to catch sidebar changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshFromLocalStorage();
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // final sources (prefer Supabase table → context → localStorage → default) - SAME AS SIDEBAR
+  const userAvatar =
+    supabaseUserData?.avatar || userData?.avatar || registrationData?.avatar || lsAvatar || "/Avatar02.png";
+
+  const userName =
+    supabaseUserData?.full_name || userData?.name || registrationData?.name || lsName || "User";
+
+  // If we have partial data from Supabase, try to fill in missing pieces
+  const finalAvatar = userAvatar || "/Avatar01.png";
+  const finalName = userName || "User";
+
+  // Debug logging (same as sidebar)
+  console.log('🔍 Settings data sources:', {
+    supabaseUserData,
+    lsAvatar,
+    lsName,
+    userData: { avatar: userData?.avatar, name: userData?.name },
+    registrationData: { avatar: registrationData?.avatar, name: registrationData?.name },
+    finalAvatar: finalAvatar,
+    finalName: finalName
+  });
+
+  // Prefill form fields from Supabase data
+  useEffect(() => {
+    if (supabaseUserData) {
+      // Set avatar from Supabase data
+      if (supabaseUserData.avatar) {
+        const avatarPath = supabaseUserData.avatar.startsWith("/") 
+          ? supabaseUserData.avatar 
+          : `/${supabaseUserData.avatar}`;
+        console.log('🔄 Setting avatar from Supabase:', avatarPath);
+        setAvatar(avatarPath);
+      }
+
+      // Set name fields
+      if (supabaseUserData.full_name) {
+        const { first, last } = splitName(supabaseUserData.full_name);
+        setFirstName(first);
+        setLastName(last);
+        setDisplayName(supabaseUserData.full_name);
+      }
+
+      // Set other fields
+      if (supabaseUserData.email) {
+        setEmail(supabaseUserData.email);
+        setWhereEmail(supabaseUserData.email);
+      }
+      if (supabaseUserData.phone) setPhone(supabaseUserData.phone);
+      if (supabaseUserData.bio) setBio(supabaseUserData.bio);
+    }
+  }, [supabaseUserData]);
+
+  // Update display name when firstName or lastName changes
+  useEffect(() => {
+    // Only update if we have both names and they're not empty
+    if (firstName.trim() && lastName.trim()) {
+      const newDisplayName = joinName(firstName, lastName);
+      setDisplayName(newDisplayName.trim());
+    }
+  }, [firstName, lastName]);
+
+  // Update avatar and name from final sources (same as sidebar)
+  useEffect(() => {
+    // Set avatar from final source
+    if (finalAvatar && finalAvatar !== "/Avatar02.png") {
+      const avatarPath = finalAvatar.startsWith("/") 
+        ? finalAvatar 
+        : `/${finalAvatar}`;
+      console.log('🔄 Setting avatar from final source:', avatarPath);
+      setAvatar(avatarPath);
+    }
+
+    // Set name from final source if we don't have form data
+    if (!firstName.trim() && !lastName.trim() && finalName && finalName !== "User") {
+      const { first, last } = splitName(finalName);
+      setFirstName(first);
+      setLastName(last);
+      setDisplayName(finalName);
+      console.log('🔄 Setting name from final source:', finalName);
+    }
+  }, [finalAvatar, finalName, firstName, lastName]);
+
+  // Force update avatar and name when final sources change (separate effect)
+  useEffect(() => {
+    console.log('🔄 Final sources changed - forcing update:', { finalAvatar, finalName });
+    
+    // Force update avatar
+    if (finalAvatar && finalAvatar !== "/Avatar02.png") {
+      const avatarPath = finalAvatar.startsWith("/") 
+        ? finalAvatar 
+        : `/${finalAvatar}`;
+      console.log('🔄 Force updating avatar to:', avatarPath);
+      setAvatar(avatarPath);
+    }
+    
+    // Force update name if we have a valid name
+    if (finalName && finalName !== "User") {
+      console.log('🔄 Force updating name to:', finalName);
+      setDisplayName(finalName);
+      
+      // Also update form fields if they're empty
+      if (!firstName.trim() && !lastName.trim()) {
+        const { first, last } = splitName(finalName);
+        setFirstName(first);
+        setLastName(last);
+      }
+    }
+  }, [finalAvatar, finalName]);
+
+  // Fallback to localStorage if no Supabase data
+  useEffect(() => {
+    if (!supabaseUserData) {
       try {
-        const a = (localStorage.getItem("avatar") || "").trim();
-        if (a) setAvatar(a.startsWith("/") ? a : `/${a}`);
+        const n = (localStorage.getItem("name") || "").trim();
+        const e = (localStorage.getItem("email") || "").trim();
+        const p = (localStorage.getItem("fullPhone") || localStorage.getItem("phone") || "").trim();
+        const b = localStorage.getItem("bio") || "";
+
+        if (n) {
+          const { first, last } = splitName(n);
+          setFirstName(first);
+          setLastName(last);
+          setDisplayName(n);
+        }
+        if (e) {
+          setEmail(e);
+          setWhereEmail(e);
+        }
+        if (p) setPhone(p);
+        if (b) setBio(b);
       } catch {
         /* ignore */
       }
-    };
-    window.addEventListener("focus", load);
-    window.addEventListener("storage", load);
-    return () => {
-      window.removeEventListener("focus", load);
-      window.removeEventListener("storage", load);
-    };
-  }, []);
+    }
+  }, [supabaseUserData]);
+
+  // Debug function to check current state (same as sidebar)
+  const debugCurrentState = () => {
+    console.log('🔍 Settings Current State Debug:', {
+      avatar,
+      displayName,
+      firstName,
+      lastName,
+      finalAvatar,
+      finalName,
+      lsName,
+      lsAvatar,
+      supabaseUserData,
+      userData: { avatar: userData?.avatar, name: userData?.name },
+      registrationData: { avatar: registrationData?.avatar, name: registrationData?.name }
+    });
+  };
 
   const fullName = useMemo(
     () => joinName(firstName, lastName),
     [firstName, lastName]
   );
+  
   const emailValid = useMemo(
     () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
     [email]
   );
+  
   const phoneValid = useMemo(
     () => /^[0-9+\s-]{7,}$/.test(phone),
     [phone]
   );
+  
   const canSave =
     !!firstName.trim() && emailValid && phoneValid && !saving;
 
@@ -108,47 +331,77 @@ export default function SettingsPage() {
     setOk(null);
     if (!canSave) return;
 
-    const targetEmail = (whereEmail || email || "").trim();
-    if (!targetEmail) {
-      setError(
-        "No original email (whereEmail) found. Please reload or log in again."
-      );
-      return;
-    }
-
     setSaving(true);
     try {
-      const payload: Record<string, string> = {
-        whereEmail: targetEmail,
-        name: fullName.trim(), // store full name in 'name'
-        email: email.trim(),
-        phone: phone.trim(),
-      };
-
-      const res = await fetch("http://127.0.0.1:5000/update-profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(data?.message || "Failed to update profile");
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        setError("No authenticated user found. Please log in again.");
         return;
       }
 
-      // Sync localStorage
+      console.log('🔄 Updating profile for user:', user.id);
+      console.log('📝 New data:', { fullName, email, phone, bio, currentAvatar: avatar });
+
+      // Update user profile in Supabase
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          user_id: user.id,
+          email: email.trim(),
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+          bio: bio.trim() || null,
+          avatar: avatar.replace('/', ''), // Remove leading slash for storage
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('❌ Error updating profile:', profileError);
+        setError("Failed to update profile. Please try again.");
+        return;
+      }
+
+      console.log('✅ Profile updated in Supabase:', profile);
+
+      // Always update user metadata in auth for name and avatar changes
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName.trim(),
+          avatar: avatar.replace('/', '') // Remove leading slash for storage
+        }
+      });
+
+      if (updateError) {
+        console.error('❌ Error updating user metadata:', updateError);
+        // Don't fail the whole operation for metadata update
+      } else {
+        console.log('✅ User metadata updated in auth');
+      }
+
+      // Sync localStorage as backup
       localStorage.setItem("name", fullName.trim());
       localStorage.setItem("email", email.trim());
       localStorage.setItem("phone", phone.trim());
       if (bio.trim()) localStorage.setItem("bio", bio.trim());
+      localStorage.setItem("avatar", avatar.replace('/', '')); // Store without leading slash
 
+      // Update local state immediately for better UX
       setWhereEmail(email.trim());
       setDisplayName(fullName.trim());
-      setOk("Profile updated!");
-    } catch {
-      setError("Network error. Please try again.");
+      
+      // Refresh Supabase data to ensure consistency
+      await fetchUserDataFromSupabase();
+      
+      setOk("Profile updated successfully!");
+    } catch (error) {
+      console.error('❌ Error saving profile:', error);
+      setError("Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -269,8 +522,10 @@ export default function SettingsPage() {
                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
                     value={bio}
                     onChange={(ev) => setBio(ev.target.value)}
-                    placeholder="(Optional — stored only in localStorage for now)"
+                    placeholder="Tell us about yourself..."
                   />
+                </div>
+                <div className="md:col-span-2 flex flex-col gap-1">
                 </div>
               </div>
             </div>

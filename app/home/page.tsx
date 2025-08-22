@@ -52,6 +52,19 @@ export default function HomePage() {
     }
   }, [searchParams, router]);
 
+  // Listen for sidebar collapse state changes
+  useEffect(() => {
+    const handleSidebarCollapsed = (event: CustomEvent) => {
+      setSidebarCollapsed(event.detail.collapsed);
+    };
+
+    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    
+    return () => {
+      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    };
+  }, []);
+
   // New User Home step logic
   useEffect(() => {
     if (userData?.isNewUser && step < 2) {
@@ -138,7 +151,7 @@ export default function HomePage() {
               style={{ width: 200, height: 60 }}
               onClick={() => router.push(`/missions/${nextMission}`)}
             >
-              Let's Go
+              Lets Go
             </LetsGoButton>
           </div>
           <motion.div
@@ -402,7 +415,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
       {/* Side Navbar */}
-      <SideNavbar onCollapse={setSidebarCollapsed} />
+      <SideNavbar />
       {/* Main Content */}
       <main
         className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
@@ -416,7 +429,3 @@ export default function HomePage() {
   );
 }
 
-// Add a simple fade-in animation
-// In your global CSS (e.g., app/globals.css), add:
-// .animate-fade-in { animation: fadeIn 0.6s; }
-// @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

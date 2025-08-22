@@ -8,9 +8,8 @@ import { useUser } from "@/context/UserContext";
 
 function validateAge(age: string) {
   const n = Number(age);
-  return /^\d{1,3}$/.test(age) && n >= 1 && n <= 120;
+  return /^\d{1,3}$/.test(age) && n >= 13 && n <= 120;
 }
-
 
 export default function SignupAge() {
   const router = useRouter();
@@ -20,6 +19,7 @@ export default function SignupAge() {
   const [age, setAge] = useState(
     registrationData.age ? String(registrationData.age) : ""
   );
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   
@@ -29,13 +29,17 @@ export default function SignupAge() {
 
   const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (!validateAge(age)) return;
-
+    if (!validateAge(age)) {
+      setError("Please enter a valid age between 13 and 120 years.");
+      return;
+    }
+    
+    setError(null);
     // Save age to UserContext for persistence across signup flow
     updateRegistrationData({ age: Number(age) });
-    // Navigate to email input page
+    // Navigate to set password page
     localStorage.setItem("age", age);
-    router.push("/signup/email");
+    router.push("/signup/setpassword");
   };
 
   return (
@@ -114,13 +118,19 @@ export default function SignupAge() {
                 // Only allow numbers
                 const val = e.target.value.replace(/[^0-9]/g, "");
                 setAge(val);
+                setError(null); // Clear error when user types
               }}
               style={{ height: 56, maxWidth: 400 }}
               maxLength={3}
-              min={1}
+              min={13}
               max={120}
               inputMode="numeric"
             />
+            
+            {error && (
+              <div className="text-red-500 text-sm text-center w-full mb-2">{error}</div>
+            )}
+            
             <NextButton disabled={!validateAge(age)} onClick={handleNext}>
               Next
             </NextButton>

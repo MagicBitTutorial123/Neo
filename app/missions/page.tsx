@@ -1,10 +1,6 @@
 "use client";
 import { useUser } from "@/context/UserContext";
 import { missions } from "@/data/missions";
-import Image from "next/image";
-import Link from "next/link";
-import LetsGoButton from "@/components/LetsGoButton";
-import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import MissionProgressBar from "@/components/MissionProgressBar";
 import StepperMissionProgressBar from "@/components/StepperMissionProgressBar";
@@ -18,9 +14,22 @@ export default function MissionsPage() {
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Listen for sidebar collapse state changes
+  React.useEffect(() => {
+    const handleSidebarCollapsed = (event: CustomEvent) => {
+      setSidebarCollapsed(event.detail.collapsed);
+    };
+
+    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    
+    return () => {
+      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    };
+  }, []);
+
   return (
     <div className="flex min-h-screen min-w-screen h-screen w-screen bg-white overflow-hidden max-w-screen max-h-screen">
-      <SideNavbar onCollapse={setSidebarCollapsed} />
+      <SideNavbar />
       <main
         className="flex-1 flex flex-col overflow-hidden max-w-screen max-h-screen h-screen w-full p-0 m-0 transition-all duration-300 ease-in-out"
         style={{

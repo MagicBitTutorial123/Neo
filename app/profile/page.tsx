@@ -7,12 +7,9 @@ export default function ProfilePage() {
   const { registrationData, userData } = useUser();
 
   // Use context data or fallback to registrationData or defaults
-  const userAvatar = userData?.avatar || registrationData.avatar || "/User.png";
-  const userName = userData?.name || registrationData.name || "User";
   const currentMission = userData?.missionProgress || 1;
 
   // Dummy data for XP and badges (replace with real data when available)
-  const xp = 120;
   const topBadge = {
     image: "/badge1.png",
     label: "BATTE READY",
@@ -29,9 +26,6 @@ export default function ProfilePage() {
     { image: "/badge6.png", name: "Beginner", earned: false },
   ];
 
-  // Playground is active if mission 2 is completed
-  const playgroundActive = (userData?.missionProgress ?? 0) >= 2;
-
   // Loading state if userData is not loaded
   if (!userData) {
     return (
@@ -43,11 +37,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FC]">
-      <SideNavbar
-        avatar={userAvatar}
-        name={userName}
-        playgroundActive= {true}//{playgroundActive}
-      />
+      <SideNavbar />
       <main className="flex-1 flex flex-col items-center px-8 py-12">
         {/* Profile Card */}
         <div className="w-full max-w-5xl rounded-3xl bg-[#F7F8FA] border border-[#E0E6ED] flex flex-row items-center px-12 py-10 mb-12 shadow-sm">

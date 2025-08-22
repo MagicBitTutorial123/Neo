@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
 
 const avatars = [
   "/Avatar01.png",
@@ -15,10 +16,11 @@ const avatars = [
 
 export default function SignupAvatar() {
   const router = useRouter();
-  const { registrationData, updateRegistrationData } = useUser();
+  const { registrationData, updateRegistrationData, clearRegistrationData } = useUser();
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
-
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   //DISPLAY NAME
   const [displayName, setDisplayName] = useState(registrationData.name || "");
@@ -28,16 +30,86 @@ export default function SignupAvatar() {
       if (saved) setDisplayName(saved);
     }
   }, [displayName]);
+
   const handleBack = () => {
-    router.push("/signup/email/setPassword");
+    router.push("/signup/setpassword");
   };
 
-  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (selected === null) return;
 
-    updateRegistrationData({ avatar: avatars[selected] });
-    router.push("/home");
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Collect all signup data from localStorage
+      const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+      const phone = localStorage.getItem("fullPhone");
+      const name = localStorage.getItem("name");
+      const age = localStorage.getItem("age");
+      const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
+      const avatar = avatars[selected];
+
+      // Validate all required data is present
+      if (!email || !phone || !name || !age || !password) {
+        throw new Error("Missing required signup data. Please go back and complete all steps.");
+      }
+
+      console.log('📋 Collected signup data:', { email, phone, name, age, avatar });
+
+      // Step 1: Create user in Supabase Auth (basic only - no custom metadata)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/home?newUser=true`,
+          data: {
+            full_name: name,
+            phone: phone,
+            age: age,
+            avatar: avatar
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('❌ Auth signup error:', authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        throw new Error('No user data returned from signup');
+      }
+
+      console.log('✅ User created successfully:', authData.user.id);
+      console.log('📧 Confirmation email sent to:', email);
+      console.log('✅ Profile will be created automatically by database trigger');
+      
+      // Save avatar selection to context
+      updateRegistrationData({ avatar: avatar });
+      
+      // Clear registration data from context and localStorage
+      clearRegistrationData();
+      localStorage.removeItem("signupEmail");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("fullPhone");
+      localStorage.removeItem("name");
+      localStorage.removeItem("age");
+      localStorage.removeItem("password");
+      localStorage.removeItem("userPassword");
+      localStorage.removeItem("currentOTP");
+      localStorage.removeItem("otpSkipped");
+      
+      // Navigate to email confirmation page
+      router.push("/signup/email/confirm");
+
+    } catch (error) {
+      console.error('❌ Registration failed:', error);
+      setError(error instanceof Error ? error.message : "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -47,7 +119,7 @@ export default function SignupAvatar() {
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
-        aria-label="Back to age step"
+        aria-label="Back to password step"
       >
         <svg
           width="48"
@@ -114,6 +186,14 @@ export default function SignupAvatar() {
           <div className="mb-4 mt-2 text-2xl md:text-3xl font-extrabold text-[#222E3A] text-center font-poppins">
             Select your avatar
           </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-sm text-center max-w-[400px]">
+              {error}
+            </div>
+          )}
+
           <div className="flex flex-row items-center justify-center gap-6 mb-8">
             {avatars.map((src, idx) => (
               <button
@@ -146,8 +226,11 @@ export default function SignupAvatar() {
               </button>
             ))}
           </div>
-          <NextButton disabled={selected === null} onClick={handleNext}>
-            Confirm
+          <NextButton 
+            disabled={selected === null || loading} 
+            onClick={handleNext}
+          >
+            {loading ? "Creating Account..." : "Complete Signup & Send Confirmation"}
           </NextButton>
         </div>
       </div>
