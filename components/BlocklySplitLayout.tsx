@@ -30,6 +30,8 @@ export default function BlocklySplitLayout({
   fromNo = false,
   onCurrentStepChange,
   onFinish,
+  onUploadCode,
+  isUploading = false,
 }: {
   mission: any;
   sidebarCollapsed?: boolean;
@@ -49,6 +51,8 @@ export default function BlocklySplitLayout({
   fromNo?: boolean;
   onCurrentStepChange?: (step: number) => void;
   onFinish?: () => void;
+  onUploadCode?: (code: string) => void;
+  isUploading?: boolean;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
@@ -60,8 +64,7 @@ export default function BlocklySplitLayout({
   const [showDontWorry, setShowDontWorry] = useState(false);
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
-  const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
-  const [generatedCode,setGeneratedCode] = useState("")
+  const [generatedCode, setGeneratedCode] = useState("");
 
   // Load saved state on mount
   useEffect(() => {
@@ -134,19 +137,43 @@ export default function BlocklySplitLayout({
       setCurrentStep((s: number) => s + 1);
     };
 
+    const handleTriggerCodeUpload = () => {
+      if (onUploadCode && generatedCode) {
+        onUploadCode(generatedCode);
+      }
+    };
+
+    const handleClearWorkspace = () => {
+      // Clear the generated code
+      setGeneratedCode("");
+      // Dispatch an event to clear the Blockly workspace
+      window.dispatchEvent(new CustomEvent("clearBlocklyWorkspace"));
+    };
+
     window.addEventListener("goToNextStep", handleGoToNextStep);
+    window.addEventListener("triggerCodeUpload", handleTriggerCodeUpload);
+    window.addEventListener("clearWorkspace", handleClearWorkspace);
     return () => {
       window.removeEventListener("goToNextStep", handleGoToNextStep);
+      window.removeEventListener("triggerCodeUpload", handleTriggerCodeUpload);
+      window.removeEventListener("clearWorkspace", handleClearWorkspace);
     };
-  }, []);
+  }, [onUploadCode, generatedCode]);
 
   // Store the user's preferred width
   const [userPanelWidth, setUserPanelWidth] = useState(200); // Initial size set to minimum
   const SIDEBAR_EXPANDED = 260;
   const SIDEBAR_COLLAPSED = 80;
-  const leftPanelWidth =
-    userPanelWidth +
-    (sidebarCollapsed ? 0 : SIDEBAR_EXPANDED - SIDEBAR_COLLAPSED);
+
+  // Define min and max width constraints
+  const MIN_PANEL_WIDTH = 240; // Minimum width for usability
+  const MAX_PANEL_WIDTH = 500; // Maximum width to maintain good layout balance
+
+  // Apply width constraints
+  const leftPanelWidth = Math.max(
+    MIN_PANEL_WIDTH,
+    Math.min(MAX_PANEL_WIDTH, userPanelWidth)
+  );
   const [isResizing, setIsResizing] = useState(false);
   const router = useRouter();
   const { userData, updateUserData, setUserData } = useUser();
@@ -163,9 +190,9 @@ export default function BlocklySplitLayout({
       ? SIDEBAR_COLLAPSED
       : SIDEBAR_EXPANDED;
     const newUserWidth = e.clientX - sidebarWidth - 20; // Account for sidebar and margins
-    const minWidth = 100; // Allow making it even smaller
-    const maxWidth = 800;
-    if (newUserWidth >= minWidth && newUserWidth <= maxWidth) {
+
+    // Apply min/max constraints
+    if (newUserWidth >= MIN_PANEL_WIDTH && newUserWidth <= MAX_PANEL_WIDTH) {
       setUserPanelWidth(newUserWidth);
     }
   };
@@ -235,33 +262,6 @@ export default function BlocklySplitLayout({
     }
   };
 
-  const handleNextMission = async () => {
-    setShowCongrats(false);
-
-    if (userData?.firebaseUid) {
-      try {
-        if (mission.id === 1) {
-          await completeMission1(userData.firebaseUid);
-        } else if (mission.id === 2) {
-          await completeMission2(userData.firebaseUid);
-        }
-      } catch (error) {
-        console.error("Failed to update mission progress:", error);
-      }
-    }
-
-    if (mission.id === 2) {
-      setShowPlaygroundUnlocked(true);
-    } else {
-      const nextMissionId = String(Number(mission.id) + 1);
-      if ((missions as any)[nextMissionId]) {
-        router.push(`/missions/${nextMissionId}`);
-      } else {
-        router.push("/missions");
-      }
-    }
-  };
-
   // Overlay handlers
   const handleStepQuestionYes = () => {
     setShowStepQuestion(false);
@@ -307,15 +307,6 @@ export default function BlocklySplitLayout({
 
   // Mission header button handlers are now handled at page level
 
-  useEffect(() => {
-    if (showHelpAccepted) {
-      const timeout = setTimeout(() => {
-        router.push("/missions/2");
-      }, 1500);
-      return () => clearTimeout(timeout);
-    }
-  }, [showHelpAccepted, router]);
-
   if (showIntro && !forceHideIntro) {
     return (
       <MissionIntro
@@ -331,11 +322,24 @@ export default function BlocklySplitLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-white relative">
+    <div
+      className="flex min-h-screen bg-white relative"
+      style={{
+        marginLeft: sidebarCollapsed ? "80px" : "260px",
+        marginRight: "0px",
+      }}
+    >
       {/* Main Content Area */}
       <div className="flex-1 flex flex-row h-screen relative">
         {/* Split Content Area - Below the header */}
-        <div className="relative h-screen flex w-full mt-16">
+        <div
+          className="relative h-screen flex w-full mt-16"
+          style={{
+            width: sidebarCollapsed
+              ? "calc(100vw - 80px)"
+              : "calc(100vw - 260px)",
+          }}
+        >
           {/* Left Side - Instructions and Images */}
           <div
             className="flex flex-col bg-[#F8F9FC]"
@@ -343,15 +347,15 @@ export default function BlocklySplitLayout({
               width: `${leftPanelWidth}px`,
               height: "calc(100vh - 80px)",
               maxHeight: "calc(100vh - 80px)",
-              marginLeft: sidebarCollapsed ? "5px" : "10px",
+              marginLeft: "0px", // Remove the small margin since we're handling sidebar spacing at the container level
             }}
           >
-            <div className="h-full p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pt-10 pb-8">
+            <div className="h-full p-4 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pt-10 pb-8">
               {mission.steps[currentStep] ? (
                 <>
-                  <div className="flex items-center mb-3">
+                  <div className="flex items-start mb-3 gap-3">
                     <span
-                      className="text-white text-xs font-bold px-5 py-1 mr-3"
+                      className="text-white text-xs font-bold px-5 py-1 flex-shrink-0"
                       style={{
                         background: "#222E3A",
                         clipPath:
@@ -363,7 +367,7 @@ export default function BlocklySplitLayout({
                     >
                       STEP {String(currentStep + 1).padStart(2, "0")}
                     </span>
-                    <span className="text-xl font-medium text-[#222E3A]">
+                    <span className="text-xl font-medium text-[#222E3A] break-words">
                       {mission.steps[currentStep].title}
                     </span>
                   </div>
@@ -410,9 +414,37 @@ export default function BlocklySplitLayout({
                     </div>
                   )}
 
+                  {/* Navigation buttons after instructions */}
+                  <div className="flex justify-between items-center px-2 mb-6 mt-4">
+                    {currentStep > 0 && (
+                      <button
+                        onClick={handlePrevious}
+                        className="w-24 px-4 py-2 rounded-full font-medium bg-[#E0E6ED] text-[#222E3A] hover:bg-[#D0D6DD] transition-colors"
+                      >
+                        Previous
+                      </button>
+                    )}
+                    {currentStep === 0 && <div></div>}
+                    {currentStep < mission.steps.length - 1 ? (
+                      <button
+                        onClick={handleNext}
+                        className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleFinish}
+                        className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
+                      >
+                        Next
+                      </button>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-center mb-8">
                     {mission.steps[currentStep].image && (
-                      <div className="relative w-full max-w-[400px] bg-gray-100 rounded-xl overflow-hidden">
+                      <div className="relative w-full bg-gray-100 rounded-xl overflow-hidden">
                         <img
                           src={mission.steps[currentStep].image}
                           alt={mission.steps[currentStep].title}
@@ -427,33 +459,6 @@ export default function BlocklySplitLayout({
                   <p className="text-gray-500">Step not found</p>
                 </div>
               )}
-
-              <div className="flex justify-between items-center px-2 mb-4 mt-8">
-                {currentStep > 0 && (
-                  <button
-                    onClick={handlePrevious}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-[#E0E6ED] text-[#222E3A] hover:bg-[#D0D6DD] transition-colors"
-                  >
-                    Previous
-                  </button>
-                )}
-                {currentStep === 0 && <div></div>}{" "}
-                {currentStep < mission.steps.length - 1 ? (
-                  <button
-                    onClick={handleNext}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleFinish}
-                    className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
-                  >
-                    Next
-                  </button>
-                )}
-              </div>
             </div>
           </div>
 
@@ -464,9 +469,11 @@ export default function BlocklySplitLayout({
             style={{ cursor: isResizing ? "ew-resize" : "ew-resize" }}
           />
           <div className="flex-grow mb-16">
-          {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
-            <BlocklyComponent generatedCode={generatedCode} setGeneratedCode={setGeneratedCode}/>
-
+            {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
+            <BlocklyComponent
+              generatedCode={generatedCode}
+              setGeneratedCode={setGeneratedCode}
+            />
           </div>
           {/* <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
             <div className="h-full flex flex-col">
@@ -522,7 +529,6 @@ export default function BlocklySplitLayout({
               </div>
             </div>
           </div> */}
-
         </div>
       </div>
 
@@ -573,36 +579,6 @@ export default function BlocklySplitLayout({
       </div> */}
 
       {/* All overlays are now handled at the page level */}
-    </div>
-  );
-}
-
-function PlaygroundUnlockedCard({ onContinue }: { onContinue: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-    >
-      <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-        <div className="mb-4 text-3xl font-extrabold text-center">
-          Playground Unlocked!
-        </div>
-        <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-          You can now access the Playground from the sidebar and try out your
-          own robot code!
-        </div>
-        <img
-          src="/playground-unlocked-placeholder.png"
-          alt="Playground Unlocked"
-          className="mb-8 w-32 h-20 object-contain"
-        />
-        <button
-          onClick={onContinue}
-          className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-        >
-          Continue
-        </button>
-      </div>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { useState, useRef } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 
-
 function validateAge(age: string) {
   const n = Number(age);
   return /^\d{1,3}$/.test(age) && n >= 13 && n <= 120;
@@ -22,7 +21,6 @@ export default function SignupAge() {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  
   const handleBack = () => {
     router.push("/signup/name");
   };
@@ -68,10 +66,10 @@ export default function SignupAge() {
       {/* Logo in top left */}
       <div className="absolute ml-12 mt-8 top-8 left-8 z-30">
         <Image
-          src="/side-logo.png"
+          src="/BuddyNeo-expanded.svg"
           alt="BuddyNeo Logo"
-          width={400}
-          height={75}
+          width={320}
+          height={60}
           style={{ maxWidth: "100%", height: "auto" }}
         />
       </div>

@@ -5,6 +5,7 @@ import Image from "next/image";
 import SideNavbar from "@/components/SideNavbar";
 import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
+import { useSidebar } from "@/context/SidebarContext";
 
 const splitName = (full: string) => {
   const parts = (full || "").trim().split(/\s+/);
@@ -20,10 +21,23 @@ export default function SettingsPage() {
   const { registrationData, userData, updateUserData } = useUser();
   
   // Header
-  const [displayName, setDisplayName] = useState("User");
 
   // Avatar state - read-only, shows selected avatar from sidebar
-  const [avatar, setAvatar] = useState<string>("/Avatar01.png");
+  const { sidebarCollapsed } = useSidebar();
+
+  // Header
+  const [displayName, setDisplayName] = useState("User");
+
+  //
+  const [avatar, setAvatar] = useState<string>(() => {
+    if (typeof window === "undefined") return "/Avatar01.png";
+    try {
+      const a = (localStorage.getItem("avatar") || "").trim();
+      return a ? (a.startsWith("/") ? a : `/${a}`) : "/Avatar01.png";
+    } catch {
+      return "/Avatar01.png";
+    }
+  });
 
   // Form fields
   const [firstName, setFirstName] = useState("");
@@ -410,7 +424,12 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen bg-[#F6F8FC]">
       <SideNavbar />
-      <main className="flex-1 px-6 lg:px-8 xl:px-10 py-8">
+      <main
+        className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+        }}
+      >
         <div className="w-full flex flex-col lg:flex-row gap-6">
           {/* Left tabs */}
           <aside className="lg:w-[280px] w-full shrink-0">

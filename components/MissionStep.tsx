@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useSidebar } from "@/context/SidebarContext";
 
 interface MissionStepProps {
   missionNumber: number;
@@ -60,7 +61,8 @@ export default function MissionStep({
   tryAgainButtonText = "Try Again",
   onTryAgain,
 }: MissionStepProps) {
-  const [ setCurrentStep] = useState(stepNumber);
+  const [setCurrentStep] = useState(stepNumber);
+  const { sidebarCollapsed } = useSidebar();
 
   const handleNext = () => {
     if (onNext) {
@@ -83,12 +85,18 @@ export default function MissionStep({
       {/* Main Content Area */}
       <div
         className="flex-1 flex flex-col h-full"
-        style={{ marginTop: "65px" }}
+        style={{
+          marginTop: "65px",
+          marginLeft: sidebarCollapsed ? "80px" : "260px",
+          marginRight: "0px",
+        }}
       >
         {/* Main Step Content */}
         <div
           className="flex w-full max-w-7xl mx-auto mt-4 gap-6"
-          style={{ flex: "0 1 auto" }}
+          style={{
+            flex: "0 1 auto",
+          }}
         >
           {/* Main Image/Tools Area */}
           <div
@@ -101,7 +109,7 @@ export default function MissionStep({
                 <img
                   src={stepImage}
                   alt={stepTitle}
-                  className="max-h-[340px] w-auto object-contain"
+                  className="max-h-[500px] w-auto object-contain"
                 />
               )}
             </div>
@@ -110,49 +118,96 @@ export default function MissionStep({
       </div>
 
       {/* Instructions Container - Fixed at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#E0E6ED] py-6">
-        <div className="w-full px-8 flex items-center justify-between max-w-7xl mx-auto h-16">
-          <div>
-            <div className="text-lg font-bold text-[#222E3A]">
-              Step {stepNumber}
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#E0E6ED] py-6"
+        style={{
+          left: sidebarCollapsed ? "80px" : "260px",
+          right: "0px",
+        }}
+      >
+        <div className="w-full px-8 max-w-7xl mx-auto">
+          {/* Instructions and buttons layout - responsive */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <div className="text-lg font-bold text-[#222E3A]">
+                Step {stepNumber}
+              </div>
+              <div className="text-base text-[#555] max-w-2xl">
+                {stepDescription}
+              </div>
             </div>
-            <div className="text-base text-[#555] max-w-2xl">
-              {stepDescription}
+            <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-12 flex-shrink-0 w-full lg:w-auto">
+              <div className="flex lg:hidden">
+                {showPreviousButton && (
+                  <button
+                    onClick={handlePrevious}
+                    className="px-6 py-3 rounded-full font-medium bg-[#F0F4F8] text-[#222E3A] hover:bg-[#E0E6ED] transition-colors"
+                  >
+                    {previousButtonText}
+                  </button>
+                )}
+              </div>
+              <div className="hidden lg:flex items-center gap-12">
+                {showPreviousButton && (
+                  <button
+                    onClick={handlePrevious}
+                    className="px-6 py-3 rounded-full font-medium bg-[#F0F4F8] text-[#222E3A] hover:bg-[#E0E6ED] transition-colors"
+                  >
+                    {previousButtonText}
+                  </button>
+                )}
+                {showNextButton && (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 py-3 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors"
+                  >
+                    {nextButtonText}
+                  </button>
+                )}
+                {showFinishButton && (
+                  <button
+                    onClick={onFinish}
+                    className="px-6 py-3 rounded-full font-medium bg-[#00AEEF] text-white hover:bg-[#0098D4] transition-colors"
+                  >
+                    {finishButtonText}
+                  </button>
+                )}
+                {showTryAgainButton && (
+                  <button
+                    onClick={onTryAgain}
+                    className="px-6 py-3 rounded-full font-medium bg-[#D9F2FF] text-[#222E3A] hover:bg-[#B3E6FF] transition-colors"
+                  >
+                    {tryAgainButtonText}
+                  </button>
+                )}
+              </div>
+              <div className="flex lg:hidden">
+                {showNextButton && (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 py-3 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors"
+                  >
+                    {nextButtonText}
+                  </button>
+                )}
+                {showFinishButton && (
+                  <button
+                    onClick={onFinish}
+                    className="px-6 py-3 rounded-full font-medium bg-[#00AEEF] text-white hover:bg-[#0098D4] transition-colors"
+                  >
+                    {finishButtonText}
+                  </button>
+                )}
+                {showTryAgainButton && (
+                  <button
+                    onClick={onTryAgain}
+                    className="px-6 py-3 rounded-full font-medium bg-[#D9F2FF] text-[#222E3A] hover:bg-[#B3E6FF] transition-colors"
+                  >
+                    {tryAgainButtonText}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-12">
-            {showPreviousButton && (
-              <button
-                onClick={handlePrevious}
-                className="px-6 py-3 rounded-full font-medium bg-[#F0F4F8] text-[#222E3A] hover:bg-[#E0E6ED] transition-colors"
-              >
-                {previousButtonText}
-              </button>
-            )}
-            {showNextButton && (
-              <button
-                onClick={handleNext}
-                className="px-6 py-3 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors"
-              >
-                {nextButtonText}
-              </button>
-            )}
-            {showFinishButton && (
-              <button
-                onClick={onFinish}
-                className="px-6 py-3 rounded-full font-medium bg-[#00AEEF] text-white hover:bg-[#0098D4] transition-colors"
-              >
-                {finishButtonText}
-              </button>
-            )}
-            {showTryAgainButton && (
-              <button
-                onClick={onTryAgain}
-                className="px-6 py-3 rounded-full font-medium bg-[#D9F2FF] text-[#222E3A] hover:bg-[#B3E6FF] transition-colors"
-              >
-                {tryAgainButtonText}
-              </button>
-            )}
           </div>
         </div>
       </div>

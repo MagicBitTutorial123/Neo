@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import MissionProgressBar from "@/components/MissionProgressBar";
 import StepperMissionProgressBar from "@/components/StepperMissionProgressBar";
 import SideNavbar from "@/components/SideNavbar";
+import { useSidebar } from "@/context/SidebarContext";
 
 export default function MissionsPage() {
   const { userData } = useUser();
@@ -12,7 +13,7 @@ export default function MissionsPage() {
   const missionList = Object.values(missions);
   // Track the selected mission index for both the stepper and the breadcrumb
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed } = useSidebar();
 
   // Listen for sidebar collapse state changes
   React.useEffect(() => {
@@ -37,13 +38,14 @@ export default function MissionsPage() {
         }}
       >
         {/* Breadcrumb */}
-        <div className="text-2xl font-extrabold text-[#222E3A] mb-6 flex items-center gap-2 px-8 pt-8">
+        <div className="text-2xl font-extrabold text-[#222E3A] mb-8 flex items-center gap-2 px-8 pt-8">
           <span className="text-[#222E3A]">Missions</span>
           <span className="text-[#222E3A]">&gt;</span>
           <span className="text-[#00AEEF]">
             Mission {String(selectedMissionIdx + 1)}
           </span>
         </div>
+
         {/* Mission Progress Bar */}
         <div className="fixed top-8 right-8 z-50 w-[320px]">
           <MissionProgressBar
@@ -57,8 +59,9 @@ export default function MissionsPage() {
             }
           />
         </div>
+
         {/* Stepper Progress Bar with Mission Details */}
-        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full">
+        <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full mt-6">
           <StepperMissionProgressBar
             missionList={missionList}
             completed={completed}
