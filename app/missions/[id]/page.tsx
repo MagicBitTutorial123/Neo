@@ -60,9 +60,6 @@ export default function MissionPage() {
   let id = params.id;
   if (Array.isArray(id)) id = id[0];
   id = String(id);
-  if (!validMissionIds.includes(id as MissionId)) {
-    return <div>Mission not found</div>;
-  }
   const mission = missions[id as MissionId];
   const layoutType = missionLayoutMap[id as MissionId] || "standardIntroLayout";
 
