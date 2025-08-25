@@ -25,25 +25,37 @@ interface BluetoothGATTServer {
   getPrimaryService: (serviceId: string) => Promise<BluetoothGATTService>;
 }
 
+type BleControlPayload = {
+  mode: string;
+  pin?: number;
+  pins?: number[];
+  trig?: number;
+  echo?: number;
+  active?: boolean;
+};
+
 interface BluetoothGATTService {
-  getCharacteristic: (characteristicId: string) => Promise<BluetoothRemoteGATTCharacteristic>;
+  getCharacteristic: (
+    characteristicId: string
+  ) => Promise<BluetoothRemoteGATTCharacteristic>;
 }
 
 interface BluetoothRemoteGATTCharacteristic {
   writeValue: (value: BufferSource) => Promise<void>;
 }
 
+interface NotifiableCharacteristic extends BluetoothRemoteGATTCharacteristic {
+  startNotifications: () => Promise<NotifiableCharacteristic | void>;
+  addEventListener: (
+    type: "characteristicvaluechanged",
+    listener: (ev: Event) => void
+  ) => void;
+  value?: DataView;
+}
+
 interface BluetoothDevice {
   gatt?: BluetoothGATT;
   addEventListener: (event: string, callback: () => void) => void;
-}
-
-declare global {
-  interface Navigator {
-    bluetooth: {
-      requestDevice: (options: { filters: Array<{ name: string }>; optionalServices: string[] }) => Promise<BluetoothDevice>;
-    };
-  }
 }
 
 Blockly.setLocale(En);
@@ -58,10 +70,15 @@ export default function Playground() {
   const [dashboardActive, setDashboardActive] = useState(false);
   const [tryingToConnect, setTryingToConnect] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedSensor, setSelectedSensor] = useState<"ldr" | "ultrasound">(
+    "ldr"
+  );
 
-  const portRef = useRef<any>(null);
+  const portRef = useRef<unknown>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
-  const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const writeCharacteristicRef =
+    useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothGATTServer | null>(null);
 
   // Simple cleanup
@@ -73,10 +90,9 @@ export default function Playground() {
     };
   }, []);
 
-
   useEffect(() => {
-    const handleKeyDown = async (e) => {
-      const keyMap = {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
         ArrowUp: "up",
         ArrowDown: "down",
         ArrowLeft: "left",
@@ -84,6 +100,158 @@ export default function Playground() {
       };
 
       const action = keyMap[e.key];
+
+      // Update the connection handling to detect cancellations
+      // const connectBluetooth = async () => {
+      //   try {
+      //     setConnectionStatus("connecting");
+      //     // Request device
+      //     if (!bluetoothDeviceRef.current) {
+      //       const navBle = (
+      //         navigator as unknown as {
+      //           bluetooth: {
+      //             requestDevice: (options: {
+      //               filters: Array<{ name: string }>;
+      //               optionalServices: string[];
+      //             }) => Promise<BluetoothDevice>;
+      //           };
+      //         }
+      //       ).bluetooth;
+
+      //       try {
+      //         bluetoothDeviceRef.current = await navBle.requestDevice({
+      //           filters: [{ name: "Neo" }],
+      //           optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
+      //         });
+      //       } catch (error) {
+      //         // Handle user cancellation
+      //         if (
+      //           error.name === "NotFoundError" ||
+      //           error.name === "NotAllowedError"
+      //         ) {
+      //           console.log("Bluetooth connection canceled by user");
+      //           setConnectionStatus("disconnected");
+      //           setIsConnected(false);
+      //           // Dispatch cancellation event
+      //           try {
+      //             window.dispatchEvent(new CustomEvent("connectionCanceled"));
+      //           } catch {}
+      //           return;
+      //         }
+      //         throw error;
+      //       }
+
+      //       // Handle disconnection
+      //       bluetoothDeviceRef.current.addEventListener(
+      //         "gattserverdisconnected",
+      //         async () => {
+      //           setIsConnected(false);
+      //           setConnectionStatus("disconnected");
+      //           try {
+      //             window.dispatchEvent(
+      //               new CustomEvent("bleConnection", {
+      //                 detail: { connected: false },
+      //               })
+      //             );
+      //           } catch {}
+      //         }
+      //       );
+      //     }
+
+      //     // ... rest of existing connection logic ...
+      //   } catch (error) {
+      //     console.error("Connection failed:", error);
+
+      //     // Handle specific cancellation errors
+      //     if (
+      //       error.name === "NotFoundError" ||
+      //       error.name === "NotAllowedError"
+      //     ) {
+      //       console.log("Bluetooth connection canceled by user");
+      //       setConnectionStatus("disconnected");
+      //       setIsConnected(false);
+      //       // Dispatch cancellation event
+      //       try {
+      //         window.dispatchEvent(new CustomEvent("connectionCanceled"));
+      //       } catch {}
+      //       return;
+      //     }
+
+      //     if (tryingToConnect) {
+      //       setTimeout(async () => {
+      //         setTryingToConnect(false);
+      //         await connectBluetooth();
+      //       }, 2000);
+      //     }
+      //   }
+      // };
+
+      // Update the USB upload function to handle cancellations
+      // const uploadCode = async () => {
+      //   if (!generatedCode) return;
+
+      //   setIsUploading(true);
+      //   try {
+      //     if (connectionType === "bluetooth") {
+      //       if (!isConnected) await connectBluetooth();
+      //       await bluetoothUpload(
+      //         generatedCode,
+      //         writeCharacteristicRef.current
+      //       );
+      //     } else {
+      //       try {
+      //         await usbUpload(generatedCode, portRef);
+      //         setIsConnected(true);
+      //       } catch (error) {
+      //         // Handle serial connection cancellation
+      //         if (
+      //           error.name === "NotFoundError" ||
+      //           error.name === "NotAllowedError"
+      //         ) {
+      //           console.log("Serial connection canceled by user");
+      //           setConnectionStatus("disconnected");
+      //           setIsConnected(false);
+      //           // Dispatch cancellation event
+      //           try {
+      //             window.dispatchEvent(new CustomEvent("serialCanceled"));
+      //           } catch {}
+      //           return;
+      //         }
+      //         throw error;
+      //       }
+      //     }
+      //   } catch (error) {
+      //     console.error("Upload failed:", error);
+
+      //     // Handle connection errors
+      //     if (
+      //       error.name === "NotFoundError" ||
+      //       error.name === "NotAllowedError"
+      //     ) {
+      //       console.log("Connection canceled by user");
+      //       setConnectionStatus("disconnected");
+      //       setIsConnected(false);
+      //       // Dispatch appropriate cancellation event
+      //       try {
+      //         if (connectionType === "bluetooth") {
+      //           window.dispatchEvent(new CustomEvent("connectionCanceled"));
+      //         } else {
+      //           window.dispatchEvent(new CustomEvent("serialCanceled"));
+      //         }
+      //       } catch {}
+      //       return;
+      //     }
+
+      //     alert(
+      //       `Upload failed: ${
+      //         error instanceof Error ? error.message : String(error)
+      //       }`
+      //     );
+      //   } finally {
+      //     setIsUploading(false);
+      //   }
+      // };
+
       if (action) {
         try {
           await keyboardSendBLE(action, writeCharacteristicRef.current);
@@ -98,16 +266,23 @@ export default function Playground() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [connectionStatus]);
 
-
-
-
   // Simple Bluetooth connection
   const connectBluetooth = async () => {
     try {
       setConnectionStatus("connecting");
       // Request device
       if (!bluetoothDeviceRef.current) {
-        bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
+        const navBle = (
+          navigator as unknown as {
+            bluetooth: {
+              requestDevice: (options: {
+                filters: Array<{ name: string }>;
+                optionalServices: string[];
+              }) => Promise<BluetoothDevice>;
+            };
+          }
+        ).bluetooth;
+        bluetoothDeviceRef.current = await navBle.requestDevice({
           filters: [{ name: "Neo" }],
           optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
         });
@@ -117,29 +292,97 @@ export default function Playground() {
           "gattserverdisconnected",
           async () => {
             setIsConnected(false);
-            setConnectionStatus("disconnected");    
+            setConnectionStatus("disconnected");
+            try {
+              window.dispatchEvent(
+                new CustomEvent("bleConnection", {
+                  detail: { connected: false },
+                })
+              );
+            } catch {}
           }
         );
       }
 
       if (!server.current?.connected) {
         console.log("Connecting to server");
-        server.current = await bluetoothDeviceRef.current.gatt!.connect();
-        console.log(server.current)
+        const device = bluetoothDeviceRef.current;
+        if (!device || !device.gatt) {
+          throw new Error("No GATT available on device");
+        }
+        server.current = await device.gatt.connect();
+        console.log(server.current);
         const service = await server.current?.getPrimaryService(
           "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
         );
-        console.log("service: ",service)
+        console.log("service: ", service);
         const characteristic = await service.getCharacteristic(
           "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
         );
+        // Subscribe to notifications from TX characteristic
+        const notifyCharacteristic = (await service.getCharacteristic(
+          "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+        )) as unknown as NotifiableCharacteristic;
+        const handleNotification = (event: Event) => {
+          try {
+            const value = (event.target as unknown as NotifiableCharacteristic)
+              .value as DataView;
+            let str = "";
+            for (let i = 0; i < value.byteLength; i++) {
+              str += String.fromCharCode(value.getUint8(i));
+            }
+            // Notifications may stream; split by newlines
+            str
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .forEach((line) => {
+                try {
+                  const msg = JSON.parse(line);
+                  if (msg?.type === "analog_sensors") {
+                      Object.entries(msg.analog).forEach(([pinStr, val]) => {
+                          window.dispatchEvent(
+                            new CustomEvent("sensorData", {
+                              detail: {
+                                sensor: "analog",
+                                value: val,
+                                pin: Number(pinStr),
+                              },
+                            })
+                          );
+                      });
+                  }
+                } catch {
+                  console.log("BLE raw:", line);
+                }
+              });
+          } catch (e) {
+            console.error("Notification parse error", e);
+          }
+        };
+        await notifyCharacteristic.startNotifications();
+        notifyCharacteristic.addEventListener(
+          "characteristicvaluechanged",
+          handleNotification
+        );
+        notifyCharacteristicRef.current = notifyCharacteristic;
 
         writeCharacteristicRef.current = characteristic;
         setConnectionStatus("connected");
         setIsConnected(true);
         setTryingToConnect(false);
+        try {
+          window.dispatchEvent(
+            new CustomEvent("bleConnection", { detail: { connected: true } })
+          );
+        } catch {}
       }
     } catch (error) {
+      if (error.name === "NotFoundError" || error.name === "NotAllowedError") {
+        console.log("Bluetooth connection canceled by user");
+        setConnectionStatus("disconnected");
+        setIsConnected(false);
+      }
       console.error("Connection failed:", error);
       if (tryingToConnect) {
         setTimeout(async () => {
@@ -162,7 +405,6 @@ export default function Playground() {
   // Simple upload code
   const uploadCode = async () => {
     if (!generatedCode) return;
-
     setIsUploading(true);
     try {
       if (connectionType === "bluetooth") {
@@ -204,9 +446,21 @@ export default function Playground() {
       }
       bluetoothDeviceRef.current = null;
       writeCharacteristicRef.current = null;
+      notifyCharacteristicRef.current = null;
       portRef.current = null;
       setIsConnected(false);
       setConnectionStatus("disconnected");
+    }
+  };
+
+  const sendBleControl = async (payload: BleControlPayload) => {
+    try {
+      if (!writeCharacteristicRef.current) return;
+      const text = JSON.stringify(payload) + "\n";
+      const encoder = new TextEncoder();
+      await writeCharacteristicRef.current.writeValue(encoder.encode(text));
+    } catch (e) {
+      console.error("BLE control send failed", e);
     }
   };
 
@@ -223,6 +477,18 @@ export default function Playground() {
     }
     connect();
   }, [tryingToConnect]);
+
+  // // Listen for batch pin requests and forward to firmware (optional future multi-stream)
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ pins: number[] }>) => {
+      const pins = e?.detail?.pins || [];
+      sendBleControl({ mode: "set_adc_pins", pins });
+    };
+    const listener: (evt: Event) => void = (evt) =>
+      handler(evt as CustomEvent<{ pins: number[] }>);
+    window.addEventListener("setAdcPins", listener);
+    return () => window.removeEventListener("setAdcPins", listener);
+  }, [sendBleControl]);
 
   return (
     <div className="app-wrapper">
@@ -252,7 +518,39 @@ export default function Playground() {
             />
 
             {dashboardActive ? (
-              <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]"></div>
+              <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]">
+                <div className="max-w-4xl mx-auto">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-[#222E3A] mb-2">
+                      Sensor
+                    </label>
+                    <select
+                      value={selectedSensor}
+                      onChange={(e) =>
+                        setSelectedSensor(
+                          e.target.value as "ldr" | "ultrasound"
+                        )
+                      }
+                      className="w-56 px-3 py-2 border rounded-lg bg-white text-[#222E3A]"
+                    >
+                      <option value="ldr">LDR</option>
+                      <option value="ultrasound">Ultrasound</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="bg-white border rounded-xl shadow-sm p-5">
+                      <div className="text-sm text-gray-500 mb-1">
+                        Current value
+                      </div>
+                      <div className="text-3xl font-semibold text-[#222E3A]">
+                        {selectedSensor === "ldr"
+                          ? latestValues.ldr ?? "—"
+                          : latestValues.ultrasound ?? "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <BlocklyComponent
                 generatedCode={generatedCode}
