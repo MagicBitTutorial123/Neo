@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 
@@ -22,8 +22,36 @@ export default function SignupAge() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleBack = () => {
+    // Clear phone verification flag when going back
+    localStorage.removeItem("phoneVerified");
+    localStorage.removeItem("otpSkipped");
     router.push("/signup/name");
   };
+
+  // Add navigation guard to ensure user has completed previous steps
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    const phone = localStorage.getItem("fullPhone");
+    const name = localStorage.getItem("name");
+    
+    if (!email || !email.trim()) {
+      alert("Please complete the email step first");
+      router.push("/signup/email");
+      return;
+    }
+    
+    if (!phone || !phone.trim()) {
+      alert("Please complete the phone verification step first");
+      router.push("/signup/phone");
+      return;
+    }
+    
+    if (!name || !name.trim()) {
+      alert("Please complete the name step first");
+      router.push("/signup/name");
+      return;
+    }
+  }, [router]);
 
   const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();

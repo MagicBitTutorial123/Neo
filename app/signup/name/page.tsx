@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 
@@ -27,8 +27,38 @@ export default function SignupName() {
    * Navigate back to the phone step
    */
   const handleBack = () => {
+    // Clear phone verification flag when going back
+    localStorage.removeItem("phoneVerified");
+    localStorage.removeItem("otpSkipped");
     router.push("/signup/phone");
   };
+
+  // Add navigation guard to ensure user has completed previous steps
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    const phone = localStorage.getItem("fullPhone");
+    
+    if (!email || !email.trim()) {
+      alert("Please complete the email step first");
+      router.push("/signup/email");
+      return;
+    }
+    
+    if (!phone || !phone.trim()) {
+      alert("Please complete the phone verification step first");
+      router.push("/signup/phone");
+      return;
+    }
+    
+    // Check if OTP verification was completed or skipped
+    const phoneVerified = localStorage.getItem("phoneVerified");
+    const otpSkipped = localStorage.getItem("otpSkipped");
+    if (!phoneVerified || (phoneVerified !== "true" && !otpSkipped)) {
+      alert("Please complete phone verification (OTP) or skip to continue");
+      router.push("/signup/phone");
+      return;
+    }
+  }, [router]);
 
   /**
    * Handle name input changes with validation
