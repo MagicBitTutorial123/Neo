@@ -83,15 +83,15 @@ Blockly.Blocks['magicbit_read_button'] = {
     this.appendDummyInput()
       .appendField("Read Button")
       .appendField(new Blockly.FieldDropdown([["left", "left"], ["right", "right"]]), "BUTTON");
-    this.setOutput(true, "Boolean");
+    this.setOutput(true, "Number");
     this.setColour("#9B51E0");
   }
 };
 pythonGenerator['magicbit_read_button'] = block => {
   const button = block.getFieldValue("BUTTON");
   pythonGenerator.definitions_['import_machine_button'] = 'from machine import Pin';
-  const pin = button === 'left' ? 34 : 35;
-  return [`Pin(${pin}, Pin.IN).value() == 0`, pythonGenerator.ORDER_FUNCTION_CALL];
+  const pin = button === 'left' ? 5 : 15;
+  return [`Pin(${pin}, Pin.IN).value()`, pythonGenerator.ORDER_FUNCTION_CALL];
 };
 
 // 7. Read Ultrasonic
@@ -135,8 +135,7 @@ pythonGenerator['magicbit_neopixel_rgb'] = block => {
   const g = block.getFieldValue("G");
   const b = block.getFieldValue("B");
   pythonGenerator.definitions_['import_neopixel'] = 'import neopixel\nfrom machine import Pin';
-  pythonGenerator.definitions_['neopixel_obj'] = `np = neopixel.NeoPixel(Pin(13), 1)`;
-  return `np[0] = (${r}, ${g}, ${b})\nnp.write()\n`;
+  return `np = neopixel.NeoPixel(Pin(13), 1)\nnp[0] = (${r}, ${g}, ${b})\nnp.write()\n`;
 };
 
 // 10. Display Text
@@ -184,20 +183,6 @@ pythonGenerator['magicbit_play_tone'] = block => {
   return `buzzer = PWM(Pin(25), freq=${freq}, duty=512)\ntime.sleep(${duration})\nbuzzer.deinit()\n`;
 };
 
-// 12. Clear Display
-Blockly.Blocks['magicbit_clear_display'] = {
-  init: function () {
-    this.appendDummyInput().appendField("Clear Display");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour("#9B51E0");
-  }
-};
-pythonGenerator['magicbit_clear_display'] = () => {
-  pythonGenerator.definitions_['import_ssd1306'] = 'from ssd1306 import SSD1306_I2C\nfrom machine import I2C, Pin';
-  pythonGenerator.definitions_['oled_obj'] = 'oled = SSD1306_I2C(128, 64, I2C(0, scl=Pin(22), sda=Pin(21)))';
-  return `oled.fill(0)\noled.show()\n`;
-};
 
 Blockly.Blocks['delay_block'] = {
   init: function () {
@@ -238,7 +223,7 @@ pythonGenerator['magicbit_motor'] = block => {
   const dir = block.getFieldValue('DIR');
   const speed = block.getFieldValue('SPEED');
   if (side === 'LEFT') {
-    if (dir === 'FWD') {
+    if (dir === 'BWD') {
       return `import machine\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)\nM1_IN1.duty(${speed})\nM1_IN2.duty(0)\n`;
     } else {
       return `import machine\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)\nM1_IN1.duty(0)\nM1_IN2.duty(${speed})\n`;

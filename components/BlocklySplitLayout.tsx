@@ -66,6 +66,14 @@ export default function BlocklySplitLayout({
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
 
+  // Debug: Monitor generatedCode changes
+  useEffect(() => {
+    console.log("🔄 BlocklySplitLayout: generatedCode changed:", {
+      length: generatedCode?.length,
+      content: generatedCode?.substring(0, 100) + (generatedCode?.length > 100 ? "..." : "")
+    });
+  }, [generatedCode]);
+
   // Load saved state on mount
   useEffect(() => {
     const savedState = MissionStatePersistence.getMissionState(
@@ -138,9 +146,26 @@ export default function BlocklySplitLayout({
     };
 
     const handleTriggerCodeUpload = () => {
+      console.log("🚀 handleTriggerCodeUpload called");
+      console.log("onUploadCode exists:", !!onUploadCode);
+      console.log("generatedCode length:", generatedCode?.length);
+      console.log("generatedCode content:", generatedCode);
       if (onUploadCode && generatedCode) {
-        onUploadCode(generatedCode);
+        console.log("Calling onUploadCode with generated code");
+        // Store the code before calling onUploadCode to ensure it's preserved
+        const codeToUpload = generatedCode;
+        onUploadCode(codeToUpload);
+        console.log("onUploadCode called, generatedCode should still be:", codeToUpload);
+      } else {
+        console.log("Cannot upload: onUploadCode or generatedCode missing");
       }
+    };
+
+    const handleGenerateCode = () => {
+      console.log("📡 handleGenerateCode event received in BlocklySplitLayout");
+      // Dispatch event to BlocklyComponent to generate code
+      window.dispatchEvent(new CustomEvent("generateCodeFromWorkspace"));
+      console.log("Generate code event dispatched to BlocklyComponent");
     };
 
     const handleClearWorkspace = () => {
@@ -152,11 +177,13 @@ export default function BlocklySplitLayout({
 
     window.addEventListener("goToNextStep", handleGoToNextStep);
     window.addEventListener("triggerCodeUpload", handleTriggerCodeUpload);
-    window.addEventListener("clearWorkspace", handleClearWorkspace);
+    window.addEventListener("generateCode", handleGenerateCode);
+    window.addEventListener("clearBlocklyWorkspace", handleClearWorkspace);
     return () => {
       window.removeEventListener("goToNextStep", handleGoToNextStep);
       window.removeEventListener("triggerCodeUpload", handleTriggerCodeUpload);
-      window.removeEventListener("clearWorkspace", handleClearWorkspace);
+      window.removeEventListener("generateCode", handleGenerateCode);
+      window.removeEventListener("clearBlocklyWorkspace", handleClearWorkspace);
     };
   }, [onUploadCode, generatedCode]);
 

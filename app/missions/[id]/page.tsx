@@ -61,9 +61,6 @@ export default function MissionPage() {
   let id = params.id;
   if (Array.isArray(id)) id = id[0];
   id = String(id);
-  if (!validMissionIds.includes(id as MissionId)) {
-    return <div>Mission not found</div>;
-  }
   const mission = missions[id as MissionId];
   const layoutType = missionLayoutMap[id as MissionId] || "standardIntroLayout";
 
@@ -176,18 +173,23 @@ export default function MissionPage() {
   // Simple Bluetooth connection
   const connectBluetooth = async () => {
     try {
+      console.log("Starting BLE connection...");
       setConnectionStatus("connecting");
+      
       // Request device
       if (!bluetoothDeviceRef.current) {
+        console.log("Requesting BLE device...");
         bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
           filters: [{ name: "Neo" }],
           optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
         });
+        console.log("BLE device selected:", bluetoothDeviceRef.current.name);
 
         // Handle disconnection
         bluetoothDeviceRef.current.addEventListener(
           "gattserverdisconnected",
           async () => {
+            console.log("BLE device disconnected");
             setIsConnected(false);
             setConnectionStatus("disconnected");
           }
@@ -195,7 +197,7 @@ export default function MissionPage() {
       }
 
       if (!server.current?.connected) {
-        console.log("Connecting to server");
+        console.log("Connecting to GATT server...");
         server.current = await bluetoothDeviceRef.current.gatt!.connect();
         console.log(server.current);
         const service = await server.current?.getPrimaryService(
@@ -205,14 +207,18 @@ export default function MissionPage() {
         const characteristic = await service.getCharacteristic(
           "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
         );
+        console.log("Write characteristic obtained:", characteristic);
 
         writeCharacteristicRef.current = characteristic;
         setConnectionStatus("connected");
         setIsConnected(true);
         setTryingToConnect(false);
+        console.log("BLE connection established successfully");
+      } else {
+        console.log("GATT server already connected");
       }
     } catch (error) {
-      console.error("Connection failed:", error);
+      console.error("BLE connection failed:", error);
       if (tryingToConnect) {
         setTimeout(async () => {
           setTryingToConnect(false);
@@ -224,16 +230,37 @@ export default function MissionPage() {
 
   // Simple upload code
   const uploadCode = async (generatedCode: string) => {
-    if (!generatedCode) return;
+    if (!generatedCode) {
+      console.error("No generated code to upload");
+      return;
+    }
+
+    console.log("Starting code upload...");
+    console.log("Connection type:", connectionType);
+    console.log("Is connected:", isConnected);
+    console.log("Generated code length:", generatedCode.length);
 
     setIsUploading(true);
     try {
       if (connectionType === "bluetooth") {
-        if (!isConnected) await connectBluetooth();
+        console.log("Attempting BLE upload...");
+        if (!isConnected) {
+          console.log("Not connected, attempting to connect...");
+          await connectBluetooth();
+        }
+        
+        if (!writeCharacteristicRef.current) {
+          throw new Error("Bluetooth characteristic not available. Please ensure BLE connection is established.");
+        }
+        
+        console.log("BLE characteristic available, starting upload...");
         await bluetoothUpload(generatedCode, writeCharacteristicRef.current);
+        console.log("BLE upload completed successfully");
       } else {
+        console.log("Attempting USB upload...");
         await usbUpload(generatedCode, portRef);
         setIsConnected(true);
+        console.log("USB upload completed successfully");
       }
     } catch (error) {
       console.error("Upload failed:", error);
@@ -394,12 +421,15 @@ export default function MissionPage() {
     if (typeof window !== "undefined" && (window as any).missionTimerControls) {
       (window as any).missionTimerControls.resume();
     }
-
-    // If we're in blocklySplitLayout, trigger code upload
+    
+    // If we're in blocklySplitLayout, generate code first, then trigger upload
     if (layoutType === "blocklySplitLayout") {
-      // We need to get the generated code from BlocklySplitLayout
-      // For now, we'll dispatch an event that BlocklySplitLayout can listen to
-      window.dispatchEvent(new CustomEvent("triggerCodeUpload"));
+      // First generate code, then trigger upload
+      window.dispatchEvent(new CustomEvent("generateCode"));
+      // Small delay to ensure code is generated before upload
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("triggerCodeUpload"));
+      }, 100);
     }
   };
 
@@ -408,7 +438,7 @@ export default function MissionPage() {
     // If we're in blocklySplitLayout, clear the workspace
     if (layoutType === "blocklySplitLayout") {
       // Dispatch an event to clear the Blockly workspace
-      window.dispatchEvent(new CustomEvent("clearWorkspace"));
+      window.dispatchEvent(new CustomEvent("clearBlocklyWorkspace"));
     }
   };
 
