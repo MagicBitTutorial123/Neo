@@ -217,32 +217,6 @@ export default function EmailConfirm() {
             )}
           </div>
 
-          <div className="flex flex-col gap-4 w-full max-w-[400px]">
-            <button
-              onClick={userConfirmed ? () => router.push("/home?newUser=true") : handleCheckEmail}
-              disabled={loading}
-              className="w-full rounded-full py-3 text-lg font-bold font-poppins bg-[#F28B20] hover:bg-[#FF5900] text-white transition-colors disabled:opacity-50"
-            >
-              {loading ? "Checking..." : userConfirmed ? "Continue to Home" : "I've confirmed my email"}
-            </button>
-
-            <button
-              onClick={handleResendEmail}
-              disabled={resendLoading}
-              className="w-full rounded-full py-3 text-lg font-bold font-poppins bg-white border-2 border-gray-300 text-[#222E3A] hover:bg-gray-50 transition-colors"
-            >
-              {resendLoading ? "Resending..." : "Resend confirmation email"}
-            </button>
-
-            {/* Development only - remove in production */}
-            <button
-              onClick={handleSkipConfirmation}
-              className="w-full rounded-full py-3 text-lg font-bold font-poppins bg-gray-200 border-2 border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              Skip for Development
-            </button>
-          </div>
-
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-500">
               Didn't receive the email? Check your spam folder or try resending.

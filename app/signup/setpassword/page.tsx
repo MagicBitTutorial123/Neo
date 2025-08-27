@@ -149,7 +149,7 @@ export default function SignupSetPassword() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
+                className="w-full px-4 py-3 text-lg border-2 text-black border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
                 placeholder="Enter your password"
                 required
               />
@@ -174,7 +174,7 @@ export default function SignupSetPassword() {
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
+                className="w-full px-4 text-black py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
                 placeholder="Confirm your password"
                 required
               />

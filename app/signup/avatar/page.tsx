@@ -196,7 +196,7 @@ export default function SignupAvatar() {
         email: email,
         password: password,
         options: {
-          emailRedirectTo: `${window.location.origin}/home?newUser=true`,
+          emailRedirectTo: `${window.location.origin}/signup/email/confirmed`,
           data: {
             full_name: name,
             phone: phone,

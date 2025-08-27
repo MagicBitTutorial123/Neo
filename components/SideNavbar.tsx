@@ -341,32 +341,24 @@ export default function SideNavbar({
 
   // refresh when window regains focus or another tab updates storage
   useEffect(() => {
-    const onFocus = () => refreshFromLocalStorage();
+    // const onFocus = () => refreshFromLocalStorage();
     const onStorage = () => refreshFromLocalStorage();
     const onAvatarChanged = (event: CustomEvent) => {
       console.log('🔄 Avatar changed event received:', event.detail);
       refreshFromLocalStorage();
     };
     
-    window.addEventListener("focus", onFocus);
+    // window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
     window.addEventListener("avatarChanged", onAvatarChanged as EventListener);
     
     return () => {
-      window.removeEventListener("focus", onFocus);
+      // window.removeEventListener("focus", onFocus);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("avatarChanged", onAvatarChanged as EventListener);
     };
   }, []);
 
-  // Check localStorage periodically to catch avatar changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshFromLocalStorage();
-    }, 1000); // Check every second
-
-    return () => clearInterval(interval);
-  }, []);
 
   // close menus on outside click / Esc
   useEffect(() => {
