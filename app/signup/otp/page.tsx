@@ -18,6 +18,31 @@ export default function SignupOtp() {
     }
   }, []);
   
+  // Add navigation guard to ensure user has completed previous steps
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    const phone = localStorage.getItem("fullPhone");
+    const currentOTP = localStorage.getItem("currentOTP");
+    
+    if (!email || !email.trim()) {
+      alert("Please complete the email step first");
+      router.push("/signup/email");
+      return;
+    }
+    
+    if (!phone || !phone.trim()) {
+      alert("Please complete the phone step first");
+      router.push("/signup/phone");
+      return;
+    }
+    
+    if (!currentOTP) {
+      alert("Please send an OTP first from the phone step");
+      router.push("/signup/phone");
+      return;
+    }
+  }, [router]);
+  
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
@@ -88,9 +113,7 @@ export default function SignupOtp() {
       
       alert(otpMessage);
       
-      // Clear the otpSkipped flag since user is now getting a new OTP
-      localStorage.removeItem("otpSkipped");
-      console.log("📱 New OTP sent, cleared skip flag");
+      console.log("📱 New OTP sent successfully");
       
       // Disable resend for 60 seconds
       setResendDisabled(true);
@@ -146,6 +169,9 @@ export default function SignupOtp() {
       console.log("✅ OTP verified successfully:", otpString);
       alert("OTP verified successfully!");
       
+      // Set phone verification flag
+      localStorage.setItem("phoneVerified", "true");
+      
       // Navigate to name step
       router.push("/signup/name");
     } catch (error) {
@@ -156,25 +182,9 @@ export default function SignupOtp() {
     }
   };
 
-  /**
-   * Skip OTP verification and go to next step
-   */
-  const handleSkipOTP = () => {
-    // Clear the otpSkipped flag since user is explicitly skipping now
-    localStorage.removeItem("otpSkipped");
-    console.log("📱 User explicitly skipped OTP verification");
-    alert("OTP verification skipped. Continuing to next step.");
-    router.push("/signup/name");
-  };
 
-  // Check if OTP was skipped from phone page - but don't auto-redirect
-  useEffect(() => {
-    const otpSkipped = localStorage.getItem("otpSkipped");
-    if (otpSkipped === "true") {
-      console.log("📱 OTP was skipped, but user can still verify if they want");
-      // Don't auto-redirect - let user choose
-    }
-  }, []);
+
+
 
   /**
    * Handle OTP input changes with validation
@@ -318,33 +328,47 @@ export default function SignupOtp() {
                 </button>
              </div>
 
-             {/* Skip button with arrow - smaller and centered */}
-             <div className="flex justify-center">
-                               <button
-                  type="button"
-                  onClick={handleSkipOTP}
-                  className="inline-flex items-center gap-2 px-6 py-2 text-base font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  <span>Skip OTP</span>
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="text-gray-400"
-                  >
-                    <path
-                      d="M5 12H19M19 12L12 5M19 12L12 19"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-             </div>
+                           {/* OTP verification gives users choice */}
+              <div className="flex justify-center">
+                <p className="text-sm text-gray-500">
+                  Verify OTP or skip to continue
+                </p>
+              </div>
            </div>
+
+            {/* Skip OTP button - gives users choice */}
+            <div className="flex justify-center mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  // Set phone verification flag when skipping
+                  localStorage.setItem("phoneVerified", "true");
+                  localStorage.setItem("otpSkipped", "true");
+                  console.log("📱 User chose to skip OTP verification");
+                  alert("OTP verification skipped. Continuing to next step.");
+                  router.push("/signup/name");
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3 text-base font-medium text-gray-500 hover:text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <span>Skip OTP & Continue</span>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-gray-400"
+                >
+                  <path
+                    d="M5 12H19M19 12L12 5M19 12L12 19"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
 
           <div className="text-center mt-4">
             <p className="text-sm text-gray-500">

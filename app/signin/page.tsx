@@ -12,6 +12,7 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+
   // Sign in function following Supabase tutorial
   async function signInWithEmail() {
     if (!email || !password) {
@@ -55,17 +56,6 @@ export default function SignIn() {
 
       if (data.user) {
         console.log("✅ Sign in successful:", data.user.email);
-        
-        // Clear any existing signup data
-        localStorage.removeItem("signupEmail");
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("fullPhone");
-        localStorage.removeItem("name");
-        localStorage.removeItem("age");
-        localStorage.removeItem("password");
-        localStorage.removeItem("userPassword");
-        localStorage.removeItem("currentOTP");
-        localStorage.removeItem("otpSkipped");
         
         // Redirect to home page
         router.push("/home");

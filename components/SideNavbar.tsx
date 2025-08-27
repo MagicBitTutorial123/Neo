@@ -109,7 +109,12 @@ export default function SideNavbar({
   const [supabaseUserData, setSupabaseUserData] = useState<{
     full_name?: string;
     avatar?: string;
+    email?: string;
   } | null>(null);
+  
+  // Loading and error states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -120,6 +125,8 @@ export default function SideNavbar({
   // Fetch user data from Supabase table
   const fetchUserDataFromSupabase = async () => {
     try {
+      setLoading(true);
+      setError(null);
       console.log('🔍 Fetching user data from Supabase...');
       
       // Get current authenticated user
@@ -127,6 +134,8 @@ export default function SideNavbar({
       
       if (authError || !user) {
         console.log('❌ No authenticated user found in Supabase Auth');
+        setError("No authenticated user found");
+        setLoading(false);
         return;
       }
 
@@ -135,7 +144,7 @@ export default function SideNavbar({
       // Fetch user profile from user_profiles table
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('full_name, avatar')
+        .select('full_name, avatar, email')
         .eq('user_id', user.id)
         .single();
 
@@ -150,30 +159,84 @@ export default function SideNavbar({
           if (userMetadata && (userMetadata.full_name || userMetadata.avatar)) {
             const fallbackProfile = {
               full_name: userMetadata.full_name || null,
-              avatar: userMetadata.avatar || null
+              avatar: userMetadata.avatar || null,
+              email: user.email
             };
             setSupabaseUserData(fallbackProfile);
             console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
+            setLoading(false);
             return;
           }
         }
+        setError("Failed to load user profile");
+        setLoading(false);
         return;
       }
 
       if (profile) {
-        setSupabaseUserData(profile);
-        console.log('✅ User profile fetched from Supabase:', profile);
+        // Ensure avatar has proper path
+        let avatarPath = profile.avatar;
+        if (avatarPath && !avatarPath.startsWith('/') && !avatarPath.startsWith('http')) {
+          avatarPath = `/${avatarPath}`;
+        }
+        
+        const updatedProfile = {
+          ...profile,
+          avatar: avatarPath
+        };
+        
+        setSupabaseUserData(updatedProfile);
+        console.log('✅ User profile fetched from Supabase:', updatedProfile);
+        
+        // Update localStorage with Supabase data for consistency
+        if (profile.full_name) {
+          localStorage.setItem('name', profile.full_name);
+        }
+        if (profile.avatar) {
+          localStorage.setItem('avatar', profile.avatar);
+        }
+        if (profile.email) {
+          localStorage.setItem('email', profile.email);
+        }
       } else {
         console.log('❌ No profile found for user');
+        setError("No user profile found");
       }
     } catch (error) {
       console.error('❌ Error fetching user data from Supabase:', error);
+      setError("Failed to load user data");
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch user data when component mounts
   useEffect(() => {
     fetchUserDataFromSupabase();
+  }, []);
+
+  // Listen for profile updates from settings page
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      console.log('🔄 Profile update event received, refreshing sidebar data...');
+      fetchUserDataFromSupabase();
+    };
+
+    // Listen for custom event when profile is updated
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, []);
+
+  // Refresh data periodically to catch changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUserDataFromSupabase();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Try to create user profile if it doesn't exist
@@ -278,32 +341,24 @@ export default function SideNavbar({
 
   // refresh when window regains focus or another tab updates storage
   useEffect(() => {
-    const onFocus = () => refreshFromLocalStorage();
+    // const onFocus = () => refreshFromLocalStorage();
     const onStorage = () => refreshFromLocalStorage();
     const onAvatarChanged = (event: CustomEvent) => {
       console.log('🔄 Avatar changed event received:', event.detail);
       refreshFromLocalStorage();
     };
     
-    window.addEventListener("focus", onFocus);
+    // window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
     window.addEventListener("avatarChanged", onAvatarChanged as EventListener);
     
     return () => {
-      window.removeEventListener("focus", onFocus);
+      // window.removeEventListener("focus", onFocus);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("avatarChanged", onAvatarChanged as EventListener);
     };
   }, []);
 
-  // Check localStorage periodically to catch avatar changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshFromLocalStorage();
-    }, 1000); // Check every second
-
-    return () => clearInterval(interval);
-  }, []);
 
   // close menus on outside click / Esc
   useEffect(() => {
@@ -329,18 +384,55 @@ export default function SideNavbar({
   }, []);
 
   // final sources (prefer Supabase table → context → localStorage → default)
-  const userAvatar =
-    lsAvatar ||
-    avatar ||
-    userData?.avatar ||
-    registrationData.avatar ||
-    "/User.png";
+  const userAvatar = (() => {
+    // Priority: Supabase > localStorage > props > context > default
+    if (supabaseUserData?.avatar) {
+      return supabaseUserData.avatar;
+    }
+    if (lsAvatar) {
+      return lsAvatar;
+    }
+    if (avatar) {
+      return avatar;
+    }
+    if (userData?.avatar) {
+      return userData.avatar;
+    }
+    if (registrationData?.avatar) {
+      return registrationData.avatar;
+    }
+    return "/User.png";
+  })();
 
-  const userName =
-    supabaseUserData?.full_name || userData?.name || registrationData?.name || lsName || "User";
+  const userName = (() => {
+    // Priority: Supabase > localStorage > props > context > default
+    if (supabaseUserData?.full_name) {
+      return supabaseUserData.full_name;
+    }
+    if (lsName) {
+      return lsName;
+    }
+    if (name) {
+      return name;
+    }
+    if (userData?.name) {
+      return userData.name;
+    }
+    if (registrationData?.name) {
+      return registrationData.name;
+    }
+    return "User";
+  })();
 
-  // If we have partial data from Supabase, try to fill in missing pieces
-  const finalAvatar = userAvatar || "/Avatar01.png";
+  // Ensure avatar has proper path
+  const finalAvatar = (() => {
+    if (!userAvatar) return "/Avatar01.png";
+    if (userAvatar.startsWith('/') || userAvatar.startsWith('http')) {
+      return userAvatar;
+    }
+    return `/${userAvatar}`;
+  })();
+
   const finalName = userName || "User";
 
   // Debug logging
@@ -755,16 +847,21 @@ export default function SideNavbar({
             } py-2`}
           >
             <div className="w-10 h-10 rounded-full bg-[#FFFBEA] flex items-center justify-center overflow-hidden">
-              <Image
-                src={userAvatar}
-                alt="User Avatar"
-                width={36}
-                height={36}
-              />
+              {loading ? (
+                <div className="w-6 h-6 border-2 border-[#222E3A] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Image
+                  src={finalAvatar}
+                  alt="User Avatar"
+                  width={36}
+                  height={36}
+                  className="object-cover"
+                />
+              )}
             </div>
             {!sidebarCollapsed && (
               <span className="text-base font-semibold text-[#222E3A]">
-                {userName}
+                {loading ? "Loading..." : finalName}
               </span>
             )}
           </Link>
@@ -820,7 +917,7 @@ export default function SideNavbar({
                     strokeWidth="1.8"
                   />
                   <path
-                    d="M19.4 15l1.6.9-1.6 2.8-1.6-.9a7.8 7.8 0 01-1.9 1.1l-.3 1.8h-3.2l-.3-1.8a7.8 7.8 0 01-1.9-1.1l-1.6.9L3 15.9l1.6-.9A7.4 7.4 0 014 12c0-1.1.2-2.1.6-3.1L3 8l1.6-2.8 1.6.9c.6-.5 1.2-.8 1.9-1.1l.3-1.8h3.2l.3 1.8c.7.3 1.3.6 1.9 1.1l1.6-.9L21 8l-1.6.9c.4 1 .6 2 .6 3.1 0 1.1-.2 2.1-.6 3z"
+                    d="M19.4 15l1.6.9-1.6 2.8-1.6-.9a7.8 0 01-1.9 1.1l-.3 1.8h-3.2l-.3-1.8a7.8 0 01-1.9-1.1l-1.6.9L3 15.9l1.6-.9A7.4 0 014 12c0-1.1.2-2.1.6-3.1L3 8l1.6-2.8 1.6.9c.6-.5 1.2-.8 1.9-1.1l.3-1.8h3.2l.3 1.8c.7.3 1.3.6 1.9 1.1l1.6-.9L21 8l-1.6.9c.4 1 .6 2 .6 3.1 0 1.1-.2 2.1-.6 3z"
                     stroke="#111827"
                     strokeWidth="1.2"
                   />

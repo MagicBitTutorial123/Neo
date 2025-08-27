@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   full_name TEXT,
   age INTEGER CHECK (age >= 13 AND age <= 120),
   avatar TEXT,
+  bio TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -71,5 +72,40 @@ JOIN auth.users u ON up.user_id = u.id;
 -- 9. Grant access to the view
 GRANT SELECT ON public.user_profile_view TO authenticated;
 
--- 10. Test the table structure
+-- 10. Create function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profiles (
+    user_id,
+    email,
+    phone,
+    full_name,
+    age,
+    avatar,
+    bio
+  ) VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', 'User'),
+    CASE 
+      WHEN NEW.raw_user_meta_data->>'age' IS NOT NULL 
+      THEN (NEW.raw_user_meta_data->>'age')::INTEGER 
+      ELSE NULL 
+    END,
+    COALESCE(NEW.raw_user_meta_data->>'avatar', '/Avatar01.png'),
+    ''
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 11. Create trigger to automatically create profile on new user signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 12. Test the table structure
 SELECT 'Table created successfully!' as status;

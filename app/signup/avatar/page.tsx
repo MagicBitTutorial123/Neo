@@ -31,7 +31,49 @@ export default function SignupAvatar() {
     }
   }, [displayName]);
 
+  // Add navigation guard to ensure user has completed previous steps
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    const phone = localStorage.getItem("fullPhone");
+    const name = localStorage.getItem("name");
+    const age = localStorage.getItem("age");
+    const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
+    
+    if (!email || !email.trim()) {
+      alert("Please complete the email step first");
+      router.push("/signup/email");
+      return;
+    }
+    
+    if (!phone || !phone.trim()) {
+      alert("Please complete the phone verification step first");
+      router.push("/signup/phone");
+      return;
+    }
+    
+    if (!name || !name.trim()) {
+      alert("Please complete the name step first");
+      router.push("/signup/name");
+      return;
+    }
+    
+    if (!age || !age.trim()) {
+      alert("Please complete the age step first");
+      router.push("/signup/age");
+      return;
+    }
+    
+    if (!password || !password.trim()) {
+      alert("Please complete the password step first");
+      router.push("/signup/setpassword");
+      return;
+    }
+  }, [router]);
+
   const handleBack = () => {
+    // Clear phone verification flag when going back
+    localStorage.removeItem("phoneVerified");
+    localStorage.removeItem("otpSkipped");
     router.push("/signup/setpassword");
   };
 
@@ -45,25 +87,116 @@ export default function SignupAvatar() {
     try {
       // Collect all signup data from localStorage
       const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
-      const phone = localStorage.getItem("fullPhone");
+      let phone = localStorage.getItem("fullPhone");
       const name = localStorage.getItem("name");
       const age = localStorage.getItem("age");
       const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
       const avatar = avatars[selected];
-
-      // Validate all required data is present
-      if (!email || !phone || !name || !age || !password) {
-        throw new Error("Missing required signup data. Please go back and complete all steps.");
+      
+      // Ensure phone number has proper format (add + if missing)
+      if (phone && !phone.startsWith('+')) {
+        phone = '+' + phone;
+        console.log('📱 Phone number format corrected:', phone);
       }
 
-      console.log('📋 Collected signup data:', { email, phone, name, age, avatar });
+      // Comprehensive validation of all required fields
+      if (!email || !email.trim()) {
+        throw new Error("Email address is required. Please go back to the email step.");
+      }
+
+      if (!phone || !phone.trim()) {
+        throw new Error("Phone number is required. Please go back to the phone step.");
+      }
+
+      if (!name || !name.trim()) {
+        throw new Error("Full name is required. Please go back to the name step.");
+      }
+
+      if (!age || !age.trim()) {
+        throw new Error("Age is required. Please go back to the age step.");
+      }
+
+      // Validate age is a valid number between 13-120
+      const ageNum = parseInt(age);
+      if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
+        throw new Error("Age must be between 13 and 120 years. Please go back to the age step.");
+      }
+
+      if (!password || !password.trim()) {
+        throw new Error("Password is required. Please go back to the password step.");
+      }
+
+      if (password.length < 8) {
+        throw new Error("Password must be at least 8 characters long. Please go back to the password step.");
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("Please enter a valid email address. Please go back to the email step.");
+      }
+
+      // Validate phone format (more flexible - should be at least 10 digits)
+      const cleanPhone = phone.replace(/[+\s-]/g, "");
+      if (!/^\d{10,15}$/.test(cleanPhone)) {
+        console.error('❌ Phone validation failed:', { phone, cleanPhone });
+        throw new Error("Please enter a valid phone number (at least 10 digits). Please go back to the phone step.");
+      }
+      
+      console.log('📱 Phone validation passed:', { phone, cleanPhone });
+
+      // Validate name format (only letters and spaces, at least 2 characters)
+      const nameRegex = /^[a-zA-Z ]{2,32}$/;
+      if (!nameRegex.test(name)) {
+        throw new Error("Name should only contain letters and spaces, 2-32 characters. Please go back to the name step.");
+      }
+
+      console.log('📋 Collected signup data:', { 
+        email, 
+        phone, 
+        name, 
+        age, 
+        avatar,
+        localStorage: {
+          userEmail: localStorage.getItem("userEmail"),
+          signupEmail: localStorage.getItem("signupEmail"),
+          fullPhone: localStorage.getItem("fullPhone"),
+          name: localStorage.getItem("name"),
+          age: localStorage.getItem("age"),
+          password: localStorage.getItem("password"),
+          userPassword: localStorage.getItem("userPassword")
+        }
+      });
+      
+      // Final data format check before Supabase
+      console.log('📋 Final data for Supabase:', {
+        email: email,
+        full_name: name,
+        phone: phone,
+        age: age,
+        avatar: avatar
+      });
 
       // Step 1: Create user in Supabase Auth (basic only - no custom metadata)
+      console.log('🚀 About to call supabase.auth.signUp with data:', {
+        email,
+        password: password ? '***' : 'MISSING',
+        options: {
+          emailRedirectTo: `${window.location.origin}/home?newUser=true`,
+          data: {
+            full_name: name,
+            phone: phone,
+            age: age,
+            avatar: avatar
+          }
+        }
+      });
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
         options: {
-          emailRedirectTo: `${window.location.origin}/home?newUser=true`,
+          emailRedirectTo: `${window.location.origin}/signup/email/confirmed?newUser=true`,
           data: {
             full_name: name,
             phone: phone,
@@ -85,6 +218,36 @@ export default function SignupAvatar() {
       console.log('✅ User created successfully:', authData.user.id);
       console.log('📧 Confirmation email sent to:', email);
       console.log('✅ Profile will be created automatically by database trigger');
+      console.log('🔍 User metadata from Supabase:', authData.user.user_metadata);
+      console.log('🔍 User data from Supabase:', authData.user);
+      
+      // Step 2: Manually create user profile if trigger fails
+      try {
+        console.log('🔄 Creating user profile manually as backup...');
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .insert([{
+            user_id: authData.user.id, // Use 'user_id' column name as this is standard
+            email: email,
+            full_name: name,
+            phone: phone,
+            age: parseInt(age),
+            avatar: avatar,
+            bio: '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (profileError) {
+          console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
+        } else {
+          console.log('✅ User profile created manually as backup:', profileData);
+        }
+      } catch (profileError) {
+        console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
+      }
       
       // Save avatar selection to context
       updateRegistrationData({ avatar: avatar });
@@ -99,7 +262,9 @@ export default function SignupAvatar() {
       localStorage.removeItem("password");
       localStorage.removeItem("userPassword");
       localStorage.removeItem("currentOTP");
+      localStorage.removeItem("phoneVerified");
       localStorage.removeItem("otpSkipped");
+      localStorage.removeItem("signupStarted");
       
       // Navigate to email confirmation page
       router.push("/signup/email/confirm");

@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 
@@ -11,11 +11,27 @@ function validateEmail(email: string) {
 
 export default function SignupEmail() {
   const router = useRouter();
-  const { updateRegistrationData } = useUser();
+  const { updateRegistrationData, clearRegistrationData } = useUser();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    clearRegistrationData();
+  }, []);
+
+  // Add navigation guard to ensure user came from signup flow
+  useEffect(() => {
+    // Check if user came from signup page by checking referrer or session
+    const referrer = document.referrer;
+    const isFromSignup = referrer.includes("/signup") || referrer.includes("signup");
+    
+    if (!isFromSignup && !localStorage.getItem("signupStarted")) {
+      // Set a flag to indicate signup has started
+      localStorage.setItem("signupStarted", "true");
+    }
+  }, []);
 
   const handleBack = () => {
     router.push("/signup");

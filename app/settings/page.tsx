@@ -20,40 +20,23 @@ const joinName = (first: string, last: string) =>
 
 export default function SettingsPage() {
   const { registrationData, userData, updateUserData } = useUser();
-  
-  // Header
-
-  // Avatar state - read-only, shows selected avatar from sidebar
   const { sidebarCollapsed } = useSidebar();
-
-  // Header
-  const [displayName, setDisplayName] = useState("User");
-
-  //
-  const [avatar, setAvatar] = useState<string>(() => {
-    if (typeof window === "undefined") return "/Avatar01.png";
-    try {
-      const a = (localStorage.getItem("avatar") || "").trim();
-      return a ? (a.startsWith("/") ? a : `/${a}`) : "/Avatar01.png";
-    } catch {
-      return "/Avatar01.png";
-    }
-  });
 
   // Form fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [age, setAge] = useState<number | null>(null);
   const [bio, setBio] = useState("");
+  const [avatar, setAvatar] = useState("/Avatar01.png");
 
-  const [whereEmail, setWhereEmail] = useState("");
-
+  // UI state
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'subscription' | 'firmware' | 'delete'>('profile');
-  
+
   // Supabase user data
   const [supabaseUserData, setSupabaseUserData] = useState<{
     full_name?: string;
@@ -66,281 +49,203 @@ export default function SettingsPage() {
   // localStorage-backed values (same as sidebar)
   const [lsName, setLsName] = useState<string | null>(null);
   const [lsAvatar, setLsAvatar] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch user data from Supabase
   const fetchUserDataFromSupabase = async () => {
     try {
+      setLoading(true);
+      setError(null);
       console.log('🔍 Fetching user data from Supabase...');
-      
+
       // Get current authenticated user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         console.log('❌ No authenticated user found in Supabase Auth');
+        setError("No authenticated user found. Please log in again.");
         return;
       }
 
       console.log('✅ Found authenticated user:', user.id);
-      
-      // Fetch user profile from user_profiles table
+      console.log('🔍 User metadata:', user.user_metadata);
+
+      // Fetch user profile from user_profiles table - now including bio column
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('full_name, avatar, email, phone, bio')
-        .eq('user_id', user.id)
+        .select('full_name, avatar, email, phone, bio, age')
+        .eq('user_id', user.id) // Use 'user_id' column name as this is standard
         .single();
 
       if (profileError) {
         console.error('❌ Error fetching user profile:', profileError);
-        
+
         // If profile doesn't exist, try to get user metadata from auth
         if (profileError.code === 'PGRST116') {
           console.log('🔄 Profile not found, trying to get user metadata from auth...');
-          
+
           const userMetadata = user.user_metadata;
-          if (userMetadata && (userMetadata.full_name || userMetadata.avatar)) {
+          if (userMetadata && (userMetadata.full_name || userMetadata.avatar || userMetadata.phone || userMetadata.age)) {
             const fallbackProfile = {
               full_name: userMetadata.full_name || undefined,
               avatar: userMetadata.avatar || undefined,
               email: user.email || undefined,
-              phone: undefined,
-              bio: undefined
+              phone: userMetadata.phone || undefined,
+              bio: '',
+              age: userMetadata.age ? parseInt(userMetadata.age) : null
             };
-            setSupabaseUserData(fallbackProfile);
+            populateFormFields(fallbackProfile);
             console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
             return;
           }
         }
+
+        // If we still don't have data, try to create a profile manually
+        console.log('🔄 Attempting to create user profile manually...');
+        await createUserProfileManually(user);
         return;
       }
 
       if (profile) {
-        setSupabaseUserData(profile);
+        populateFormFields(profile);
         console.log('✅ User profile fetched from Supabase:', profile);
       } else {
         console.log('❌ No profile found for user');
+        setError("No user profile found.");
       }
     } catch (error) {
       console.error('❌ Error fetching user data from Supabase:', error);
+      setError("Failed to load user data. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ---- load from localStorage (same as sidebar)
-  const refreshFromLocalStorage = () => {
+  // Create user profile manually if it doesn't exist
+  const createUserProfileManually = async (user: any) => {
     try {
-      const n = localStorage.getItem("name");
-      const a = localStorage.getItem("avatar");
-      setLsName(n && n.trim() ? n.trim() : null);
+      console.log('🔧 Creating user profile manually...');
 
-      // normalize avatar path
-      let av = a && a.trim() ? a.trim() : null;
-      if (av) {
-        if (!av.startsWith("/") && !av.startsWith("http")) av = `/${av}`;
-        setLsAvatar(av);
-      } else {
-        setLsAvatar(null);
+      // Get data from user metadata
+      const userMetadata = user.user_metadata;
+      const profileData = {
+        user_id: user.id, // Use 'user_id' column name as this is standard
+        email: user.email,
+        full_name: userMetadata?.full_name || 'User',
+        phone: userMetadata?.phone || '',
+        age: userMetadata?.age ? parseInt(userMetadata.age) : null,
+        avatar: userMetadata?.avatar || '/Avatar01.png',
+        bio: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('📝 Profile data to insert:', profileData);
+
+      // Insert profile into user_profiles table
+      const { data: newProfile, error: insertError } = await supabase
+        .from('user_profiles')
+        .insert([profileData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Error creating profile manually:', insertError);
+        // Even if profile creation fails, try to use metadata
+        const fallbackProfile = {
+          full_name: userMetadata?.full_name || 'User',
+          avatar: userMetadata?.avatar || '/Avatar01.png',
+          email: user.email || '',
+          phone: userMetadata?.phone || '',
+          bio: '',
+          age: userMetadata?.age ? parseInt(userMetadata.age) : null
+        };
+        populateFormFields(fallbackProfile);
+        console.log('✅ Using fallback data after failed profile creation:', fallbackProfile);
+        return;
       }
-    } catch {
-      /* noop */
+
+      if (newProfile) {
+        populateFormFields(newProfile);
+        console.log('✅ User profile created manually:', newProfile);
+      }
+    } catch (error) {
+      console.error('❌ Error creating profile manually:', error);
+      // Last resort: use whatever data we can get
+      const userMetadata = user.user_metadata;
+      const fallbackProfile = {
+        full_name: userMetadata?.full_name || 'User',
+        avatar: userMetadata?.avatar || '/Avatar01.png',
+        email: user.email || '',
+        phone: userMetadata?.phone || '',
+        bio: '',
+        age: userMetadata?.age ? parseInt(userMetadata.age) : null
+      };
+      populateFormFields(fallbackProfile);
+      console.log('✅ Using last resort fallback data:', fallbackProfile);
     }
+  };
+
+  // Populate form fields with user data
+  const populateFormFields = (profile: any) => {
+    // Set avatar
+    if (profile.avatar) {
+      const avatarPath = profile.avatar.startsWith("/")
+        ? profile.avatar
+        : `/${profile.avatar}`;
+      setAvatar(avatarPath);
+    }
+
+    // Set name fields
+    if (profile.full_name) {
+      const { first, last } = splitName(profile.full_name);
+      setFirstName(first);
+      setLastName(last);
+    }
+
+    // Set other fields
+    if (profile.email) setEmail(profile.email);
+    if (profile.phone) setPhone(profile.phone);
+    if (profile.bio !== undefined) setBio(profile.bio || '');
+    if (profile.age !== undefined) setAge(profile.age);
   };
 
   // Fetch user data when component mounts
   useEffect(() => {
     fetchUserDataFromSupabase();
-    refreshFromLocalStorage();
   }, []);
 
-  // refresh when window regains focus or another tab updates storage
+  // Load data from localStorage as fallback
   useEffect(() => {
-    const onFocus = () => refreshFromLocalStorage();
-    const onStorage = () => refreshFromLocalStorage();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  // Check localStorage periodically to catch sidebar changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshFromLocalStorage();
-    }, 1000); // Check every second
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // final sources (prefer Supabase table → context → localStorage → default) - SAME AS SIDEBAR
-  const userAvatar =
-    supabaseUserData?.avatar || userData?.avatar || registrationData?.avatar || lsAvatar || "/Avatar02.png";
-
-  const userName =
-    supabaseUserData?.full_name || userData?.name || registrationData?.name || lsName || "User";
-
-  // If we have partial data from Supabase, try to fill in missing pieces
-  const finalAvatar = userAvatar || "/Avatar01.png";
-  const finalName = userName || "User";
-
-  // Debug logging (same as sidebar)
-  console.log('🔍 Settings data sources:', {
-    supabaseUserData,
-    lsAvatar,
-    lsName,
-    userData: { avatar: userData?.avatar, name: userData?.name },
-    registrationData: { avatar: registrationData?.avatar, name: registrationData?.name },
-    finalAvatar: finalAvatar,
-    finalName: finalName
-  });
-
-  // Prefill form fields from Supabase data
-  useEffect(() => {
-    if (supabaseUserData) {
-      // Set avatar from Supabase data
-      if (supabaseUserData.avatar) {
-        const avatarPath = supabaseUserData.avatar.startsWith("/") 
-          ? supabaseUserData.avatar 
-          : `/${supabaseUserData.avatar}`;
-        console.log('🔄 Setting avatar from Supabase:', avatarPath);
-        setAvatar(avatarPath);
-      }
-
-      // Set name fields
-      if (supabaseUserData.full_name) {
-        const { first, last } = splitName(supabaseUserData.full_name);
-        setFirstName(first);
-        setLastName(last);
-        setDisplayName(supabaseUserData.full_name);
-      }
-
-      // Set other fields
-      if (supabaseUserData.email) {
-        setEmail(supabaseUserData.email);
-        setWhereEmail(supabaseUserData.email);
-      }
-      if (supabaseUserData.phone) setPhone(supabaseUserData.phone);
-      if (supabaseUserData.bio) setBio(supabaseUserData.bio);
-    }
-  }, [supabaseUserData]);
-
-  // Update display name when firstName or lastName changes
-  useEffect(() => {
-    // Only update if we have both names and they're not empty
-    if (firstName.trim() && lastName.trim()) {
-      const newDisplayName = joinName(firstName, lastName);
-      setDisplayName(newDisplayName.trim());
-    }
-  }, [firstName, lastName]);
-
-  // Update avatar and name from final sources (same as sidebar)
-  useEffect(() => {
-    // Set avatar from final source
-    if (finalAvatar && finalAvatar !== "/Avatar02.png") {
-      const avatarPath = finalAvatar.startsWith("/") 
-        ? finalAvatar 
-        : `/${finalAvatar}`;
-      console.log('🔄 Setting avatar from final source:', avatarPath);
-      setAvatar(avatarPath);
-    }
-
-    // Set name from final source if we don't have form data
-    if (!firstName.trim() && !lastName.trim() && finalName && finalName !== "User") {
-      const { first, last } = splitName(finalName);
-      setFirstName(first);
-      setLastName(last);
-      setDisplayName(finalName);
-      console.log('🔄 Setting name from final source:', finalName);
-    }
-  }, [finalAvatar, finalName, firstName, lastName]);
-
-  // Force update avatar and name when final sources change (separate effect)
-  useEffect(() => {
-    console.log('🔄 Final sources changed - forcing update:', { finalAvatar, finalName });
-    
-    // Force update avatar
-    if (finalAvatar && finalAvatar !== "/Avatar02.png") {
-      const avatarPath = finalAvatar.startsWith("/") 
-        ? finalAvatar 
-        : `/${finalAvatar}`;
-      console.log('🔄 Force updating avatar to:', avatarPath);
-      setAvatar(avatarPath);
-    }
-    
-    // Force update name if we have a valid name
-    if (finalName && finalName !== "User") {
-      console.log('🔄 Force updating name to:', finalName);
-      setDisplayName(finalName);
-      
-      // Also update form fields if they're empty
-      if (!firstName.trim() && !lastName.trim()) {
-        const { first, last } = splitName(finalName);
-        setFirstName(first);
-        setLastName(last);
-      }
-    }
-  }, [finalAvatar, finalName]);
-
-  // Fallback to localStorage if no Supabase data
-  useEffect(() => {
-    if (!supabaseUserData) {
-      try {
-        const n = (localStorage.getItem("name") || "").trim();
-        const e = (localStorage.getItem("email") || "").trim();
-        const p = (localStorage.getItem("fullPhone") || localStorage.getItem("phone") || "").trim();
-        const b = localStorage.getItem("bio") || "";
-
-        if (n) {
-          const { first, last } = splitName(n);
-          setFirstName(first);
-          setLastName(last);
-          setDisplayName(n);
+    try {
+      const storedAge = localStorage.getItem('age');
+      if (storedAge && storedAge.trim()) {
+        const ageValue = parseInt(storedAge.trim());
+        if (!isNaN(ageValue)) {
+          setAge(ageValue);
         }
-        if (e) {
-          setEmail(e);
-          setWhereEmail(e);
-        }
-        if (p) setPhone(p);
-        if (b) setBio(b);
-      } catch {
-        /* ignore */
       }
+    } catch (error) {
+      console.error('❌ Error reading age from localStorage:', error);
     }
-  }, [supabaseUserData]);
-
-  // Debug function to check current state (same as sidebar)
-  const debugCurrentState = () => {
-    console.log('🔍 Settings Current State Debug:', {
-      avatar,
-      displayName,
-      firstName,
-      lastName,
-      finalAvatar,
-      finalName,
-      lsName,
-      lsAvatar,
-      supabaseUserData,
-      userData: { avatar: userData?.avatar, name: userData?.name },
-      registrationData: { avatar: registrationData?.avatar, name: registrationData?.name }
-    });
-  };
+  }, []);
 
   const fullName = useMemo(
     () => joinName(firstName, lastName),
     [firstName, lastName]
   );
-  
-  const emailValid = useMemo(
-    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    [email]
-  );
-  
+
   const phoneValid = useMemo(
     () => /^[0-9+\s-]{7,}$/.test(phone),
     [phone]
   );
-  
-  const canSave =
-    !!firstName.trim() && emailValid && phoneValid && !saving;
+
+  const ageValid = useMemo(
+    () => age === null || (age >= 5 && age <= 120),
+    [age]
+  );
+
+  const canSave = !!firstName.trim() && phoneValid && ageValid && !saving;
 
   const handleSave = async () => {
     setError(null);
@@ -351,27 +256,47 @@ export default function SettingsPage() {
     try {
       // Get current authenticated user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         setError("No authenticated user found. Please log in again.");
         return;
       }
 
       console.log('🔄 Updating profile for user:', user.id);
-      console.log('📝 New data:', { fullName, email, phone, bio, currentAvatar: avatar });
+      console.log('📝 New data:', { fullName, email, phone, age, bio, currentAvatar: avatar });
+
+      // Prepare the data for upsert
+      const upsertData = {
+        user_id: user.id,
+        email: email.trim(),
+        full_name: fullName.trim(),
+        phone: phone.trim() || null,
+        age: age, // Preserve existing age
+        avatar: avatar.startsWith('/') ? avatar.substring(1) : avatar,
+        bio: bio.trim() || '',
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('📤 Data being sent to Supabase:', upsertData);
+
+      // First, let's check what's currently in the database
+      console.log('🔍 Checking current profile in database...');
+      const { data: currentProfile, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (checkError) {
+        console.log('⚠️ No existing profile found, will create new one');
+      } else {
+        console.log('✅ Found existing profile:', currentProfile);
+      }
 
       // Update user profile in Supabase
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .upsert({
-          user_id: user.id,
-          email: email.trim(),
-          full_name: fullName.trim(),
-          phone: phone.trim(),
-          bio: bio.trim() || null,
-          avatar: avatar.replace('/', ''), // Remove leading slash for storage
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(upsertData, {
           onConflict: 'user_id'
         })
         .select()
@@ -379,13 +304,19 @@ export default function SettingsPage() {
 
       if (profileError) {
         console.error('❌ Error updating profile:', profileError);
-        setError("Failed to update profile. Please try again.");
+        console.error('❌ Error details:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        setError(`Failed to update profile: ${profileError.message}`);
         return;
       }
 
       console.log('✅ Profile updated in Supabase:', profile);
 
-      // Always update user metadata in auth for name and avatar changes
+      // Update user metadata in auth for name and avatar changes
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           full_name: fullName.trim(),
@@ -404,17 +335,17 @@ export default function SettingsPage() {
       localStorage.setItem("name", fullName.trim());
       localStorage.setItem("email", email.trim());
       localStorage.setItem("phone", phone.trim());
-      if (bio.trim()) localStorage.setItem("bio", bio.trim());
+      localStorage.setItem("age", age ? age.toString() : '');
+      localStorage.setItem("bio", bio.trim());
       localStorage.setItem("avatar", avatar.replace('/', '')); // Store without leading slash
 
-      // Update local state immediately for better UX
-      setWhereEmail(email.trim());
-      setDisplayName(fullName.trim());
-      
-      // Refresh Supabase data to ensure consistency
-      await fetchUserDataFromSupabase();
-      
       setOk("Profile updated successfully!");
+
+      // Dispatch custom event to notify sidebar to refresh
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+
+      // Refresh data to ensure consistency
+      await fetchUserDataFromSupabase();
     } catch (error) {
       console.error('❌ Error saving profile:', error);
       setError("Failed to update profile. Please try again.");
@@ -423,11 +354,56 @@ export default function SettingsPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-[#F6F8FC]">
+        <SideNavbar />
+        <main
+          className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
+          style={{
+            marginLeft: sidebarCollapsed ? "80px" : "260px",
+          }}
+        >
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-gray-600">Loading profile...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error && !firstName && !lastName) {
+    return (
+      <div className="flex min-h-screen bg-[#F6F8FC]">
+        <SideNavbar />
+        <main
+          className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
+          style={{
+            marginLeft: sidebarCollapsed ? "80px" : "260px",
+          }}
+        >
+          <div className="flex flex-col items-center justify-center h-64 gap-4">
+            <div className="text-lg text-red-600">{error}</div>
+            <button
+              onClick={fetchUserDataFromSupabase}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              Retry Loading Profile
+            </button>
+            <div className="text-sm text-gray-500">
+              If the problem persists, try refreshing the page or contact support.
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#F6F8FC]">
       <SideNavbar />
       <main
-        className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
+        className="flex-1 px-6 lg:px-8  xl:px-10 py-8 transition-all duration-300 ease-in-out"
         style={{
           marginLeft: sidebarCollapsed ? "80px" : "260px",
         }}
@@ -437,53 +413,48 @@ export default function SettingsPage() {
           <aside className="lg:w-[280px] w-full shrink-0">
             <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6 min-h-[560px]">
               <nav className="flex flex-col gap-2 h-full">
-                <button 
+                <button
                   onClick={() => setActiveTab('profile')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
-                    activeTab === 'profile'
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'profile'
                       ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
                       : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                  }`}
+                    }`}
                 >
                   My Profile
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('security')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
-                    activeTab === 'security'
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'security'
                       ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
                       : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                  }`}
+                    }`}
                 >
                   Security
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('subscription')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
-                    activeTab === 'subscription'
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'subscription'
                       ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
                       : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                  }`}
+                    }`}
                 >
                   Subscription
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('firmware')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
-                    activeTab === 'firmware'
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'firmware'
                       ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
                       : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                  }`}
+                    }`}
                 >
                   Firmware
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('delete')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
-                    activeTab === 'delete'
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'delete'
                       ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
                       : 'hover:bg-[#F8FAFC] text-[#EF4444]'
-                  }`}
+                    }`}
                 >
                   Delete Account
                 </button>
@@ -493,7 +464,7 @@ export default function SettingsPage() {
           </aside>
 
           {/* Right pane */}
-          <section className="flex-1 flex flex-col gap-6">
+            <section className="flex-1 flex flex-col gap-6">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <>
@@ -510,7 +481,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex flex-col">
                       <h1 className="text-[34px] md:text-[40px] leading-none font-extrabold text-[#0F172A]">
-                        {displayName}
+                        {fullName}
                       </h1>
                       <p className="mt-1 text-[15px] text-[#6B7280]">
                         {bio || "No bio set"}
@@ -518,109 +489,172 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
+         
+            {/* Editable form */}
+            <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-5 md:p-7">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] md:text-[20px] font-extrabold text-[#0F172A]">
+                  Personal Information
+                </h2>
+                <button
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${canSave
+                      ? "border-[#E5E7EB] hover:bg-[#F8FAFC]"
+                      : "border-[#E5E7EB] opacity-60 cursor-not-allowed"
+                    } text-[14px] text-[#0F172A]`}
+                  onClick={handleSave}
+                  disabled={!canSave}
+                >
+                  {saving ? "Saving..." : "Save"}
+                </button>
+              </div>
 
-                {/* Editable form */}
-                <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-5 md:p-7">
-                  <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-[18px] md:text-[20px] font-extrabold text-[#0F172A]">
-                      Personal Information
-                    </h2>
-                    <button
-                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
-                        canSave
-                          ? "border-[#E5E7EB] hover:bg-[#F8FAFC]"
-                          : "border-[#E5E7EB] opacity-60 cursor-not-allowed"
-                      } text-[14px] text-[#0F172A]`}
-                      onClick={handleSave}
-                      disabled={!canSave}
-                    >
-                      {saving ? "Saving..." : "Save"}
-                    </button>
-                  </div>
+              {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+              {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
 
-                  {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-                  {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-sm text-[#6B7280]">First Name</label>
-                      <input
-                        type="text"
-                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                        value={firstName}
-                        onChange={(ev) => setFirstName(ev.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-sm text-[#6B7280]">Last Name</label>
-                      <input
-                        type="text"
-                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                        value={lastName}
-                        onChange={(ev) => setLastName(ev.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-sm text-[#6B7280]">Email</label>
-                      <input
-                        type="email"
-                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                        value={email}
-                        onChange={(ev) => setEmail(ev.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-sm text-[#6B7280]">Phone</label>
-                      <input
-                        type="tel"
-                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                        value={phone}
-                        onChange={(ev) => setPhone(ev.target.value)}
-                      />
-                    </div>
-                    <div className="md:col-span-2 flex flex-col gap-1">
-                      <label className="text-sm text-[#6B7280]">Bio</label>
-                      <textarea
-                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
-                        value={bio}
-                        onChange={(ev) => setBio(ev.target.value)}
-                        placeholder="Tell us about yourself..."
-                      />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-[#6B7280]">First Name</label>
+                  <input
+                    type="text"
+                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                    value={firstName}
+                    onChange={(ev) => setFirstName(ev.target.value)}
+                  />
                 </div>
-              </>
-            )}
-
-            {/* Firmware Tab */}
-            {activeTab === 'firmware' && (
-              <FirmwareInstaller />
-            )}
-
-            {/* Security Tab */}
-            {activeTab === 'security' && (
-              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
-                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Security Settings</h2>
-                <p className="text-[14px] text-[#6B7280]">Security settings will be available soon.</p>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-[#6B7280]">Last Name</label>
+                  <input
+                    type="text"
+                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                    value={lastName}
+                    onChange={(ev) => setLastName(ev.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-[#6B7280]">Email</label>
+                  <input
+                    type="email"
+                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                    value={email}
+                    onChange={(ev) => setEmail(ev.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-[#6B7280]">Phone</label>
+                  <input
+                    type="tel"
+                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                    value={phone}
+                    onChange={(ev) => setPhone(ev.target.value)}
+                  />
+                </div>
+                <div className="md:col-span-2 flex flex-col gap-1">
+                  <label className="text-sm text-[#6B7280]">Bio</label>
+                  <textarea
+                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
+                    value={bio}
+                    onChange={(ev) => setBio(ev.target.value)}
+                    placeholder="Tell us about yourself..."
+                  />
+                </div>
               </div>
+            </div>
+                 
+            </>
             )}
 
-            {/* Subscription Tab */}
-            {activeTab === 'subscription' && (
-              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
-                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Subscription</h2>
-                <p className="text-[14px] text-[#6B7280]">Subscription management will be available soon.</p>
-              </div>
-            )}
+          
 
-            {/* Delete Account Tab */}
-            {activeTab === 'delete' && (
-              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
-                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Delete Account</h2>
-                <p className="text-[14px] text-[#6B7280]">Account deletion will be available soon.</p>
+        {/* Firmware Tab */}
+        {activeTab === 'firmware' && (
+          <FirmwareInstaller />
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && (
+          <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+            <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Security Settings</h2>
+            <p className="text-[14px] text-[#6B7280]">Security settings will be available soon.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-[#6B7280]">First Name</label>
+                <input
+                  type="text"
+                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                  value={firstName}
+                  onChange={(ev) => setFirstName(ev.target.value)}
+                  placeholder="Enter first name"
+                />
               </div>
-            )}
-          </section>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-[#6B7280]">Last Name</label>
+                <input
+                  type="text"
+                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                  value={lastName}
+                  onChange={(ev) => setLastName(ev.target.value)}
+                  placeholder="Enter last name"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-[#6B7280]">Email <span className="text-xs text-gray-500">(Read-only)</span></label>
+                <input
+                  type="email"
+                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none bg-gray-50 text-gray-600 cursor-not-allowed"
+                  value={email}
+                  readOnly
+                  disabled
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-[#6B7280]">Phone</label>
+                <input
+                  type="tel"
+                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                  value={phone}
+                  onChange={(ev) => setPhone(ev.target.value)}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-[#6B7280]">Age</label>
+                <input
+                  type="number"
+                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                  value={age || ''}
+                  onChange={(ev) => setAge(ev.target.value ? parseInt(ev.target.value) : null)}
+                  placeholder="Enter age"
+                />
+              </div>
+              <div className="md:col-span-2 flex flex-col gap-1">
+                <label className="text-sm text-[#6B7280]">Bio</label>
+                <textarea
+                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
+                  value={bio}
+                  onChange={(ev) => setBio(ev.target.value)}
+                  placeholder="Tell us about yourself..."
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Subscription Tab */}
+        {activeTab === 'subscription' && (
+          <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+            <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Subscription</h2>
+            <p className="text-[14px] text-[#6B7280]">Subscription management will be available soon.</p>
+          </div>
+        )}
+
+        {/* Delete Account Tab */}
+        {activeTab === 'delete' && (
+          <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+            <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Delete Account</h2>
+            <p className="text-[14px] text-[#6B7280]">Account deletion will be available soon.</p>
+          </div>
+        )}
+        </section>
         </div>
       </main>
     </div>

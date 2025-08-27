@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
 import { useUser } from "@/context/UserContext";
+import BasicAuthGuard from "@/components/BasicAuthGuard";
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -36,9 +37,9 @@ export default function HomePage() {
   const searchParams = useSearchParams();
   const { userData } = useUser();
 
-  const mainTextStep1 = useTypingEffect("Welcome onboard!");
-  const mainTextStep2 = useTypingEffect("I'm your Robot.");
-  const subTextStep2 = useTypingEffect("Let's get things up!");
+  const mainTextStep = useTypingEffect("I'm your Robot.");
+  const subTextStep = useTypingEffect("Let's get things up!");
+  const [isNewUser,setIsNewUser] = useState(false)
 
   // On mount, set hydrated state and check for new user query param
   useEffect(() => {
@@ -47,10 +48,15 @@ export default function HomePage() {
     // Check if this is a new user from signup
     const isNewUserFromSignup = searchParams.get("newUser") === "true";
     if (isNewUserFromSignup) {
-      // Clear the query parameter from URL
       router.replace("/home");
+      setIsNewUser(true);
     }
-  }, [searchParams, router]);
+    
+    // Also check if user is new based on mission progress
+    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
+      setIsNewUser(true);
+    }
+  }, [searchParams, router, userData]);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -99,53 +105,14 @@ export default function HomePage() {
   const nextMission = (userData?.missionProgress ?? 0) + 1;
 
   const newUserContent = useMemo(() => {
-    if (step === 0) {
-      return (
-        <div className="flex flex-1 w-full h-full relative animate-fade-in">
-          <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10 ml-40">
-            <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A]">
-              {mainTextStep1}
-            </div>
-          </div>
-        </div>
-      );
-    } else if (step === 1) {
       return (
         <div className="flex flex-1 w-full h-full relative animate-fade-in">
           <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
             <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
-              {mainTextStep2}
+              {mainTextStep}
             </div>
             <div className="text-3xl text-[#555] font-poppins mb-18">
-              {subTextStep2}
-            </div>
-          </div>
-          <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 60, damping: 18 }}
-            className="absolute bottom-0 right-0 flex items-end justify-end"
-            style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
-          >
-            <Image
-              src="/welcome-robot.png"
-              alt="Robot"
-              width={450}
-              height={450}
-              style={{ maxWidth: "100%", maxHeight: "100%" }}
-            />
-          </motion.div>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex flex-1 w-full h-full relative animate-fade-in">
-          <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
-            <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
-              {mainTextStep2}
-            </div>
-            <div className="text-3xl text-[#555] font-poppins mb-18">
-              {subTextStep2}
+              {subTextStep}
             </div>
             <LetsGoButton
               style={{ width: 200, height: 60 }}
@@ -172,15 +139,8 @@ export default function HomePage() {
         </div>
       );
     }
-  }, [
-    step,
-    router,
-    mainTextStep1,
-    mainTextStep2,
-    subTextStep2,
-    userData?.missionProgress,
-    nextMission,
-  ]);
+  
+  , [router, mainTextStep, subTextStep, nextMission]);
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
@@ -400,31 +360,41 @@ export default function HomePage() {
   }
 
   // Get user data from context or localStorage fallback
-  const user =
-    userData ||
-    (typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("userData") || "null")
-      : null);
+  
+  // Check if user came from signup flow (newUser=true in URL)
+  const isFromSignup = searchParams.get("newUser") === "true";
+  
+  // Show onboarding ONLY for new users who came from signup flow
+  // Existing users (from signin) should see dashboard directly
+  const shouldShowOnboarding = isNewUser && isFromSignup;
 
-  // Check if user is new based on mission progress or isNewUser flag
-  const isNewUser =
-    !user ||
-    user.isNewUser ||
-    (user.missionProgress !== undefined && user.missionProgress < 2);
+  console.log("🔍 User data:", userData);
+  console.log("🔍 Is new user:", isNewUser);
+  console.log("🔍 Mission progress:", userData?.missionProgress);
+  console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
+  console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
+  console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
+  console.log("🔍 Final isNewUser calculation:", isNewUser);
+  console.log("🔍 isFromSignup:", isFromSignup);
+  console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
-      {/* Side Navbar */}
-      <SideNavbar />
-      {/* Main Content */}
-      <main
-        className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
-        style={{
-          marginLeft: sidebarCollapsed ? "80px" : "260px",
-        }}
-      >
-        {isNewUser ? newUserContent : defaultHomeContent}
-      </main>
-    </div>
+    <BasicAuthGuard>
+      <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
+        {/* Side Navbar */}
+        <SideNavbar />
+        {/* Main Content */}
+        <main
+          className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
+          style={{
+            marginLeft: sidebarCollapsed ? "80px" : "260px",
+          }}
+        >
+          
+          
+          {shouldShowOnboarding ? newUserContent : defaultHomeContent}
+        </main>
+      </div>
+    </BasicAuthGuard>
   );
 }

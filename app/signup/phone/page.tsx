@@ -70,6 +70,17 @@ export default function SignupPhone() {
     }, 2000); // Wait 2 seconds for async operations to complete
   }, []);
   
+  // Add navigation guard to ensure user has completed email step
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    
+    if (!email || !email.trim()) {
+      alert("Please complete the email step first");
+      router.push("/signup/email");
+      return;
+    }
+  }, [router]);
+  
   const getEmailFromSupabase = async () => {
     try {
       console.log("🔍 Attempting to get email from Supabase session...");
@@ -98,6 +109,12 @@ export default function SignupPhone() {
     router.push("/signup/email/confirm");
   };
   
+  // Clear phone verification flag when user returns to phone step
+  useEffect(() => {
+    localStorage.removeItem("phoneVerified");
+    localStorage.removeItem("otpSkipped");
+  }, []);
+  
   const handleNext = async () => {
     if (!phone || phone.length < 7) {
       alert("Please enter a valid phone number");
@@ -113,9 +130,15 @@ export default function SignupPhone() {
     const fullPhone = selectedCountry.code + cleanPhone;
     const normalizedPhone = fullPhone.replace(/[+\s-]/g, "");
 
-    // Store phone number
-    localStorage.setItem("fullPhone", normalizedPhone);
-    updateRegistrationData({ fullPhone });
+    console.log("📱 Send OTP - Phone details:", {
+      originalPhone: phone,
+      cleanPhone,
+      countryCode: selectedCountry.code,
+      fullPhone,
+      normalizedPhone
+    });
+
+    // Phone number will be stored later when sending OTP
 
     // Debug localStorage
     console.log("🔍 Debug localStorage:");
@@ -145,6 +168,8 @@ export default function SignupPhone() {
       console.log("📱 Sending OTP to:", fullPhone);
       console.log("📱 Clean phone number:", cleanPhone);
       console.log("📱 Country code:", selectedCountry.code);
+      console.log("📱 Full phone format:", fullPhone);
+      console.log("📱 Phone length:", fullPhone.length);
       let userEmail = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
       
       // If no email in localStorage, use manual email input
@@ -164,6 +189,11 @@ export default function SignupPhone() {
       
       console.log("📧 Sending OTP to email:", userEmail);
       
+      // Store phone number in localStorage before sending OTP
+      localStorage.setItem("fullPhone", fullPhone);
+      updateRegistrationData({ fullPhone });
+      console.log("📱 Phone stored in localStorage:", fullPhone);
+      
       // Call the actual API endpoint
       const response = await fetch('/api/send-otp', {
         method: 'POST',
@@ -182,8 +212,8 @@ export default function SignupPhone() {
       
              // Show success message with OTP (for development only)
        const otpMessage = data.otp 
-         ? `✅ OTP sent successfully!\n\n🔐 Your OTP code is: ${data.otp}\n\n📱 Check your phone for WhatsApp message\n📧 Check your email for OTP code\n\nYou can also skip OTP verification if needed.`
-         : "✅ OTP sent successfully!\n\n📱 Check your phone for WhatsApp message\n📧 Check your email for OTP code\n\nYou can also skip OTP verification if needed.";
+         ? `✅ OTP sent successfully!\n\n🔐 Your OTP code is: ${data.otp}\n\n📱 Check your phone for WhatsApp message\n📧 Check your email for OTP code\n\nYou can verify OTP or skip to continue.`
+         : "✅ OTP sent successfully!\n\n📱 Check your phone for WhatsApp message\n📧 Check your email for OTP code\n\nYou can verify OTP or skip to continue.";
        
        alert(otpMessage);
        
@@ -193,9 +223,7 @@ export default function SignupPhone() {
           console.log("🔐 OTP stored in localStorage for debugging:", data.otp);
         }
         
-        // Clear the otpSkipped flag since user chose to send OTP
-        localStorage.removeItem("otpSkipped");
-        console.log("📱 OTP sent, cleared skip flag - user can now verify");
+        console.log("📱 OTP sent successfully - user can now verify");
        
         // Navigate to OTP verification page
         router.push("/signup/otp");
@@ -360,12 +388,13 @@ export default function SignupPhone() {
 
             <div className="text-center text-sm text-gray-600 mb-4">
               <p>We'll send you a verification code via WhatsApp and email</p>
-              <p className="text-xs mt-1">(You can skip OTP verification if needed)</p>
+              <p className="text-xs mt-1">You can verify OTP or skip to continue</p>
             </div>
 
             <div className="flex flex-col gap-3 w-full">
               <NextButton type="submit">Send OTP & Continue</NextButton>
               
+              {/* Skip OTP button - gives users choice */}
               <button
                 type="button"
                 onClick={() => {
@@ -374,11 +403,20 @@ export default function SignupPhone() {
                   const fullPhone = selectedCountry.code + cleanPhone;
                   const normalizedPhone = fullPhone.replace(/[+\s-]/g, "");
                   
-                  localStorage.setItem("fullPhone", normalizedPhone);
-                  updateRegistrationData({ fullPhone });
+                  console.log("📱 Skip OTP - Phone details:", {
+                    originalPhone: phone,
+                    cleanPhone,
+                    countryCode: selectedCountry.code,
+                    fullPhone,
+                    normalizedPhone
+                  });
                   
-                  // Mark OTP as skipped
+                  localStorage.setItem("fullPhone", normalizedPhone);
+                  updateRegistrationData({ fullPhone: normalizedPhone });
+                  
+                  // Mark OTP as skipped and set phone verification flag
                   localStorage.setItem("otpSkipped", "true");
+                  localStorage.setItem("phoneVerified", "true");
                   
                   console.log("📱 Phone stored, OTP skipped. Going to next step.");
                   router.push("/signup/name");

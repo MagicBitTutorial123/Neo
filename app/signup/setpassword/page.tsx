@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 
 export default function SignupSetPassword() {
@@ -11,6 +11,38 @@ export default function SignupSetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Add navigation guard to ensure user has completed previous steps
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    const phone = localStorage.getItem("fullPhone");
+    const name = localStorage.getItem("name");
+    const age = localStorage.getItem("age");
+    
+    if (!email || !email.trim()) {
+      alert("Please complete the email step first");
+      router.push("/signup/email");
+      return;
+    }
+    
+    if (!phone || !phone.trim()) {
+      alert("Please complete the phone verification step first");
+      router.push("/signup/phone");
+      return;
+    }
+    
+    if (!name || !name.trim()) {
+      alert("Please complete the name step first");
+      router.push("/signup/name");
+      return;
+    }
+    
+    if (!age || !age.trim()) {
+      alert("Please complete the age step first");
+      router.push("/signup/age");
+      return;
+    }
+  }, [router]);
 
   const handleNext = () => {
     if (!password || !confirmPassword) {
@@ -38,6 +70,9 @@ export default function SignupSetPassword() {
   };
 
   const handleBack = () => {
+    // Clear phone verification flag when going back
+    localStorage.removeItem("phoneVerified");
+    localStorage.removeItem("otpSkipped");
     router.push("/signup/age");
   };
 
@@ -114,7 +149,7 @@ export default function SignupSetPassword() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
+                className="w-full px-4 py-3 text-lg border-2 text-black border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
                 placeholder="Enter your password"
                 required
               />
@@ -139,7 +174,7 @@ export default function SignupSetPassword() {
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
+                className="w-full px-4 text-black py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none transition-all pr-12"
                 placeholder="Confirm your password"
                 required
               />
