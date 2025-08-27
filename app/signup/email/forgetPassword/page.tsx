@@ -128,7 +128,7 @@ export default function ForgotPasswordPage() {
             </button>
 
             <div className="mt-4 flex items-center justify-between text-sm w-full max-w-[400px]">
-              <Link href="http://localhost:3000" className="text-[#00AEEF] hover:underline underline-offset-2">
+              <Link href="https://v0tfgs7s-3000.asse.devtunnels.ms/" className="text-[#00AEEF] hover:underline underline-offset-2">
                 Back to Sign in
               </Link>
               <Link href="/signup" className="text-[#0F172A]/70 hover:text-[#0F172A] transition">

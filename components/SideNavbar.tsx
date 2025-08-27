@@ -491,7 +491,7 @@ export default function SideNavbar({
   const handleLogout = () => {
     updateUserData({});
     localStorage.clear();
-    router.push("http://localhost:3000/");
+    router.push("https://v0tfgs7s-3000.asse.devtunnels.ms/");
   };
 
   // Open contact modal from Help menu

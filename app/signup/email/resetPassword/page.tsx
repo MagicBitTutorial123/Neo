@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
         
         // Redirect to localhost:3000 after a short delay
         setTimeout(() => {
-          router.push("http://localhost:3000");
+          router.push("https://v0tfgs7s-3000.asse.devtunnels.ms/");
         }, 2000);
       }
     } catch (err) {
