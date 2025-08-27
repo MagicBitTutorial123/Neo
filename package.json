@@ -17,6 +17,7 @@
     "axios": "^1.10.0",
     "blockly": "^10.4.3",
     "clsx": "^2.1.1",
+    "esptool-js": "^0.5.7",
     "firebase": "^11.10.0",
     "framer-motion": "^12.19.1",
     "lottie-react": "^2.4.1",

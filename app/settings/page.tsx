@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import SideNavbar from "@/components/SideNavbar";
+import FirmwareInstaller from "@/components/FirmwareInstaller";
 import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useSidebar } from "@/context/SidebarContext";
@@ -51,6 +52,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'subscription' | 'firmware' | 'delete'>('profile');
   
   // Supabase user data
   const [supabaseUserData, setSupabaseUserData] = useState<{
@@ -435,16 +437,54 @@ export default function SettingsPage() {
           <aside className="lg:w-[280px] w-full shrink-0">
             <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6 min-h-[560px]">
               <nav className="flex flex-col gap-2 h-full">
-                <button className="w-full text-left px-5 py-5 rounded-[14px] bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]">
+                <button 
+                  onClick={() => setActiveTab('profile')}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === 'profile'
+                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
+                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
+                  }`}
+                >
                   My Profile
                 </button>
-                <button className="w-full text-left px-5 py-5 rounded-[14px] hover:bg-[#F8FAFC] text-[#0F172A]/70">
+                <button 
+                  onClick={() => setActiveTab('security')}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === 'security'
+                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
+                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
+                  }`}
+                >
                   Security
                 </button>
-                <button className="w-full text-left px-5 py-5 rounded-[14px] hover:bg-[#F8FAFC] text-[#0F172A]/70">
+                <button 
+                  onClick={() => setActiveTab('subscription')}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === 'subscription'
+                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
+                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
+                  }`}
+                >
                   Subscription
                 </button>
-                <button className="w-full text-left px-5 py-5 rounded-[14px] hover:bg-[#F8FAFC] text-[#EF4444]">
+                <button 
+                  onClick={() => setActiveTab('firmware')}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === 'firmware'
+                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
+                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
+                  }`}
+                >
+                  Firmware
+                </button>
+                <button 
+                  onClick={() => setActiveTab('delete')}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === 'delete'
+                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
+                      : 'hover:bg-[#F8FAFC] text-[#EF4444]'
+                  }`}
+                >
                   Delete Account
                 </button>
                 <div className="flex-1" />
@@ -454,100 +494,132 @@ export default function SettingsPage() {
 
           {/* Right pane */}
           <section className="flex-1 flex flex-col gap-6">
-            {/* Header card */}
-            <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] px-6 md:px-10 py-6 md:py-7">
-              <div className="flex items-center gap-4 md:gap-6">
-                <div className="w-[82px] h-[82px] relative">
-                  <Image
-                    src={avatar}
-                    alt="Avatar"
-                    fill
-                    className="rounded-full object-cover bg-[#FFF7E6] p-2"
-                  />
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
+              <>
+                {/* Header card */}
+                <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] px-6 md:px-10 py-6 md:py-7">
+                  <div className="flex items-center gap-4 md:gap-6">
+                    <div className="w-[82px] h-[82px] relative">
+                      <Image
+                        src={avatar}
+                        alt="Avatar"
+                        fill
+                        className="rounded-full object-cover bg-[#FFF7E6] p-2"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <h1 className="text-[34px] md:text-[40px] leading-none font-extrabold text-[#0F172A]">
+                        {displayName}
+                      </h1>
+                      <p className="mt-1 text-[15px] text-[#6B7280]">
+                        {bio || "No bio set"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <h1 className="text-[34px] md:text-[40px] leading-none font-extrabold text-[#0F172A]">
-                    {displayName}
-                  </h1>
-                  <p className="mt-1 text-[15px] text-[#6B7280]">
-                    {bio || "No bio set"}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* Editable form */}
-            <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-5 md:p-7">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[18px] md:text-[20px] font-extrabold text-[#0F172A]">
-                  Personal Information
-                </h2>
-                <button
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
-                    canSave
-                      ? "border-[#E5E7EB] hover:bg-[#F8FAFC]"
-                      : "border-[#E5E7EB] opacity-60 cursor-not-allowed"
-                  } text-[14px] text-[#0F172A]`}
-                  onClick={handleSave}
-                  disabled={!canSave}
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </div>
+                {/* Editable form */}
+                <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-5 md:p-7">
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-[18px] md:text-[20px] font-extrabold text-[#0F172A]">
+                      Personal Information
+                    </h2>
+                    <button
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
+                        canSave
+                          ? "border-[#E5E7EB] hover:bg-[#F8FAFC]"
+                          : "border-[#E5E7EB] opacity-60 cursor-not-allowed"
+                      } text-[14px] text-[#0F172A]`}
+                      onClick={handleSave}
+                      disabled={!canSave}
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
 
-              {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-              {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
+                  {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+                  {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">First Name</label>
-                  <input
-                    type="text"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={firstName}
-                    onChange={(ev) => setFirstName(ev.target.value)}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">First Name</label>
+                      <input
+                        type="text"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={firstName}
+                        onChange={(ev) => setFirstName(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Last Name</label>
+                      <input
+                        type="text"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={lastName}
+                        onChange={(ev) => setLastName(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Email</label>
+                      <input
+                        type="email"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={email}
+                        onChange={(ev) => setEmail(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Phone</label>
+                      <input
+                        type="tel"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={phone}
+                        onChange={(ev) => setPhone(ev.target.value)}
+                      />
+                    </div>
+                    <div className="md:col-span-2 flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Bio</label>
+                      <textarea
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
+                        value={bio}
+                        onChange={(ev) => setBio(ev.target.value)}
+                        placeholder="Tell us about yourself..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Last Name</label>
-                  <input
-                    type="text"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={lastName}
-                    onChange={(ev) => setLastName(ev.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Email</label>
-                  <input
-                    type="email"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={email}
-                    onChange={(ev) => setEmail(ev.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Phone</label>
-                  <input
-                    type="tel"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={phone}
-                    onChange={(ev) => setPhone(ev.target.value)}
-                  />
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Bio</label>
-                  <textarea
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
-                    value={bio}
-                    onChange={(ev) => setBio(ev.target.value)}
-                    placeholder="Tell us about yourself..."
-                  />
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-1">
-                </div>
+              </>
+            )}
+
+            {/* Firmware Tab */}
+            {activeTab === 'firmware' && (
+              <FirmwareInstaller />
+            )}
+
+            {/* Security Tab */}
+            {activeTab === 'security' && (
+              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Security Settings</h2>
+                <p className="text-[14px] text-[#6B7280]">Security settings will be available soon.</p>
               </div>
-            </div>
+            )}
+
+            {/* Subscription Tab */}
+            {activeTab === 'subscription' && (
+              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Subscription</h2>
+                <p className="text-[14px] text-[#6B7280]">Subscription management will be available soon.</p>
+              </div>
+            )}
+
+            {/* Delete Account Tab */}
+            {activeTab === 'delete' && (
+              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Delete Account</h2>
+                <p className="text-[14px] text-[#6B7280]">Account deletion will be available soon.</p>
+              </div>
+            )}
           </section>
         </div>
       </main>
