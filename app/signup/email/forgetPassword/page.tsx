@@ -4,6 +4,7 @@
 import React, { useState, FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { APP_BASE_URL } from "@/lib/env";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -128,7 +129,7 @@ export default function ForgotPasswordPage() {
             </button>
 
             <div className="mt-4 flex items-center justify-between text-sm w-full max-w-[400px]">
-              <Link href="http://localhost:3000" className="text-[#00AEEF] hover:underline underline-offset-2">
+              <Link href={APP_BASE_URL} className="text-[#00AEEF] hover:underline underline-offset-2">
                 Back to Sign in
               </Link>
               <Link href="/signup" className="text-[#0F172A]/70 hover:text-[#0F172A] transition">

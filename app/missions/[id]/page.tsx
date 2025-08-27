@@ -19,6 +19,8 @@ import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { TimerPersistence } from "@/utils/timerPersistence";
 import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
+import FirmwareInstallModal from "@/components/FirmwareInstallModal";
+import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
 // Simple type declarations
 interface BluetoothDevice {
@@ -83,6 +85,7 @@ export default function MissionPage() {
   const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
+  const [showFirmwareModal, setShowFirmwareModal] = useState(false);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -282,6 +285,18 @@ export default function MissionPage() {
         } else {
           setIsConnected(true);
           setConnectionStatus("connected");
+          // After serial connect, check for MicroPython and prompt installer if missing
+          try {
+            const navSerial = (navigator as unknown as { serial: { requestPort: () => Promise<any> } }).serial;
+            let port = (portRef.current as any) || null;
+            if (!port || !port.readable || !port.writable) {
+              port = await navSerial.requestPort();
+              try { await port.open({ baudRate: 115200 }); } catch {}
+              (portRef as any).current = port;
+            }
+            const needs = await checkIfMicroPythonNeeded(port, undefined);
+            if (needs) setShowFirmwareModal(true);
+          } catch {}
         }
       } catch {
         setConnectionStatus("disconnected");
@@ -854,6 +869,8 @@ export default function MissionPage() {
               </div>
             </div>
           )}
+          {/* Firmware Install Modal for USB only */}
+          <FirmwareInstallModal open={showFirmwareModal} onClose={() => setShowFirmwareModal(false)} />
         </div>
       );
     case "blocklySplitLayout":

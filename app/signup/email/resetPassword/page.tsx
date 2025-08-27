@@ -3,6 +3,7 @@
 import React, { useState, FormEvent, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { APP_BASE_URL } from "@/lib/env";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -55,13 +56,13 @@ export default function ResetPasswordPage() {
       if (error) {
         setError(error.message || "Failed to reset password.");
       } else {
-        setMessage("Password updated successfully! Redirecting to localhost:3000...");
+        setMessage(`Password updated successfully! Redirecting to ${APP_BASE_URL}...`);
         setPassword("");
         setConfirm("");
         
-        // Redirect to localhost:3000 after a short delay
+        // Redirect after a short delay
         setTimeout(() => {
-          router.push("http://localhost:3000");
+          router.push(APP_BASE_URL);
         }, 2000);
       }
     } catch (err) {
@@ -75,10 +76,10 @@ export default function ResetPasswordPage() {
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">
       <button
-        onClick={() => router.push("http://localhost:3000")}
+        onClick={() => router.push(APP_BASE_URL)}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
-        aria-label="Back to localhost:3000"
+        aria-label={`Back to ${APP_BASE_URL}`}
       >
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none"
              xmlns="http://www.w3.org/2000/svg"
@@ -196,7 +197,7 @@ export default function ResetPasswordPage() {
             </button>
 
             <div className="mt-4 flex items-center justify-center text-sm">
-              <Link href="http://localhost:3000" className="text-[#00AEEF] hover:underline underline-offset-2">
+              <Link href={APP_BASE_URL} className="text-[#00AEEF] hover:underline underline-offset-2">
                 Back to Sign in
               </Link>
             </div>

@@ -12,6 +12,8 @@ import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import Header from "@/components/StatusHeaderBar";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
+import FirmwareInstallModal from "@/components/FirmwareInstallModal";
+import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
 // Simple type declarations
 interface BluetoothGATT {
@@ -77,6 +79,8 @@ export default function Playground() {
     ldr: number | null;
     ultrasound: number | null;
   }>({ ldr: null, ultrasound: null });
+
+  const [showFirmwareModal, setShowFirmwareModal] = useState(false);
 
   const portRef = useRef<unknown>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
@@ -377,6 +381,18 @@ export default function Playground() {
         } else {
           setIsConnected(true);
           setConnectionStatus("connected");
+          // After serial connect, check for MicroPython and prompt installer if missing
+          try {
+            const navSerial = (navigator as unknown as { serial: { requestPort: () => Promise<any> } }).serial;
+            let port = (portRef.current as any) || null;
+            if (!port || !port.readable || !port.writable) {
+              port = await navSerial.requestPort();
+              try { await port.open({ baudRate: 115200 }); } catch {}
+              (portRef as any).current = port;
+            }
+            const needs = await checkIfMicroPythonNeeded(port, undefined);
+            if (needs) setShowFirmwareModal(true);
+          } catch {}
         }
       } catch {
         setConnectionStatus("disconnected");
@@ -504,6 +520,7 @@ export default function Playground() {
           </div>
         </div>
       </div>
+      <FirmwareInstallModal open={showFirmwareModal} onClose={() => setShowFirmwareModal(false)} />
     </div>
   );
 }

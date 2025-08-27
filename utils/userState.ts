@@ -1,11 +1,12 @@
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/env";
 
 /**
  * Complete a mission using the dedicated endpoint
  */
 export const completeMission = async (firebaseUid: string, missionId: number) => {
   try {
-    const response = await axios.post("http://localhost:5000/api/auth/missions/complete", {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/missions/complete`, {
       uid: firebaseUid,
       missionId: missionId,
     });
@@ -30,7 +31,7 @@ export const updateUserState = async (
 ) => {
   try {
     const response = await axios.patch(
-      `http://localhost:5000/api/auth/user/${userId}`,
+      `${API_BASE_URL}/api/auth/user/${userId}`,
       updates
     );
     return response.data;
