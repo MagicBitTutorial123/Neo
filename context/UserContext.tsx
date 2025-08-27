@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 type UserRegistrationData = {
   name?: string;
@@ -37,6 +38,9 @@ type UserContextType = {
   clearRegistrationData: () => void;
   setUserData: (user: UserData | null) => void;
   updateUserData: (data: Partial<UserData>) => void;
+  loading: boolean;
+  checkingAuth: boolean;
+  logout: () => Promise<void>;
 };
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -45,18 +49,54 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [registrationData, setRegistrationData] =
     useState<UserRegistrationData>({});
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
+  // Load existing user data on mount
   useEffect(() => {
-    const stored = localStorage.getItem("registrationData");
-    if (stored) {
-      setRegistrationData(JSON.parse(stored));
-    }
-
-    const storedUser = localStorage.getItem("userData");
-    if (storedUser) {
-      setUserData(JSON.parse(storedUser));
-    }
+    // Simple auth check without complex profile loading
+    checkAuthSimple();
   }, []);
+
+  const checkAuthSimple = async () => {
+    try {
+      setCheckingAuth(true);
+      
+      // Basic auth check only
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (user && !error) {
+        console.log("✅ User authenticated");
+        // Set basic user data
+        const basicUserData: UserData = {
+          _id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.full_name || '',
+          phone: user.user_metadata?.phone || '',
+          age: user.user_metadata?.age || 0,
+          avatar: user.user_metadata?.avatar || '',
+          isNewUser: true,
+          missionProgress: 0,
+          xp: 0,
+          hasCompletedMission2: false,
+          hasCompletedMission3: false,
+          createdAt: new Date().toISOString()
+        };
+        
+        setUserData(basicUserData);
+        setLoading(false);
+      } else {
+        console.log("❌ User not authenticated");
+        setLoading(false);
+      }
+      
+      setCheckingAuth(false);
+    } catch (err) {
+      console.error("❌ Simple auth check failed:", err);
+      setLoading(false);
+      setCheckingAuth(false);
+    }
+  };
 
   const updateRegistrationData = (data: Partial<UserRegistrationData>) => {
     const updated = { ...registrationData, ...data };
@@ -84,6 +124,17 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUserData(null);
+      localStorage.clear();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -93,6 +144,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         clearRegistrationData,
         setUserData: handleSetUserData,
         updateUserData,
+        loading,
+        checkingAuth,
+        logout,
       }}
     >
       {children}

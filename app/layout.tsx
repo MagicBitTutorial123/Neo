@@ -4,6 +4,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import { SidebarProvider } from "@/context/SidebarContext";
+import SimpleRouteProtection from "@/components/SimpleRouteProtection";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -28,7 +29,11 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <UserProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <SidebarProvider>
+            <SimpleRouteProtection>
+              {children}
+            </SimpleRouteProtection>
+          </SidebarProvider>
         </UserProvider>
       </body>
     </html>

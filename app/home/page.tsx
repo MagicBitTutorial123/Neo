@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
 import { useUser } from "@/context/UserContext";
+import BasicAuthGuard from "@/components/BasicAuthGuard";
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -50,7 +51,12 @@ export default function HomePage() {
       router.replace("/home");
       setIsNewUser(true);
     }
-  }, [searchParams, router]);
+    
+    // Also check if user is new based on mission progress
+    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
+      setIsNewUser(true);
+    }
+  }, [searchParams, router, userData]);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -355,22 +361,40 @@ export default function HomePage() {
 
   // Get user data from context or localStorage fallback
   
-  // Check if user is new based on mission progress or isNewUser flag
+  // Check if user came from signup flow (newUser=true in URL)
+  const isFromSignup = searchParams.get("newUser") === "true";
   
+  // Show onboarding ONLY for new users who came from signup flow
+  // Existing users (from signin) should see dashboard directly
+  const shouldShowOnboarding = isNewUser && isFromSignup;
+
+  console.log("🔍 User data:", userData);
+  console.log("🔍 Is new user:", isNewUser);
+  console.log("🔍 Mission progress:", userData?.missionProgress);
+  console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
+  console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
+  console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
+  console.log("🔍 Final isNewUser calculation:", isNewUser);
+  console.log("🔍 isFromSignup:", isFromSignup);
+  console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
-      {/* Side Navbar */}
-      <SideNavbar />
-      {/* Main Content */}
-      <main
-        className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
-        style={{
-          marginLeft: sidebarCollapsed ? "80px" : "260px",
-        }}
-      >
-        {isNewUser ? newUserContent : defaultHomeContent}
-      </main>
-    </div>
+    <BasicAuthGuard>
+      <div className="flex min-h-screen bg-[#F8F9FC] overflow-x-hidden">
+        {/* Side Navbar */}
+        <SideNavbar />
+        {/* Main Content */}
+        <main
+          className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
+          style={{
+            marginLeft: sidebarCollapsed ? "80px" : "260px",
+          }}
+        >
+          
+          
+          {shouldShowOnboarding ? newUserContent : defaultHomeContent}
+        </main>
+      </div>
+    </BasicAuthGuard>
   );
 }

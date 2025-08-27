@@ -16,6 +16,11 @@ export default function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps
 
   useEffect(() => {
     checkAuth();
+    
+    // Set up interval to check auth every few seconds
+    const interval = setInterval(checkAuth, 3000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const checkAuth = async () => {
@@ -27,6 +32,8 @@ export default function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps
       
       if (!user || error) {
         console.log("❌ User not authenticated, redirecting to:", redirectTo);
+        console.log("🚫 Attempted to access protected route:", window.location.pathname);
+        
         // Use hard redirect to prevent back navigation
         window.location.href = redirectTo;
         return;
@@ -43,6 +50,14 @@ export default function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps
       setLoading(false);
     }
   };
+
+  // Additional protection: check on every render
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      console.log("🚫 Unauthorized access detected, redirecting to:", redirectTo);
+      window.location.href = redirectTo;
+    }
+  }, [loading, isAuthenticated, redirectTo]);
 
   // Show loading while checking authentication
   if (loading) {
