@@ -38,6 +38,11 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   const [latestDigitalByPin, setLatestDigitalByPin] = useState({});
   const [widgetData, setWidgetData] = useState({});
   const [sensorHistory, setSensorHistory] = useState({});
+  
+  // Python code editing state
+  const [editableCode, setEditableCode] = useState("");
+  const [codeHasBeenEdited, setCodeHasBeenEdited] = useState(false);
+  const [showCodeResetWarning, setShowCodeResetWarning] = useState(false);
 
   const workspaceRef = useRef(null);
 
@@ -547,8 +552,11 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       }
     } else if (activeTab == "Code") {
       generateCode();
+      // Initialize editable code when switching to Code tab
+      setEditableCode(generatedCode);
+      setCodeHasBeenEdited(false);
     }
-  }, [activeTab]);
+  }, [activeTab, generatedCode]);
 
   // Manual save function for workspace
   const generateCode = () => {
@@ -628,6 +636,47 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       window.removeEventListener("bleConnection", handleBleConnection);
   }, []);
 
+
+  // Handle tab switching with code editing warning
+  const handleTabSwitch = (newTab) => {
+    if (activeTab === "Code" && newTab === "Blocks" && codeHasBeenEdited) {
+      setShowCodeResetWarning(true);
+    } else {
+      setActiveTab(newTab);
+      if (newTab === "Code") {
+        setEditableCode(generatedCode);
+        setCodeHasBeenEdited(false);
+      }
+    }
+  };
+
+  // Handle code reset confirmation
+  const handleCodeResetConfirm = () => {
+    setShowCodeResetWarning(false);
+    setCodeHasBeenEdited(false);
+    setActiveTab("Blocks");
+    // Reset the editable code to match the generated code
+    setEditableCode(generatedCode);
+  };
+
+  // Handle code reset cancellation
+  const handleCodeResetCancel = () => {
+    setShowCodeResetWarning(false);
+    // Stay on Code tab
+  };
+
+  // Function to get the current code (either edited or generated)
+  const getCurrentCode = () => {
+    if (activeTab === "Code" && codeHasBeenEdited) {
+      return editableCode;
+    }
+    return generatedCode;
+  };
+
+  // Initialize editable code when component loads
+  useEffect(() => {
+    setEditableCode(generatedCode);
+  }, [generatedCode]);
 
   // Handle dashboard state
   useEffect(() => {
@@ -867,7 +916,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         {/* Tab Navigation */}
         <div className="absolute top-0 right-4 m-2 flex items-center gap-0 z-20">
           <button
-            onClick={() => setActiveTab("Blocks")}
+            onClick={() => handleTabSwitch("Blocks")}
             className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150 ${
               activeTab === "Blocks"
                 ? "bg-white border border-blue-400 text-black shadow-sm"
@@ -880,20 +929,23 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
           </button>
 
           <button
-            onClick={() => setActiveTab("Code")}
+            onClick={() => handleTabSwitch("Code")}
             className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150 ${
               activeTab === "Code"
                 ? "bg-white border-blue-400 text-blue-900 shadow-sm"
                 : "bg-blue-100 border-blue-200 text-blue-800 hover:bg-blue-200"
-            } rounded-none`}
+            } rounded-none relative`}
             style={{ minWidth: 120 }}
           >
             <Image src={codingIcon} alt="Code" className="w-5 h-5" />
             <span className="ml-1 font-bold">Code</span>
+            {codeHasBeenEdited && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+            )}
           </button>
 
           <button
-            onClick={() => setActiveTab("Dashboard")}
+            onClick={() => handleTabSwitch("Dashboard")}
             className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150 ${
               activeTab === "Dashboard"
                 ? "bg-white border-blue-400 text-blue-900 shadow-sm"
@@ -926,10 +978,18 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
             <Editor
               height="90vh"
               defaultLanguage="python"
-              value={generatedCode}
+              value={editableCode}
+              onChange={(value) => {
+                setEditableCode(value);
+                if (value !== generatedCode) {
+                  setCodeHasBeenEdited(true);
+                } else {
+                  setCodeHasBeenEdited(false);
+                }
+              }}
               theme="vs-light"
               options={{
-                readOnly: true,
+                readOnly: false,
                 padding: { top: 40, bottom: 20, left: 20, right: 20 },
                 minimap: false,
                 scrollBeyondLastLine: false,
@@ -1145,6 +1205,43 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
           )}
         </div>
       </div>
+      
+      {/* Code Reset Warning Modal */}
+      {showCodeResetWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-90 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl border border-gray-200">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">Code Will Be Reset</h3>
+              </div>
+            </div>
+            <div className="mb-6">
+              <p className="text-sm text-gray-600">
+                You've made changes to the Python code. Switching back to Blocks will reset your manual edits and regenerate the code from the blocks.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCodeResetCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Stay on Code
+              </button>
+              <button
+                onClick={handleCodeResetConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Reset & Switch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
