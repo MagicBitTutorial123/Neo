@@ -879,6 +879,7 @@ export default function MissionPage() {
                 onConnectionTypeChange={onConnectionTypeChange}
                 connectionType={connectionType}
                 isUploading={isUploading}
+                isRunning={isRunning}
               />
             </div>
           )}

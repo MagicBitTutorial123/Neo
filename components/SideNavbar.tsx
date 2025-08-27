@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { useSidebar } from "@/context/SidebarContext";
+import { supabase } from "@/lib/supabaseClient";
 
 /** Vertical ellipsis icon */
 const EllipsisV = ({ size = 20 }: { size?: number }) => (

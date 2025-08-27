@@ -250,15 +250,18 @@ export default function Playground() {
         if (!device || !device.gatt) {
           throw new Error("No GATT available on device");
         }
+
         server.current = await device.gatt.connect();
         console.log(server.current);
         const service = await server.current?.getPrimaryService(
           "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
         );
+        
         console.log("service: ", service);
         const characteristic = await service.getCharacteristic(
           "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
         );
+        
         // Subscribe to notifications from TX characteristic
         const notifyCharacteristic = (await service.getCharacteristic(
           "6e400003-b5a3-f393-e0a9-e50e24dcca9e"

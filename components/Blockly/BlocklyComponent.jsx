@@ -18,10 +18,14 @@ import "@/components/Blockly/customblocks/magicbitblocks";
 import "@/components/Blockly/customblocks/keyboardBlocks";
 import AIChatbot from "@/components/AI/chatbot";
 import Image from "next/image";
+import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
 export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
+  // Sidebar context
+  const { sidebarCollapsed } = useSidebar();
+  
   // State management
   const [activeTab, setActiveTab] = useState("Blocks");
   const [expandMenu, setExpandMenu] = useState(false);
@@ -306,6 +310,10 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   useEffect(() => {
     if (activeTab !== "Blocks") return;
 
+    // Calculate sidebar width and toolbox position
+    const sidebarWidth = 120;
+    const toolboxLeftMargin = sidebarWidth -100; 
+
     const style = document.createElement("style");
     style.id = "blockly-dynamic-styles";
     style.innerHTML = `
@@ -314,17 +322,20 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         border-radius: 999px;
       }
 
+      
+
       .blocklyToolboxDiv {
         width: 70px !important;
         min-width: 70px !important;
         max-width: 70px !important;
+
         height: auto !important;
         max-height: 90vh !important;
         overflow: visible !important;
         position: fixed !important;
         z-index: 100 !important;
         margin-top: 0.5rem !important;
-        margin-left: 25px !important;
+        margin-left: ${toolboxLeftMargin}px !important;
         padding: 1.5rem 0.25rem !important;
         background-color: #CCE4FF !important;
         display: flex !important;
@@ -393,6 +404,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       background-color: var(--selected-category-color, #2196f3) !important;
       border: 3px solid white !important;
       box-shadow: 0 0 0 2px var(--selected-category-color, #2196f3) !important;
+      
     }
 
     .blocklyTreeLabel {
@@ -469,7 +481,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         document.head.removeChild(existingStyle);
       }
     };
-  }, [activeTab]);
+  }, [activeTab, sidebarCollapsed]);
 
   // Initialize Blockly workspace
   const initializeWorkspace = (element) => {
@@ -838,11 +850,19 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
     );
   };
 
+  // Calculate dynamic margin based on sidebar state
+  const sidebarWidth = sidebarCollapsed ? 80 : 260;
+  const containerMarginLeft = sidebarWidth + 12; // Add some space from sidebar edge
+
   return (
     <div className="h-full bg-white flex flex-col">
       <div
-        className="relative gap-3px mx-3 my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
-        style={{ borderRadius: "48px" }}
+        className="relative gap-3px my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
+        style={{ 
+          borderRadius: "48px",
+          marginLeft: `${containerMarginLeft}px`,
+          marginRight: "12px"
+        }}
       >
         {/* Tab Navigation */}
         <div className="absolute top-0 right-4 m-2 flex items-center gap-0 z-20">
@@ -887,7 +907,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         </div>
 
         {/* Main Content Area */}
-        <div className="relative z-5 flex-grow w-full">
+        <div className="z-5 flex-grow w-full">
           {/* Blocks Tab */}
           {activeTab === "Blocks" && (
             <div

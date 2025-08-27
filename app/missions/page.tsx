@@ -15,18 +15,18 @@ export default function MissionsPage() {
   const [selectedMissionIdx, setSelectedMissionIdx] = useState(completed);
   const { sidebarCollapsed } = useSidebar();
 
-  // Listen for sidebar collapse state changes
-  React.useEffect(() => {
-    const handleSidebarCollapsed = (event: CustomEvent) => {
-      setSidebarCollapsed(event.detail.collapsed);
-    };
+  // // Listen for sidebar collapse state changes
+  // React.useEffect(() => {
+  //   const handleSidebarCollapsed = (event: CustomEvent) => {
+  //     setSidebarCollapsed(event.detail.collapsed);
+  //   };
 
-    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+  //   window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
     
-    return () => {
-      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
-    };
-  }, []);
+  //   return () => {
+  //     window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+  //   };
+  // }, []);
 
   return (
     <div className="flex min-h-screen min-w-screen h-screen w-screen bg-white overflow-hidden max-w-screen max-h-screen">

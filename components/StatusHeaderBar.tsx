@@ -23,6 +23,7 @@ interface HeaderProps {
   connectionStatus: string;
   connectionType?: "bluetooth" | "serial";
   isUploading?: boolean;
+  isRunning?: boolean;
 }
 
 export default function Header({
@@ -44,6 +45,7 @@ export default function Header({
   setConnectionStatus,
   connectionType = "bluetooth",
   isUploading = false,
+  isRunning = false,
 }: HeaderProps) {
   const [timerValue, setTimerValue] = useState(0);
   const { sidebarCollapsed: contextSidebarCollapsed } = useSidebar();
