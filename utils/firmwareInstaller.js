@@ -414,10 +414,10 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
       );
     }
 
-    // Clean exit
+    // Clean exit - close writers but keep port open
     try { await writer.close(); } catch {}
     try { await outputDone; } catch {}
-    try { await port.close(); } catch {}
+    // Keep port open for continued use
     
     return installedCount;
     
