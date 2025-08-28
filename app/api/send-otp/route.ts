@@ -4,6 +4,17 @@ import twilio from 'twilio';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Type definitions for global storage
+interface OTPData {
+  otp: string;
+  expiresAt: number;
+}
+
+interface GlobalWithOTP {
+  otpStorage?: Map<string, OTPData>;
+  otpCleanupInterval?: NodeJS.Timeout;
+}
+
 // Initialize SendGrid
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -16,25 +27,27 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
 
 // Simple in-memory OTP storage (use Redis/database in production)
 // Use a more persistent approach for development
-let otpStorage: Map<string, { otp: string; expiresAt: number }>;
+let otpStorage: Map<string, OTPData>;
 
 // Initialize OTP storage with better persistence
+const globalWithOTP = global as unknown as GlobalWithOTP;
+
 if (typeof global !== 'undefined') {
-  if (!(global as any).otpStorage) {
-    (global as any).otpStorage = new Map<string, { otp: string; expiresAt: number }>();
+  if (!globalWithOTP.otpStorage) {
+    globalWithOTP.otpStorage = new Map<string, OTPData>();
     console.log('🔧 Initialized new global OTP storage');
   } else {
-    console.log('🔧 Using existing global OTP storage, size:', (global as any).otpStorage.size);
+    console.log('🔧 Using existing global OTP storage, size:', globalWithOTP.otpStorage.size);
   }
-  otpStorage = (global as any).otpStorage;
+  otpStorage = globalWithOTP.otpStorage;
 } else {
-  otpStorage = new Map<string, { otp: string; expiresAt: number }>();
+  otpStorage = new Map<string, OTPData>();
   console.log('🔧 Initialized local OTP storage (no global available)');
 }
 
 // Clean up expired OTPs every 5 minutes
-if (typeof global !== 'undefined' && !(global as any).otpCleanupInterval) {
-  (global as any).otpCleanupInterval = setInterval(() => {
+if (typeof global !== 'undefined' && !globalWithOTP.otpCleanupInterval) {
+  globalWithOTP.otpCleanupInterval = setInterval(() => {
     const now = Date.now();
     let cleanedCount = 0;
     for (const [key, value] of otpStorage.entries()) {
@@ -52,9 +65,9 @@ if (typeof global !== 'undefined' && !(global as any).otpCleanupInterval) {
 // File-based OTP storage functions for development
 const OTP_STORAGE_FILE = path.join(process.cwd(), 'app', 'api', 'otp-storage.json');
 
-async function saveOTPToFile(key: string, otpData: { otp: string; expiresAt: number }) {
+async function saveOTPToFile(key: string, otpData: OTPData) {
   try {
-    let storageData: { otps: Record<string, { otp: string; expiresAt: number }>; lastUpdated: string | null } = { 
+    let storageData: { otps: Record<string, OTPData>; lastUpdated: string | null } = { 
       otps: {}, 
       lastUpdated: null 
     };
@@ -62,7 +75,7 @@ async function saveOTPToFile(key: string, otpData: { otp: string; expiresAt: num
     try {
       const fileContent = await fs.readFile(OTP_STORAGE_FILE, 'utf-8');
       storageData = JSON.parse(fileContent);
-    } catch (error) {
+    } catch {
       console.log('📁 Creating new OTP storage file');
     }
     
@@ -76,16 +89,6 @@ async function saveOTPToFile(key: string, otpData: { otp: string; expiresAt: num
   }
 }
 
-async function getOTPFromFile(key: string) {
-  try {
-    const fileContent = await fs.readFile(OTP_STORAGE_FILE, 'utf-8');
-    const storageData = JSON.parse(fileContent);
-    return storageData.otps[key] || null;
-  } catch (error) {
-    console.log('📁 No OTP storage file found or error reading');
-    return null;
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -170,13 +173,15 @@ export async function POST(request: NextRequest) {
         console.log('✅ Email OTP sent successfully via SendGrid:', emailResponse);
         console.log('📧 Message ID:', emailResponse?.[0]?.headers?.['x-message-id']);
         console.log('📧 Check your email for OTP:', otp);
-      } catch (emailError: any) {
+      } catch (emailError: unknown) {
         console.error('❌ Failed to send email OTP:', emailError);
-        console.error('❌ Error details:', {
-          message: emailError.message,
-          code: emailError.code,
-          response: emailError.response?.body
-        });
+        if (emailError instanceof Error) {
+          console.error('❌ Error details:', {
+            message: emailError.message,
+            code: (emailError as any).code,
+            response: (emailError as any).response?.body
+          });
+        }
       }
     } else {
       console.log('⚠️ SendGrid API key not configured - skipping email');
@@ -204,13 +209,15 @@ export async function POST(request: NextRequest) {
         console.log('✅ Message status:', whatsappMessage.status);
         console.log('📱 WhatsApp message body:', `🔐 Your BuddyNeo verification code is: ${otp}\n\nThis code will expire in 10 minutes.`);
         console.log('📱 Check WhatsApp for OTP:', otp);
-      } catch (whatsappError: any) {
+      } catch (whatsappError: unknown) {
         console.error('❌ Failed to send WhatsApp OTP:', whatsappError);
-        console.error('❌ Error details:', {
-          message: whatsappError.message,
-          code: whatsappError.code,
-          status: whatsappError.status
-        });
+        if (whatsappError instanceof Error) {
+          console.error('❌ Error details:', {
+            message: whatsappError.message,
+            code: (whatsappError as any).code,
+            status: (whatsappError as any).status
+          });
+        }
       }
     } else {
       console.log('⚠️ Twilio credentials not configured - skipping WhatsApp');

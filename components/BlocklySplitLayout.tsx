@@ -1,15 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import MissionIntro from "@/components/MissionIntro";
-import Header from "@/components/StatusHeaderBar";
-import CongratsCard from "@/components/CongratsCard";
-import StepQuestionCard from "@/components/StepQuestionCard";
-import MCQCard from "@/components/MCQCard";
-import HelpNeoOverlay from "@/components/HelpNeoOverlay";
-import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
-import { useRouter } from "next/navigation";
-import { missions } from "@/data/missions";
-import { useUser } from "@/context/UserContext";
+// import Header from "@/components/StatusHeaderBar";
+// import CongratsCard from "@/components/CongratsCard";
+// import StepQuestionCard from "@/components/StepQuestionCard";
+// import MCQCard from "@/components/MCQCard";
+// import HelpNeoOverlay from "@/components/HelpNeoOverlay";
+// import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
+// import { useRouter } from "next/navigation";
+// import { missions } from "@/data/missions";
+// import { useUser } from "@/context/UserContext";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 
@@ -23,14 +23,14 @@ export default function BlocklySplitLayout({
   onDontWorryChange,
   onCongratsChange,
   onHelpAcceptedChange,
-  onTryAgain,
+  // onTryAgain,
   onMCQAnswer,
   onMCQChange,
-  fromNo = false,
+  // fromNo = false,
   onCurrentStepChange,
   onFinish,
   onUploadCode,
-  isUploading = false,
+  // isUploading = false,
 }: {
   mission: any;
   sidebarCollapsed?: boolean;
@@ -201,8 +201,8 @@ export default function BlocklySplitLayout({
     Math.min(MAX_PANEL_WIDTH, userPanelWidth)
   );
   const [isResizing, setIsResizing] = useState(false);
-  const router = useRouter();
-  const { userData, updateUserData, setUserData } = useUser();
+  // const router = useRouter();
+  // const { userData, updateUserData, setUserData } = useUser();
 
   // Resizer functionality
   const handleMouseDown = (e: React.MouseEvent) => {

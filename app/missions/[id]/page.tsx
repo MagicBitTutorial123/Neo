@@ -8,7 +8,6 @@ import BlocklySplitLayout from "@/components/BlocklySplitLayout";
 import SideNavbar from "@/components/SideNavbar";
 import Header from "@/components/StatusHeaderBar";
 import CountdownTimer from "@/components/CountdownTimer";
-import StepQuestionCard from "@/components/StepQuestionCard";
 import MCQCard from "@/components/MCQCard";
 import StepRetryCard from "@/components/StepRetryCard";
 import StepSuccessCard from "@/components/StepSuccessCard";
@@ -804,7 +803,7 @@ export default function MissionPage() {
                     Nice!
                   </div>
                   <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
-                    Let's see if you are correct or wrong.
+                    Let&apos;s see if you are correct or wrong.
                   </div>
                   <div className="flex justify-start">
                     <button
@@ -826,7 +825,7 @@ export default function MissionPage() {
             >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
                 <div className="mb-4 text-3xl font-extrabold text-center">
-                  Don't worry!
+                  Don&apos;t worry!
                 </div>
                 <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
                   Check the images of elevation and try again.
@@ -1093,7 +1092,7 @@ export default function MissionPage() {
                     Nice!
                   </div>
                   <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
-                    Let's see if you are correct or wrong.
+                    Let&apos;s see if you are correct or wrong.
                   </div>
                   <div className="flex justify-start">
                     <button
@@ -1115,7 +1114,7 @@ export default function MissionPage() {
             >
               <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
                 <div className="mb-4 text-3xl font-extrabold text-center">
-                  Don't worry!
+                  Don&apos;t worry!
                 </div>
                 <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
                   Check the images of elevation and try again.

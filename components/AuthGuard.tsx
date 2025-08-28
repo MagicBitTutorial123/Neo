@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 interface AuthGuardProps {
@@ -12,7 +12,7 @@ interface AuthGuardProps {
 export default function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  // const router = useRouter();
 
   useEffect(() => {
     checkAuth();

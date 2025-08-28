@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { APP_BASE_URL } from "@/lib/env";
 import NotificationWrapper from "@/components/NotificationWrapper";
 import { supabase } from "@/lib/supabaseClient";
@@ -10,7 +9,6 @@ import { supabase } from "@/lib/supabaseClient";
 // Using centralized Supabase client configured via env vars
 
 export default function Home() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import SideNavbar from "@/components/SideNavbar";
 import FirmwareInstaller from "@/components/FirmwareInstaller";
-import { useUser } from "@/context/UserContext";
+// import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useSidebar } from "@/context/SidebarContext";
 
@@ -19,7 +19,7 @@ const joinName = (first: string, last: string) =>
   [first.trim(), last.trim()].filter(Boolean).join(" ");
 
 export default function SettingsPage() {
-  const { registrationData, userData, updateUserData } = useUser();
+  // const { registrationData, userData, updateUserData } = useUser();
   const { sidebarCollapsed } = useSidebar();
 
   // Form fields
@@ -38,17 +38,17 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'subscription' | 'firmware' | 'delete'>('profile');
 
   // Supabase user data
-  const [supabaseUserData, setSupabaseUserData] = useState<{
-    full_name?: string;
-    avatar?: string;
-    email?: string;
-    phone?: string;
-    bio?: string;
-  } | null>(null);
+  // const [supabaseUserData, setSupabaseUserData] = useState<{
+  //   full_name?: string;
+  //   avatar?: string;
+  //   email?: string;
+  //   phone?: string;
+  //   bio?: string;
+  // } | null>(null);
 
   // localStorage-backed values (same as sidebar)
-  const [lsName, setLsName] = useState<string | null>(null);
-  const [lsAvatar, setLsAvatar] = useState<string | null>(null);
+  // const [lsName, setLsName] = useState<string | null>(null);
+  // const [lsAvatar, setLsAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch user data from Supabase
