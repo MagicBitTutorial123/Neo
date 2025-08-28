@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import "blockly/javascript";
 import "@/components/Blockly/customblocks/magicbitblocks";
 import "@/components/Blockly/customblocks/keyboardBlocks";
@@ -460,7 +460,7 @@ export default function Playground() {
     }
   };
 
-  const sendBleControl = async (payload: BleControlPayload) => {
+  const sendBleControl = useCallback(async (payload: BleControlPayload) => {
     try {
       if (!writeCharacteristicRef.current) return;
       const text = JSON.stringify(payload) + "\n";
@@ -469,7 +469,7 @@ export default function Playground() {
     } catch (e) {
       console.error("BLE control send failed", e);
     }
-  };
+  }, []);
 
   const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
     if (isConnected) onConnectToggle(false);
