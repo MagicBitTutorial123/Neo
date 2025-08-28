@@ -81,7 +81,22 @@ const firmwareInstaller = async (portRef, onProgress) => {
     if (needsMicroPython) {
       if (onProgress) onProgress(15, `Flashing MicroPython firmware...`);
       await flashMicroPythonFirmware(esploader, onProgress);
-      if (onProgress) onProgress(40, `MicroPython flashed successfully. Installing Python files...`);
+      if (onProgress) onProgress(40, `MicroPython flashed successfully. Preparing to install Python files...`);
+      // Important: release ESPLoader transport so we can use the port for REPL
+      try {
+        await esploader.transport.disconnect();
+      } catch (e) {
+        console.log("Error disconnecting ESPLoader transport (ignored):", e);
+      }
+      esploader = null;
+      // Ensure the serial port is fully free before continuing
+      try {
+        if (port?.readable?.locked || port?.writable?.locked) {
+          await port.close();
+        }
+      } catch {}
+      // Short delay to allow device reboot and port settle
+      await new Promise(r => setTimeout(r, 1000));
     } else {
       if (onProgress) onProgress(15, `MicroPython found. Installing Python files...`);
     }
@@ -245,7 +260,7 @@ gc.collect()           # Run a garbage collection
 };
 
 // Function to check if MicroPython firmware needs to be flashed
-const checkIfMicroPythonNeeded = async (port, onProgress) => {
+export const checkIfMicroPythonNeeded = async (port, onProgress) => {
   let writer = null;
   let reader = null;
   
@@ -419,98 +434,68 @@ const installPythonFiles = async (port, firmwareFiles, onProgress) => {
   let encoder = null;
   let outputDone = null;
   let writer = null;
-  let reader = null;
   
   try {
-    // Ensure port is open and ready
+    // Ensure port is open and streams are unlocked
+    if (port?.readable?.locked || port?.writable?.locked) {
+      try { await port.close(); } catch {}
+    }
     if (!port.readable || !port.writable) {
       await port.open({ baudRate: 115200 });
     }
     
     // Wait for MicroPython to be ready after boot
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Use the same efficient approach as usbUpload.js
     encoder = new TextEncoderStream();
     outputDone = encoder.readable.pipeTo(port.writable);
     writer = encoder.writable.getWriter();
-    reader = port.readable.getReader();
     
-    // Enter raw REPL mode
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // Simple REPL entry (like usbUpload.js)
     await writer.write('\x03'); // Ctrl+C to interrupt
-    await new Promise((r) => setTimeout(r, 100));
-    await writer.write('\x01'); // Ctrl+A - enter raw REPL
-    await new Promise((r) => setTimeout(r, 100));
+    await sleep(20);
+    await writer.write('\x01'); // Ctrl+A - enter raw REPL  
+    await sleep(20);
+    await writer.write('\x02'); // Ctrl+B - return to normal REPL
+    await sleep(100);
 
     let installedCount = 0;
     const totalFiles = firmwareFiles.length;
 
     for (const file of firmwareFiles) {
-      try {
-        if (onProgress) onProgress(
-          42 + (installedCount / totalFiles) * 55, 
-          `Installing ${file.name}...`
-        );
+      if (onProgress) onProgress(
+        42 + (installedCount / totalFiles) * 55, 
+        `Installing ${file.name}...`
+      );
 
-        // Build script for this single file and execute, verifying 'OK'
-        const lines = file.content.split('\n');
-        await writer.write(`f = open('${file.name}', 'w')\r\n`);
-        for (const line of lines) {
-          const sanitized = JSON.stringify(line + "\n");
-          await writer.write(`f.write(${sanitized})\r\n`);
-        }
-        await writer.write("f.close()\r\n");
-        await writer.write("print('WRITE_OK')\r\n");
-        
-        // Execute the buffered script for this file
-        await writer.write('\x04'); // Ctrl+D to execute
-
-        // Read execution response, ensure OK/WRITE_OK
-        let resp = '';
-        const start = Date.now();
-        const decoder = new TextDecoder();
-        while (Date.now() - start < 5000) {
-          const { value, done } = await Promise.race([
-            reader.read(),
-            new Promise((resolve) => setTimeout(() => resolve({ timeout: true }), 200)),
-          ]);
-          if (value && !done) {
-            resp += decoder.decode(value);
-            if (resp.includes('WRITE_OK') && resp.includes('OK')) break;
-            if (resp.includes('Traceback')) {
-              throw new Error(`MicroPython error writing ${file.name}: ${resp}`);
-            }
-          }
-          if (done) break;
-        }
-        if (!(resp.includes('WRITE_OK') && resp.includes('OK'))) {
-          throw new Error(`No confirmation from device while writing ${file.name}`);
-        }
-
-        installedCount++;
-        if (onProgress) onProgress(
-          42 + (installedCount / totalFiles) * 55, 
-          `Installed ${file.name} (${installedCount}/${totalFiles})`
-        );
-
-      } catch (error) {
-        console.error(`Error installing ${file.name}:`, error);
-        throw new Error(`Failed to install ${file.name}: ${error.message}`);
+      console.log(`Writing ${file.name}...`);
+      
+      // Open file for writing
+      await writer.write(`f = open('${file.name}', 'w')\r\n`);
+      
+      // Write content line by line (simple and fast like usbUpload.js)
+      const lines = file.content.split('\n');
+      for (const line of lines) {
+        await writer.write(`f.write(${JSON.stringify(line + '\n')})\r\n`);
       }
+      
+      // Close file
+      await writer.write("f.close()\r\n");
+      
+      installedCount++;
+      if (onProgress) onProgress(
+        42 + (installedCount / totalFiles) * 55, 
+        `Installed ${file.name} (${installedCount}/${totalFiles})`
+      );
     }
 
-    // Create a reset trigger file
-    await writer.write("f = open('reset.txt', 'w')\r\n");
-    await new Promise((r) => setTimeout(r, 50));
-    await writer.write("f.write('1')\r\n");
-    await new Promise((r) => setTimeout(r, 50));
-    await writer.write("f.close()\r\n");
-    await new Promise((r) => setTimeout(r, 500));
-
-    // Exit raw REPL mode to friendly prompt
-    await writer.write('\x02'); // Ctrl+B
-
-    await writer.close();
-    await outputDone;
+    // Clean exit
+    try { await writer.close(); } catch {}
+    try { await outputDone; } catch {}
+    try { await port.close(); } catch {}
     
     return installedCount;
     
