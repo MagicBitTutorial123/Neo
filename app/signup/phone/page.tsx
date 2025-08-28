@@ -22,6 +22,8 @@ export default function SignupPhone() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [manualEmail, setManualEmail] = useState("");
+  const [phoneValid, setPhoneValid] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
 
   // Ensure email is available from localStorage
   useEffect(() => {
@@ -115,9 +117,23 @@ export default function SignupPhone() {
     localStorage.removeItem("otpSkipped");
   }, []);
   
+  // Validate phone number whenever it changes
+  useEffect(() => {
+    if (phone.length === 0) {
+      setPhoneValid(false);
+      setPhoneError("");
+    } else if (phone.length !== 10) {
+      setPhoneValid(false);
+      setPhoneError("Phone number must be exactly 10 digits");
+    } else {
+      setPhoneValid(true);
+      setPhoneError("");
+    }
+  }, [phone]);
+
   const handleNext = async () => {
-    if (!phone || phone.length < 7) {
-      alert("Please enter a valid phone number");
+    if (!phoneValid) {
+      alert(phoneError || "Please enter a valid phone number");
       return;
     }
 
@@ -294,10 +310,16 @@ export default function SignupPhone() {
               handleNext();
             }}
           >
-            <div
-              className="flex items-center w-full bg-white rounded-full shadow-sm px-4 py-2 relative"
-              style={{ height: 64 }}
-            >
+                         <div
+               className={`flex items-center w-full bg-white rounded-full shadow-sm px-4 py-2 relative ${
+                 phone && !phoneValid 
+                   ? 'border-2 border-red-500' 
+                   : phone && phoneValid 
+                   ? 'border-2 border-green-500' 
+                   : ''
+               }`}
+               style={{ height: 64 }}
+             >
               {/* Country dropdown */}
               <button
                 type="button"
@@ -384,9 +406,17 @@ export default function SignupPhone() {
                   We need your email to send the verification code
                 </p>
               </div>
-            )}
+                         )}
 
-            <div className="text-center text-sm text-gray-600 mb-4">
+             {/* Phone validation feedback */}
+             {phoneError && (
+               <p className="text-red-500 text-xs mt-2 text-center">{phoneError}</p>
+             )}
+             {phone && phoneValid && (
+               <p className="text-green-500 text-xs mt-2 text-center">✓ Valid phone number format (10 digits)</p>
+             )}
+
+             <div className="text-center text-sm text-gray-600 mb-4">
               <p>We'll send you a verification code via WhatsApp and email</p>
               <p className="text-xs mt-1">You can verify OTP or skip to continue</p>
             </div>
