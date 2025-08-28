@@ -236,7 +236,7 @@ export default function SettingsPage() {
   );
 
   const phoneValid = useMemo(
-    () => /^[0-9+\s-]{7,}$/.test(phone),
+    () => /^[0-9+\s-]{10}$/.test(phone),
     [phone]
   );
 
@@ -543,10 +543,27 @@ export default function SettingsPage() {
                   <label className="text-sm text-[#6B7280]">Phone</label>
                   <input
                     type="tel"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                    className={`rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black ${
+                      phone && !phoneValid 
+                        ? 'border-red-500 focus:ring-red-200' 
+                        : phone && phoneValid 
+                        ? 'border-green-500 focus:ring-green-200' 
+                        : 'border-[#E5E7EB]'
+                    }`}
                     value={phone}
                     onChange={(ev) => setPhone(ev.target.value)}
+                    placeholder="Enter phone number"
                   />
+                  {phone && !phoneValid && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Phone number must be exactly 10 digits and can contain +, -, and spaces
+                    </p>
+                  )}
+                  {phone && phoneValid && (
+                    <p className="text-xs text-green-500 mt-1">
+                      ✓ Valid phone number format (10 digits)
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-2 flex flex-col gap-1">
                   <label className="text-sm text-[#6B7280]">Bio</label>
@@ -610,11 +627,27 @@ export default function SettingsPage() {
                 <label className="text-sm text-[#6B7280]">Phone</label>
                 <input
                   type="tel"
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                  className={`rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black ${
+                    phone && !phoneValid 
+                      ? 'border-red-500 focus:ring-red-200' 
+                      : phone && phoneValid 
+                      ? 'border-green-500 focus:ring-green-200' 
+                      : 'border-[#E5E7EB]'
+                  }`}
                   value={phone}
                   onChange={(ev) => setPhone(ev.target.value)}
                   placeholder="Enter phone number"
                 />
+                {phone && !phoneValid && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Phone number must be exactly 10 digits and can contain +, -, and spaces
+                  </p>
+                )}
+                {phone && phoneValid && (
+                  <p className="text-xs text-green-500 mt-1">
+                    ✓ Valid phone number format (10 digits)
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm text-[#6B7280]">Age</label>

@@ -136,11 +136,11 @@ export default function SignupAvatar() {
         throw new Error("Please enter a valid email address. Please go back to the email step.");
       }
 
-      // Validate phone format (more flexible - should be at least 10 digits)
+      // Validate phone format (exactly 10 digits)
       const cleanPhone = phone.replace(/[+\s-]/g, "");
-      if (!/^\d{10,15}$/.test(cleanPhone)) {
+      if (!/^\d{10}$/.test(cleanPhone)) {
         console.error('❌ Phone validation failed:', { phone, cleanPhone });
-        throw new Error("Please enter a valid phone number (at least 10 digits). Please go back to the phone step.");
+        throw new Error("Please enter a valid phone number (exactly 10 digits). Please go back to the phone step.");
       }
       
       console.log('📱 Phone validation passed:', { phone, cleanPhone });
