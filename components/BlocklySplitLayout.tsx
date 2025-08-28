@@ -10,7 +10,6 @@ import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import { useRouter } from "next/navigation";
 import { missions } from "@/data/missions";
 import { useUser } from "@/context/UserContext";
-import { completeMission1, completeMission2 } from "@/utils/userState";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 
