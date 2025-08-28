@@ -176,10 +176,15 @@ export async function POST(request: NextRequest) {
       } catch (emailError: unknown) {
         console.error('❌ Failed to send email OTP:', emailError);
         if (emailError instanceof Error) {
+          // Capture known optional fields without using 'any'
+          const sgError = emailError as Error & {
+            code?: string | number;
+            response?: { body?: unknown };
+          };
           console.error('❌ Error details:', {
             message: emailError.message,
-            code: (emailError as any).code,
-            response: (emailError as any).response?.body
+            code: sgError.code,
+            response: sgError.response?.body
           });
         }
       }
@@ -212,10 +217,14 @@ export async function POST(request: NextRequest) {
       } catch (whatsappError: unknown) {
         console.error('❌ Failed to send WhatsApp OTP:', whatsappError);
         if (whatsappError instanceof Error) {
+          const twilioError = whatsappError as Error & {
+            code?: string | number;
+            status?: string | number;
+          };
           console.error('❌ Error details:', {
             message: whatsappError.message,
-            code: (whatsappError as any).code,
-            status: (whatsappError as any).status
+            code: twilioError.code,
+            status: twilioError.status
           });
         }
       }

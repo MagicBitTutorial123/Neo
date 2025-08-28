@@ -634,6 +634,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
           return newHistory;
         });
       }
+
   
     };
   

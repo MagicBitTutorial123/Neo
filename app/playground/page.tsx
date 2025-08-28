@@ -222,7 +222,7 @@ export default function Playground() {
   }, [connectionStatus]);
 
   // Simple Bluetooth connection
-  const connectBluetooth = async () => {
+  const connectBluetooth = useCallback(async () => {
     try {
       setConnectionStatus("connecting");
       // Request device
@@ -297,7 +297,7 @@ export default function Playground() {
               .forEach((line) => {
                 try {
                   const msg = JSON.parse(line);
-                  if (msg?.type === "analog_sensors") {
+                  if (msg?.type === "sensors") {
                       Object.entries(msg.analog).forEach(([pinStr, val]) => {
                           window.dispatchEvent(
                             new CustomEvent("sensorData", {
@@ -309,8 +309,18 @@ export default function Playground() {
                             })
                           );
                       });
+                      if (msg.ultrasound) {
+                        window.dispatchEvent(
+                          new CustomEvent("sensorData", {
+                            detail: {
+                              sensor: "ultrasound",
+                              value: msg.ultrasound,
+                            },
+                          })
+                        );
+                      }
                   }
-                } catch {
+                } catch(e) {
                   console.log("BLE raw:", line);
                 }
               });
@@ -357,7 +367,7 @@ export default function Playground() {
         }, 2000);
       }
     }
-  };
+  }, [tryingToConnect]);
 
   const clearWorkspace = () => {
     console.log("test");
@@ -487,7 +497,7 @@ export default function Playground() {
       }
     }
     connect();
-  }, [tryingToConnect]);
+  }, [connectBluetooth, tryingToConnect]);
 
   // // Listen for batch pin requests and forward to firmware (optional future multi-stream)
   useEffect(() => {
