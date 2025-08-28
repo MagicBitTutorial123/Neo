@@ -106,7 +106,7 @@ export default function MissionPage() {
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
   const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const server = useRef<BluetoothRemoteGATTServer | null>(null);
-  const [isRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
@@ -317,6 +317,7 @@ export default function MissionPage() {
         setIsConnected(true);
         console.log("USB upload completed successfully");
       }
+      setIsRunning(true); // Set running state after successful upload
     } catch (error) {
       console.error("Upload failed:", error);
       alert(
@@ -532,6 +533,22 @@ export default function MissionPage() {
     }
   };
 
+  // Stop code execution
+  const handleStop = async () => {
+    console.log("🛑 Stop button clicked from page level!");
+    try {
+      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
+        const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
+        const encoder = new TextEncoder();
+        await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
+        setIsRunning(false);
+      }
+    } catch (error) {
+      console.error("Stop failed:", error);
+      setIsRunning(false); // Set to false anyway
+    }
+  };
+
   const handleErase = () => {
     console.log("🧹 Erase button clicked from page level!");
     // If we're in blocklySplitLayout, clear the workspace
@@ -740,6 +757,7 @@ export default function MissionPage() {
                 timeAllocated={mission.intro.timeAllocated}
                 liveUsers={17}
                 onRun={handleRun}
+                onPause={handleStop}
                 onErase={handleErase}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
@@ -751,6 +769,7 @@ export default function MissionPage() {
                 onConnectionTypeChange={onConnectionTypeChange}
                 connectionType={connectionType}
                 isUploading={isUploading}
+                isRunning={isRunning}
               />
             </div>
           )}
@@ -973,6 +992,7 @@ export default function MissionPage() {
                 timeAllocated={mission.intro.timeAllocated}
                 liveUsers={17}
                 onRun={handleRun}
+                onPause={handleStop}
                 onErase={handleErase}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}

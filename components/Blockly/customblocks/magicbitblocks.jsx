@@ -224,17 +224,19 @@ pythonGenerator['magicbit_motor'] = block => {
   const side = block.getFieldValue('SIDE');
   const dir = block.getFieldValue('DIR');
   const speed = block.getFieldValue('SPEED');
+  pythonGenerator.definitions_['import_machine'] = 'from machine import Pin, PWM\nM2_IN1 = machine.PWM(18, freq=1000)\nM2_IN2 = machine.PWM(27, freq=1000)\n\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)';
+  
   if (side === 'LEFT') {
     if (dir === 'BWD') {
-      return `import machine\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)\nM1_IN1.duty(${speed})\nM1_IN2.duty(0)\n`;
+      return `M1_IN1.duty(${speed})\nM1_IN2.duty(1)\n`;
     } else {
-      return `import machine\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)\nM1_IN1.duty(0)\nM1_IN2.duty(${speed})\n`;
+      return `M1_IN1.duty(1)\nM1_IN2.duty(${speed})\n`;
     }
   } else {
     if (dir === 'FWD') {
-      return `import machine\nM2_IN1 = machine.PWM(18, freq=1000)\nM2_IN2 = machine.PWM(27, freq=1000)\nM2_IN1.duty(${speed})\nM2_IN2.duty(0)\n`;
+      return `M2_IN1.duty(${speed})\nM2_IN2.duty(1)\n`;
     } else {
-      return `import machine\nM2_IN1 = machine.PWM(18, freq=1000)\nM2_IN2 = machine.PWM(27, freq=1000)\nM2_IN1.duty(0)\nM2_IN2.duty(${speed})\n`;
+      return `M2_IN1.duty(1)\nM2_IN2.duty(${speed})\n`;
     }
   }
 };

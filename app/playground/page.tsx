@@ -73,6 +73,7 @@ export default function Playground() {
   const [dashboardActive, setDashboardActive] = useState(false);
   const [tryingToConnect, setTryingToConnect] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const [selectedSensor, setSelectedSensor] = useState<"ldr" | "ultrasound">(
     "ldr"
   );
@@ -393,6 +394,7 @@ export default function Playground() {
         await usbUpload(codeToUpload, portRef);
         setIsConnected(true);
       }
+      setIsRunning(true); // Set running state after successful upload
     } catch (error) {
       console.error("Upload failed:", error);
       alert(
@@ -402,6 +404,21 @@ export default function Playground() {
       );
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Stop code execution
+  const stopCode = async () => {
+    try {
+      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
+        const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
+        const encoder = new TextEncoder();
+        await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
+        setIsRunning(false);
+      }
+    } catch (error) {
+      console.error("Stop failed:", error);
+      setIsRunning(false); // Set to false anyway
     }
   };
 
@@ -527,6 +544,7 @@ export default function Playground() {
               liveUsers={17}
               isPlayground={true}
               onRun={uploadCode}
+              onPause={stopCode}
               timeAllocated="100"
               isConnected={isConnected}
               setIsConnected={setIsConnected}
@@ -537,6 +555,7 @@ export default function Playground() {
               onConnectionTypeChange={onConnectionTypeChange}
               connectionType={connectionType}
               isUploading={isUploading}
+              isRunning={isRunning}
             />
 
             {dashboardActive ? (
