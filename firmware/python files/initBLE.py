@@ -82,12 +82,11 @@ def process_code_upload(code_buffer):
             
             for line in lines:
                 # Convert time.sleep to asyncio.sleep
-                line = re.sub(r'time\.sleep', r'await asyncio.sleep', line)
-                if re.match(r'^\s*while\s+True\s*:', line):
-                    converted.append(line)
-                    converted.append("  await asyncio.sleep(0)")
-   
-                converted.append("    " + line)
+               if re.match(r'^\s*while\s+True\s*:', line):
+                    converted.append("    " + line)               # indent once inside async def
+                    converted.append("      await asyncio.sleep(0)")  # properly nested sleep
+               else:
+                    converted.append("    " + line)     
             
             final_code = "async def mainLoop():\n" + "\n".join(converted) + "\n"
             print(final_code)
