@@ -9,7 +9,6 @@ import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import { useRouter } from "next/navigation";
 import { missions } from "@/data/missions";
 import { useUser } from "@/context/UserContext";
-import { completeMission1, completeMission2 } from "@/utils/userState";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 
 export default function StandardMissionLayout({
@@ -200,18 +199,7 @@ export default function StandardMissionLayout({
   const handleNextMission = async () => {
     setShowCongrats(false);
 
-    // Update mission progress in backend
-    if (userData?.firebaseUid) {
-      try {
-        if (mission.id === 1) {
-          await completeMission1(userData.firebaseUid);
-        } else if (mission.id === 2) {
-          await completeMission2(userData.firebaseUid);
-        }
-      } catch (error) {
-        console.error("Failed to update mission progress:", error);
-      }
-    }
+   
 
     if (mission.id === 2) {
       setShowPlaygroundUnlocked(true);

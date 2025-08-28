@@ -5,6 +5,7 @@ import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import { APP_BASE_URL } from "@/lib/env";
 import { useSidebar } from "@/context/SidebarContext";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -491,7 +492,7 @@ export default function SideNavbar({
   const handleLogout = () => {
     updateUserData({});
     localStorage.clear();
-    router.push("https://v0tfgs7s-3000.asse.devtunnels.ms/");
+    router.push(`${APP_BASE_URL}/`);
   };
 
   // Open contact modal from Help menu

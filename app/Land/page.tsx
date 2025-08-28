@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { APP_BASE_URL } from "@/lib/env";
 import NotificationWrapper from "@/components/NotificationWrapper";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -80,7 +81,7 @@ const handleGoogleLogin = async () => {
 
             <button
               type="button"
-              onClick={() => { window.location.href = "http://localhost:3000/"; }}
+              onClick={() => { window.location.href = `${APP_BASE_URL}/`; }}
               className="w-full rounded-full py-3 text-lg font-bold font-poppins bg-[#F28B20] hover:bg-[#FF5900] text-white transition-colors flex items-center justify-center gap-3"
             >
               <svg

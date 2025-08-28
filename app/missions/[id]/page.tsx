@@ -19,6 +19,8 @@ import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { TimerPersistence } from "@/utils/timerPersistence";
 import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
+import FirmwareInstallModal from "@/components/FirmwareInstallModal";
+import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
 // Simple type declarations
 interface BluetoothDevice {
@@ -83,6 +85,7 @@ export default function MissionPage() {
   const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
+  const [showFirmwareModal, setShowFirmwareModal] = useState(false);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -164,8 +167,21 @@ export default function MissionPage() {
   // Simple cleanup
   useEffect(() => {
     return () => {
+      // Cleanup Bluetooth
       if (bluetoothDeviceRef.current?.gatt?.connected) {
         bluetoothDeviceRef.current.gatt.disconnect();
+      }
+      
+      // Cleanup Serial port
+      if (portRef.current) {
+        try {
+          const port = portRef.current as any;
+          if (port && (port.readable || port.writable)) {
+            port.close().catch(console.error);
+          }
+        } catch (error) {
+          console.log("Error closing serial port on cleanup:", error);
+        }
       }
     };
   }, []);
@@ -219,6 +235,19 @@ export default function MissionPage() {
       }
     } catch (error) {
       console.error("BLE connection failed:", error);
+      
+      // Check if user cancelled the device selection
+      if (error.name === "NotFoundError" || error.name === "NotAllowedError") {
+        console.log("Bluetooth connection canceled by user");
+        setConnectionStatus("disconnected");
+        setIsConnected(false);
+        setTryingToConnect(false); // Stop trying to connect
+        return; // Don't retry on user cancellation
+      }
+      
+      // Only retry for other types of errors if still trying to connect
+      setConnectionStatus("disconnected");
+      setIsConnected(false);
       if (tryingToConnect) {
         setTimeout(async () => {
           setTryingToConnect(false);
@@ -280,8 +309,35 @@ export default function MissionPage() {
         if (connectionType === "bluetooth") {
           setTryingToConnect(true);
         } else {
-          setIsConnected(true);
-          setConnectionStatus("connected");
+          // Serial connection - show connecting status first
+          setConnectionStatus("connecting");
+          setIsConnected(false);
+          
+          try {
+            const navSerial = (navigator as unknown as { serial: { requestPort: () => Promise<any> } }).serial;
+            let port = (portRef.current as any) || null;
+            
+            // Request port selection if needed
+            if (!port || !port.readable || !port.writable) {
+              port = await navSerial.requestPort();
+              await port.open({ baudRate: 115200 });
+              (portRef as any).current = port;
+            }
+            
+            // Only set connected after successful port opening
+            setIsConnected(true);
+            setConnectionStatus("connected");
+            
+            // Check for MicroPython and prompt installer if missing
+            const needs = await checkIfMicroPythonNeeded(port, undefined);
+            if (needs) setShowFirmwareModal(true);
+            
+          } catch (error) {
+            console.error("Serial connection failed:", error);
+            setConnectionStatus("disconnected");
+            setIsConnected(false);
+            throw error; // Re-throw to be caught by outer catch
+          }
         }
       } catch {
         setConnectionStatus("disconnected");
@@ -289,12 +345,27 @@ export default function MissionPage() {
       }
     } else {
       setConnectionStatus("disconnecting");
+      
+      // Handle Bluetooth disconnection
       if (bluetoothDeviceRef.current?.gatt?.connected) {
         bluetoothDeviceRef.current.gatt.disconnect();
       }
       bluetoothDeviceRef.current = null;
       writeCharacteristicRef.current = null;
+      
+      // Handle Serial port disconnection
+      if (portRef.current) {
+        try {
+          const port = portRef.current as any;
+          if (port && (port.readable || port.writable)) {
+            await port.close();
+          }
+        } catch (error) {
+          console.log("Error closing serial port:", error);
+        }
+      }
       portRef.current = null;
+      
       setIsConnected(false);
       setConnectionStatus("disconnected");
     }
@@ -854,6 +925,12 @@ export default function MissionPage() {
               </div>
             </div>
           )}
+          {/* Firmware Install Modal for USB only */}
+          <FirmwareInstallModal 
+            open={showFirmwareModal} 
+            onClose={() => setShowFirmwareModal(false)} 
+            portRef={portRef}
+          />
         </div>
       );
     case "blocklySplitLayout":
