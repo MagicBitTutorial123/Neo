@@ -180,6 +180,8 @@ pythonGenerator['magicbit_play_tone'] = block => {
   const freq = block.getFieldValue("FREQ");
   const duration = block.getFieldValue("DURATION");
   pythonGenerator.definitions_['import_machine_tone'] = 'from machine import Pin, PWM';
+  pythonGenerator.definitions_['import_time'] = 'import time';
+
   return `buzzer = PWM(Pin(25), freq=${freq}, duty=512)\ntime.sleep(${duration})\nbuzzer.deinit()\n`;
 };
 
