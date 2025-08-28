@@ -17,15 +17,15 @@ const firmwareInstaller = async (portRef, onProgress, abortSignal) => {
 
   try {
     // Only request port if we don't have one at all
-    if (!port) {
-      port = await navigator.serial.requestPort();
-      portRef.current = port;
-    }
+  if (!port) {
+    port = await navigator.serial.requestPort();
+    portRef.current = port;
+  }
 
     // Only open port if it's not already open and accessible
-    if (!port.readable || !port.writable) {
-      await port.open({ baudRate: 115200 });
-    }
+  if (!port.readable || !port.writable) {
+    await port.open({ baudRate: 115200 });
+  }
 
     if (onProgress) onProgress(0, `Initializing ESP32 connection...`);
     checkCancelled();
@@ -105,145 +105,34 @@ const firmwareInstaller = async (portRef, onProgress, abortSignal) => {
       // Ensure the serial port is fully free before continuing
       try {
         if (port?.readable?.locked || port?.writable?.locked) {
-          await port.close();
+    await port.close();
         }
       } catch {}
       // Short delay to allow device reboot and port settle
       await new Promise(r => setTimeout(r, 1000));
     } else {
-      if (onProgress) onProgress(15, `MicroPython found. Installing Python files...`);
+      if (onProgress) onProgress(12, `MicroPython found. Loading Python files...`);
     }
 
-    // Firmware files to install
-    const firmwareFiles = [
-      {
-        name: 'ble_advertising.py',
-        content: `# BLE Advertising Module
-import bluetooth
-from micropython import const
-import struct
-import time
-
-# BLE constants
-_IRQ_CENTRAL_CONNECT = const(1)
-_IRQ_CENTRAL_DISCONNECT = const(2)
-_IRQ_GATTS_WRITE = const(11)
-_IRQ_GATTS_READ_REQUEST = const(12)
-
-# Advertisement types
-_ADV_TYPE_FLAGS = const(0x01)
-_ADV_TYPE_NAME = const(9)
-
-# BLE device name
-_DEVICE_NAME = "Magicbit"
-
-# BLE instance
-_ble = bluetooth.BLE()
-
-def _irq(event, data):
-    if event == _IRQ_CENTRAL_CONNECT:
-        print("Central connected")
-    elif event == _IRQ_CENTRAL_DISCONNECT:
-        print("Central disconnected")
-
-def init():
-    _ble.active(True)
-    _ble.irq(_irq)
-    print("BLE advertising started")
-
-def deinit():
-    _ble.active(False)
-`
-      },
-      {
-        name: 'ble_uart_peripheral.py',
-        content: `# BLE UART Peripheral Module
-import bluetooth
-from micropython import const
-
-# BLE constants
-_IRQ_CENTRAL_CONNECT = const(1)
-_IRQ_CENTRAL_DISCONNECT = const(2)
-_IRQ_GATTS_WRITE = const(11)
-
-# BLE instance
-_ble = bluetooth.BLE()
-
-def init():
-    _ble.active(True)
-    print("BLE UART peripheral started")
-
-def deinit():
-    _ble.active(False)
-`
-      },
-      {
-        name: 'initBLE.py',
-        content: `# BLE Initialization Module
-import bluetooth
-from micropython import const
-
-# BLE device name
-_DEVICE_NAME = "Magicbit"
-
-# BLE instance
-_ble = bluetooth.BLE()
-
-def init():
-    _ble.active(True)
-    print("BLE initialized and advertising started")
-
-def deinit():
-    _ble.active(False)
-`
-      },
-      {
-        name: 'main.py',
-        content: `# Main application entry point
-from machine import Pin
-import time
-
-# Initialize pins
-pins = [21, 22, 26, 27, 4, 2, 12, 13, 14, 15, 5, 32, 33, 16, 17, 18]
-
-# Set all pins to output and low
-for pin_num in pins:
-    pin = Pin(pin_num, Pin.OUT)
-    pin.value(0)
-
-print("Magicbit initialized")
-print("All pins set to low")
-
-# Main loop
-async def mainLoop():
-    while True:
-        # Your main application logic here
-        time.sleep(1)
-
-# Run main loop if called directly
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(mainLoop())
-`
-      },
-      {
-        name: 'keyboardhandler.py',
-        content: `# Keyboard handler module
-def handle_keyboard_input():
-    pass
-`
-      },
-      {
-        name: 'boot.py',
-        content: `# Boot configuration
-# This file is executed on every boot (including wake-boot from deepsleep)
-import esp
-esp.osdebug(None)     # Turn off vendor O/S debugging messages
-import gc
-gc.collect()           # Run a garbage collection
-`
+    // Load firmware files dynamically from the API
+    checkCancelled();
+    if (onProgress) onProgress(15, `Loading Python files...`);
+    
+    let firmwareFiles;
+    try {
+      const response = await fetch('/api/python-files');
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error('Failed to load Python files from server');
       }
-    ];
+      
+      firmwareFiles = data.files;
+      console.log(`Loaded ${firmwareFiles.length} Python files:`, firmwareFiles.map(f => f.name));
+    } catch (error) {
+      console.error('Error loading Python files:', error);
+      throw new Error(`Failed to load Python files: ${error.message}`);
+    }
 
     // Now install the Python files via REPL
     checkCancelled();
@@ -469,7 +358,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
       await port.open({ baudRate: 115200 });
     } else if (!port.readable || !port.writable) {
       console.log("Port not accessible, opening...");
-      await port.open({ baudRate: 115200 });
+    await port.open({ baudRate: 115200 });
     } else {
       console.log("Using existing open port connection");
     }
@@ -482,7 +371,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
     outputDone = encoder.readable.pipeTo(port.writable);
     writer = encoder.writable.getWriter();
     
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     // Simple REPL entry (like usbUpload.js)
     await writer.write('\x03'); // Ctrl+C to interrupt
@@ -498,7 +387,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
     for (const file of firmwareFiles) {
       checkCancelled();
       if (onProgress) onProgress(
-        42 + (installedCount / totalFiles) * 55, 
+        20 + (installedCount / totalFiles) * 75, 
         `Installing ${file.name}...`
       );
 
@@ -512,6 +401,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
       for (const line of lines) {
         checkCancelled(); // Check cancellation during file writing
         await writer.write(`f.write(${JSON.stringify(line + '\n')})\r\n`);
+        await sleep(10);
       }
       
       // Close file
@@ -519,7 +409,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
       
       installedCount++;
       if (onProgress) onProgress(
-        42 + (installedCount / totalFiles) * 55, 
+        20 + (installedCount / totalFiles) * 75, 
         `Installed ${file.name} (${installedCount}/${totalFiles})`
       );
     }

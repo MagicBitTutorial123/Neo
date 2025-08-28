@@ -28,18 +28,18 @@ def reset_code_files():
 
 async def main():
     """Main entry point - starts BLE service"""
-    try:
-        from initBLE import start_ble_service
+   # try:
+    from initBLE import start_ble_service
+    
+    print("Starting Magicbit Firmware...")
+    
+    # Start BLE service (this will run indefinitely)
+    await start_ble_service()
         
-        print("Starting Magicbit Firmware...")
-        
-        # Start BLE service (this will run indefinitely)
-        await start_ble_service()
-        
-    except Exception as e:
-        print(f"Boot error: {e}")
-        reset_code_files()
-        machine.reset()
+    #except Exception as e:
+     #   print(f"Boot error: {e}")
+      #  reset_code_files()
+       # machine.reset()
 
 # Start the system
 asyncio.run(main())
