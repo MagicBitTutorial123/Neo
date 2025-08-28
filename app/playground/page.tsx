@@ -571,7 +571,11 @@ export default function Playground() {
           </div>
         </div>
       </div>
-      <FirmwareInstallModal open={showFirmwareModal} onClose={() => setShowFirmwareModal(false)} />
+      <FirmwareInstallModal 
+        open={showFirmwareModal} 
+        onClose={() => setShowFirmwareModal(false)} 
+        portRef={portRef}
+      />
     </div>
   );
 }

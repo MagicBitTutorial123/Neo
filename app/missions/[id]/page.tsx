@@ -926,7 +926,11 @@ export default function MissionPage() {
             </div>
           )}
           {/* Firmware Install Modal for USB only */}
-          <FirmwareInstallModal open={showFirmwareModal} onClose={() => setShowFirmwareModal(false)} />
+          <FirmwareInstallModal 
+            open={showFirmwareModal} 
+            onClose={() => setShowFirmwareModal(false)} 
+            portRef={portRef}
+          />
         </div>
       );
     case "blocklySplitLayout":

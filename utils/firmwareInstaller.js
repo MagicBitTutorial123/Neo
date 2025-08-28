@@ -1,34 +1,45 @@
 import { ESPLoader, Transport } from 'esptool-js';
 
-const firmwareInstaller = async (portRef, onProgress) => {
+const firmwareInstaller = async (portRef, onProgress, abortSignal) => {
   if (!("serial" in navigator)) {
     throw new Error("Web Serial API is not supported in this browser.");
   }
 
   let port = portRef.current;
   let esploader = null;
+  
+  // Check for cancellation
+  const checkCancelled = () => {
+    if (abortSignal?.aborted) {
+      throw new Error("Installation cancelled by user");
+    }
+  };
 
   try {
-    // Request port if not already connected
-    if (!port || !port.readable || !port.writable) {
+    // Only request port if we don't have one at all
+    if (!port) {
       port = await navigator.serial.requestPort();
       portRef.current = port;
     }
 
-    // Ensure port is properly opened
+    // Only open port if it's not already open and accessible
     if (!port.readable || !port.writable) {
       await port.open({ baudRate: 115200 });
     }
 
     if (onProgress) onProgress(0, `Initializing ESP32 connection...`);
+    checkCancelled();
 
     if (onProgress) onProgress(5, `Connecting to ESP32...`);
+    checkCancelled();
     
     // First, try to connect via serial and check for MicroPython
     const needsMicroPython = await checkIfMicroPythonNeeded(port, onProgress);
+    checkCancelled();
     
     if (needsMicroPython) {
       if (onProgress) onProgress(10, `MicroPython not detected. Initializing ESP32 flashing...`);
+      checkCancelled();
 
       // Ensure port is closed before handing control to ESPLoader
       try {
@@ -78,10 +89,12 @@ const firmwareInstaller = async (portRef, onProgress) => {
       if (onProgress) onProgress(10, `MicroPython detected. Skipping firmware flash...`);
     }
     
-    if (needsMicroPython) {
-      if (onProgress) onProgress(15, `Flashing MicroPython firmware...`);
-      await flashMicroPythonFirmware(esploader, onProgress);
-      if (onProgress) onProgress(40, `MicroPython flashed successfully. Preparing to install Python files...`);
+         if (needsMicroPython) {
+       if (onProgress) onProgress(15, `Flashing MicroPython firmware...`);
+       checkCancelled();
+       await flashMicroPythonFirmware(esploader, onProgress, abortSignal);
+       checkCancelled();
+       if (onProgress) onProgress(40, `MicroPython flashed successfully. Preparing to install Python files...`);
       // Important: release ESPLoader transport so we can use the port for REPL
       try {
         await esploader.transport.disconnect();
@@ -233,7 +246,9 @@ gc.collect()           # Run a garbage collection
     ];
 
     // Now install the Python files via REPL
-    const installedCount = await installPythonFiles(port, firmwareFiles, onProgress);
+    checkCancelled();
+    const installedCount = await installPythonFiles(port, firmwareFiles, onProgress, abortSignal);
+    checkCancelled();
 
     // Installation complete
     if (onProgress) onProgress(100, `Firmware installation complete!`);
@@ -375,7 +390,12 @@ export const checkIfMicroPythonNeeded = async (port, onProgress) => {
 };
 
 // Function to flash MicroPython firmware using esptool-js
-const flashMicroPythonFirmware = async (esploader, onProgress) => {
+const flashMicroPythonFirmware = async (esploader, onProgress, abortSignal) => {
+  const checkCancelled = () => {
+    if (abortSignal?.aborted) {
+      throw new Error("Installation cancelled by user");
+    }
+  };
   try {
     if (onProgress) onProgress(20, `Loading MicroPython firmware binary...`);
     
@@ -407,6 +427,7 @@ const flashMicroPythonFirmware = async (esploader, onProgress) => {
     const blockSize = 0x4000; // 16KB matches loader's FLASH_WRITE_SIZE
 
     for (let seq = 0; seq < numBlocks; seq++) {
+      checkCancelled(); // Check cancellation during firmware flashing
       const start = seq * blockSize;
       const end = Math.min(start + blockSize, totalSize);
       const chunk = bin.slice(start, end);
@@ -430,18 +451,27 @@ const flashMicroPythonFirmware = async (esploader, onProgress) => {
 };
 
 // Function to install Python files via REPL (after MicroPython is flashed)
-const installPythonFiles = async (port, firmwareFiles, onProgress) => {
+const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) => {
+  const checkCancelled = () => {
+    if (abortSignal?.aborted) {
+      throw new Error("Installation cancelled by user");
+    }
+  };
   let encoder = null;
   let outputDone = null;
   let writer = null;
   
   try {
-    // Ensure port is open and streams are unlocked
+    // Only close and reopen if streams are locked or port is not accessible
     if (port?.readable?.locked || port?.writable?.locked) {
+      console.log("Port streams are locked, attempting to reset...");
       try { await port.close(); } catch {}
-    }
-    if (!port.readable || !port.writable) {
       await port.open({ baudRate: 115200 });
+    } else if (!port.readable || !port.writable) {
+      console.log("Port not accessible, opening...");
+      await port.open({ baudRate: 115200 });
+    } else {
+      console.log("Using existing open port connection");
     }
     
     // Wait for MicroPython to be ready after boot
@@ -466,6 +496,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress) => {
     const totalFiles = firmwareFiles.length;
 
     for (const file of firmwareFiles) {
+      checkCancelled();
       if (onProgress) onProgress(
         42 + (installedCount / totalFiles) * 55, 
         `Installing ${file.name}...`
@@ -479,6 +510,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress) => {
       // Write content line by line (simple and fast like usbUpload.js)
       const lines = file.content.split('\n');
       for (const line of lines) {
+        checkCancelled(); // Check cancellation during file writing
         await writer.write(`f.write(${JSON.stringify(line + '\n')})\r\n`);
       }
       

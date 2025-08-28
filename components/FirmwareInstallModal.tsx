@@ -4,15 +4,20 @@ import { firmwareInstaller } from '@/utils/firmwareInstaller';
 interface FirmwareInstallModalProps {
   open: boolean;
   onClose: () => void;
+  portRef?: React.MutableRefObject<any>; // Accept existing port reference
 }
 
-export default function FirmwareInstallModal({ open, onClose }: FirmwareInstallModalProps) {
+export default function FirmwareInstallModal({ open, onClose, portRef: externalPortRef }: FirmwareInstallModalProps) {
   const [isInstalling, setIsInstalling] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const portRef = useRef<SerialPort | null>(null);
+  const fallbackPortRef = useRef<SerialPort | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Use external port ref if provided, otherwise use fallback
+  const portRef = externalPortRef || fallbackPortRef;
 
   if (!open) return null;
 
@@ -23,18 +28,34 @@ export default function FirmwareInstallModal({ open, onClose }: FirmwareInstallM
     setSuccess(null);
     setProgress(0);
     setStatus('Preparing installation...');
+    
+    // Create new abort controller for this installation
+    abortControllerRef.current = new AbortController();
+    
     try {
       const result = await firmwareInstaller(portRef, (p: number, s: string) => {
         setProgress(p);
         setStatus(s);
-      });
+      }, abortControllerRef.current.signal);
       setSuccess(result.message);
       setStatus('Installation completed successfully!');
     } catch (err: any) {
-      setError(err?.message || 'Firmware installation failed');
-      setStatus('Installation failed');
+      if (err.message === 'Installation cancelled by user') {
+        setError('Installation cancelled');
+        setStatus('Installation cancelled by user');
+      } else {
+        setError(err?.message || 'Firmware installation failed');
+        setStatus('Installation failed');
+      }
     } finally {
       setIsInstalling(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
@@ -50,7 +71,7 @@ export default function FirmwareInstallModal({ open, onClose }: FirmwareInstallM
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-[92vw] max-w-[560px] p-6 relative">
-        <button aria-label="Close" onClick={handleClose} className="absolute right-4 top-4 w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
+        <button aria-label="Close" onClick={handleClose} disabled={isInstalling} className={`absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center ${isInstalling ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M6 6l12 12M18 6L6 18" stroke="#64748B" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -84,12 +105,25 @@ export default function FirmwareInstallModal({ open, onClose }: FirmwareInstallM
         )}
 
         <div className="flex gap-3">
-          <button onClick={handleInstall} disabled={isInstalling} className={`flex-1 px-4 py-3 rounded-xl font-medium text-sm ${isInstalling ? 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0098D4]'}`}>
-            {isInstalling ? 'Installing…' : 'Install Firmware'}
-          </button>
-          <button onClick={handleClose} disabled={isInstalling} className="px-4 py-3 rounded-xl font-medium text-sm border border-[#E5E7EB] text-[#374151] hover:bg-[#F9FAFB]">
-            Close
-          </button>
+          {!isInstalling ? (
+            <>
+              <button onClick={handleInstall} className="flex-1 px-4 py-3 rounded-xl font-medium text-sm bg-[#00AEEF] text-white hover:bg-[#0098D4]">
+                Install Firmware
+              </button>
+              <button onClick={handleClose} className="px-4 py-3 rounded-xl font-medium text-sm border border-[#E5E7EB] text-[#374151] hover:bg-[#F9FAFB]">
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <button disabled className="flex-1 px-4 py-3 rounded-xl font-medium text-sm bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed">
+                Installing…
+              </button>
+              <button onClick={handleCancel} className="px-4 py-3 rounded-xl font-medium text-sm bg-[#FF4D4F] text-white hover:bg-[#FF3030]">
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
