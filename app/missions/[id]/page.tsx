@@ -18,6 +18,7 @@ import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { TimerPersistence } from "@/utils/timerPersistence";
 import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
+import { keyboardSendBLE } from "@/utils/keyboardPress";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
 import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
@@ -106,6 +107,7 @@ export default function MissionPage() {
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
   const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const server = useRef<BluetoothRemoteGATTServer | null>(null);
+  const keyStateRef = useRef<{ [key: string]: boolean }>({});
   const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
@@ -123,6 +125,72 @@ export default function MissionPage() {
       window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as unknown as EventListener);
     };
   }, [setSidebarCollapsed]);
+
+  // Keyboard event handlers for mission control
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      const action = keyMap[e.key];
+      
+      // Prevent key repeat - only send if key is not already pressed
+      if (action) {
+        if (keyStateRef.current[action]) {
+          console.log(`Key "${action}" already pressed, ignoring repeat`);
+          return; // Key is already pressed, ignore this event
+        }
+        
+        // Mark key as pressed
+        keyStateRef.current[action] = true;
+      }
+
+      if (action) {
+        try {
+          await keyboardSendBLE(action, writeCharacteristicRef.current);
+        } catch (error) {
+          console.error("Failed to send key:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
+    const handleKeyUp = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      const action = keyMap[e.key];
+      
+      if (action) {
+        // Mark key as released
+        keyStateRef.current[action] = false;
+        
+        try {
+          // Send stop_all command twice for reassurance when any arrow key is released
+          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
+         
+        } catch (error) {
+          console.error("Failed to send stop command:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [connectionStatus]);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
 
