@@ -7,6 +7,7 @@ import gc
 import sys
 from machine import Pin, ADC
 import time
+import bluetooth
 
 # GPIO pins that can be reset
 GPIO_PINS = [0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
@@ -113,7 +114,7 @@ def process_code_upload(code_buffer):
             f.write(final_code)
         
         with open('keyboardhandler.py', 'w') as f:
-            f.write("import uasyncio as asyncio\nfrom machine import Pin\nimport neopixel\n")
+            f.write("import uasyncio as asyncio\nfrom machine import Pin,PWM\nimport neopixel\nM1_IN1 = PWM(Pin(16), freq=500)\nM1_IN2 = PWM(Pin(17), freq=500)\nM2_IN1 = PWM(Pin(18), freq=500)\nM2_IN2 = PWM(Pin(27), freq=500)\n")
             # Convert to async functions
             handler_code = re.sub(r'time\.sleep', r'await asyncio.sleep', handler_code)
             handler_code = re.sub(r'def ', r'async def ', handler_code)

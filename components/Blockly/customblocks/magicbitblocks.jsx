@@ -214,17 +214,22 @@ Blockly.Blocks['magicbit_motor'] = {
       .appendField(new Blockly.FieldDropdown([["Left", "LEFT"], ["Right", "RIGHT"]]), "SIDE")
       .appendField(new Blockly.FieldDropdown([["Forward", "FWD"], ["Backward", "BWD"]]), "DIR")
       .appendField("speed")
-      .appendField(new Blockly.FieldNumber(0, 0, 1023, 1), "SPEED");
+      .appendField(new Blockly.FieldNumber(0, 0, 100, 1), "SPEED")
+      .appendField("%");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour("#9B51E0");
   }
 };
+
+// add global variables for motor pins for keyboard methods
 pythonGenerator['magicbit_motor'] = block => {
   const side = block.getFieldValue('SIDE');
   const dir = block.getFieldValue('DIR');
-  const speed = block.getFieldValue('SPEED');
-  pythonGenerator.definitions_['import_machine'] = 'from machine import Pin, PWM\nM2_IN1 = machine.PWM(18, freq=1000)\nM2_IN2 = machine.PWM(27, freq=1000)\n\nM1_IN1 = machine.PWM(16, freq=1000)\nM1_IN2 = machine.PWM(17, freq=1000)';
+  const speedPercent = block.getFieldValue('SPEED');
+  
+  // Map 0-100% to 1-1000 range (avoiding 0 to prevent motor stall)
+  const speed = speedPercent === 0 ? 200 : Math.round((speedPercent / 100) * 999) + 1;
   
   if (side === 'LEFT') {
     if (dir === 'BWD') {
@@ -237,6 +242,6 @@ pythonGenerator['magicbit_motor'] = block => {
       return `M2_IN1.duty(${speed})\nM2_IN2.duty(1)\n`;
     } else {
       return `M2_IN1.duty(1)\nM2_IN2.duty(${speed})\n`;
-    }
+    } 
   }
 };

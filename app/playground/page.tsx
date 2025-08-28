@@ -87,6 +87,8 @@ export default function Playground() {
     useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothGATTServer | null>(null);
+  const keyThrottleRef = useRef<{ [key: string]: number }>({});
+  const keyStateRef = useRef<{ [key: string]: boolean }>({});
   // const watchedPinsRef = useRef<Set<number>>(new Set());
 
   // Simple cleanup
@@ -120,7 +122,18 @@ export default function Playground() {
         ArrowRight: "right",
       };
 
-      const action = keyMap[e.key]; // ... existing code ...
+      const action = keyMap[e.key];
+      
+      // Prevent key repeat - only send if key is not already pressed
+      if (action) {
+        if (keyStateRef.current[action]) {
+          console.log(`Key "${action}" already pressed, ignoring repeat`);
+          return; // Key is already pressed, ignore this event
+        }
+        
+        // Mark key as pressed
+        keyStateRef.current[action] = true;
+      }
 
       // Update the connection handling to detect cancellations
       // const connectBluetooth = async () => {
@@ -218,8 +231,36 @@ export default function Playground() {
       }
     };
 
+    const handleKeyUp = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      const action = keyMap[e.key];
+      
+      if (action) {
+        // Mark key as released
+        keyStateRef.current[action] = false;
+        
+        try {
+          // Send stop_all command when any arrow key is released
+          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
+        } catch (error) {
+          console.error("Failed to send stop command:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
   }, [connectionStatus]);
 
   // Simple Bluetooth connection
