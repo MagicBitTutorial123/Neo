@@ -96,7 +96,10 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
           kind: "category",
           name: "Keyboard",
           colour: "#FF33CC",
-          contents: [{ kind: "block", type: "keyboard_when_key_pressed" }],
+          contents: [
+            { kind: "block", type: "keyboard_when_key_pressed" },
+            { kind: "block", type: "keyboard_when_custom_key_pressed" }
+          ],
         },
         {
           kind: "category",

@@ -136,7 +136,35 @@ export default function MissionPage() {
         ArrowRight: "right",
       };
 
-      const action = keyMap[e.key];
+      let action = keyMap[e.key];
+      
+      // If not an arrow key, check if it's a custom key
+      if (!action) {
+        let customKey = e.key.toLowerCase();
+        
+        // Handle special keys
+        if (customKey === ' ') {
+          customKey = 'space';
+        } else if (customKey === 'enter') {
+          customKey = 'enter';
+        } else if (customKey === 'shift') {
+          customKey = 'shift';
+        } else if (customKey === 'control') {
+          customKey = 'ctrl';
+        } else if (customKey === 'alt') {
+          customKey = 'alt';
+        } else if (customKey.length === 1) {
+          // Single character keys (a-z, 0-9, etc.)
+          action = customKey;
+        } else {
+          // For other keys, make safe for function names
+          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+        
+        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
+          action = customKey;
+        }
+      }
       
       // Prevent key repeat - only send if key is not already pressed
       if (action) {
@@ -167,7 +195,35 @@ export default function MissionPage() {
         ArrowRight: "right",
       };
 
-      const action = keyMap[e.key];
+      let action = keyMap[e.key];
+      
+      // If not an arrow key, check if it's a custom key
+      if (!action) {
+        let customKey = e.key.toLowerCase();
+        
+        // Handle special keys
+        if (customKey === ' ') {
+          customKey = 'space';
+        } else if (customKey === 'enter') {
+          customKey = 'enter';
+        } else if (customKey === 'shift') {
+          customKey = 'shift';
+        } else if (customKey === 'control') {
+          customKey = 'ctrl';
+        } else if (customKey === 'alt') {
+          customKey = 'alt';
+        } else if (customKey.length === 1) {
+          // Single character keys (a-z, 0-9, etc.)
+          action = customKey;
+        } else {
+          // For other keys, make safe for function names
+          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+        
+        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
+          action = customKey;
+        }
+      }
       
       if (action) {
         // Mark key as released
