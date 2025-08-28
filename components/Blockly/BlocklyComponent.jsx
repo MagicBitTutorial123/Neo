@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from "react";
 import blocksTabIcon from "@/assets/blocksTabIcon.svg";
 import codingIcon from "@/assets/codingIcon.svg";
 import dashboardIcon from "@/assets/dashboardIcon.svg";
@@ -22,7 +22,7 @@ import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
-export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
+const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
   // Sidebar context
   const { sidebarCollapsed } = useSidebar();
   
@@ -30,7 +30,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   const [activeTab, setActiveTab] = useState("Blocks");
   const [expandMenu, setExpandMenu] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [workspaceInitialized, setWorkspaceInitialized] = useState(false);
   const [bleConnected, setBleConnected] = useState(false);
   const [widgets, setWidgets] = useState([]);
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -45,6 +44,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   const [showCodeResetWarning, setShowCodeResetWarning] = useState(false);
 
   const workspaceRef = useRef(null);
+  const isLoadingWorkspace = useRef(false);
 
   // Constants
   const ANALOG_PINS = [
@@ -68,11 +68,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       )
     );
   };
-
-  useEffect(() => {
-    console.log(latestAnalogByPin);
-  },[latestAnalogByPin])
-
 
   // Toolbox configuration
   const toolboxConfig = useMemo(
@@ -259,7 +254,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         document.body.removeChild(svgDefs);
       }
     };
-  }, []);
+  }, [sidebarCollapsed]);
 
   // Handle category selection and UI interactions
   useEffect(() => {
@@ -317,7 +312,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
 
     // Calculate sidebar width and toolbox position
     const sidebarWidth = 120;
-    const toolboxLeftMargin = sidebarWidth -100; 
+    const toolboxLeftMargin = sidebarWidth -100;
 
     const style = document.createElement("style");
     style.id = "blockly-dynamic-styles";
@@ -491,6 +486,8 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   // Initialize Blockly workspace
   const initializeWorkspace = (element) => {
     if (!element) return;
+    // Prevent re-initializing if a workspace already exists
+    if (workspaceRef.current) return;
     console.log("🔧 Initializing workspace...");
     try {
       const savedWorkspace = localStorage.getItem("blocklyWorkspace");
@@ -518,6 +515,8 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       }
 
       workspace.addChangeListener((event) => {
+        // Ignore events fired while programmatically loading/restoring workspace
+        if (isLoadingWorkspace.current) return;
         if (
           event.type == "create" ||
           event.type == "move" ||
@@ -531,7 +530,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       });
 
       workspaceRef.current = workspace;
-      setWorkspaceInitialized(true);
       console.log("Workspace initialization complete");
     } catch (error) {
       console.error("Error initializing workspace:", error);
@@ -545,18 +543,34 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       if (savedState) {
         try {
           const xml = Blockly.utils.xml.textToDom(savedState);
-          Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current);
+          if (workspaceRef.current) {
+            isLoadingWorkspace.current = true;
+            Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, workspaceRef.current);
+            isLoadingWorkspace.current = false;
+            // Generate code once after restore without reacting to intermediate events
+            generateCode();
+          }
         } catch (error) {
           console.error("Error restoring workspace:", error);
+          isLoadingWorkspace.current = false;
         }
       }
     } else if (activeTab == "Code") {
+      // Dispose workspace when leaving Blocks so it can re-init on return
+      if (workspaceRef.current && typeof workspaceRef.current.dispose === "function") {
+        try {
+          workspaceRef.current.dispose();
+        } catch {}
+        workspaceRef.current = null;
+      }
       generateCode();
       // Initialize editable code when switching to Code tab
-      setEditableCode(generatedCode);
+      if (editableCode !== generatedCode) {
+        setEditableCode(generatedCode);
+      }
       setCodeHasBeenEdited(false);
     }
-  }, [activeTab, generatedCode]);
+  }, [activeTab]);
 
   // Manual save function for workspace
   const generateCode = () => {
@@ -586,9 +600,11 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         console.log("Final code with handlers:", finalCode);
       }
 
-      // Update the shared state
-      setGeneratedCode(finalCode);
-      console.log("Code generated successfully, length:", finalCode.length);
+      // Update the shared state only if changed to avoid redundant renders
+      if (typeof finalCode === "string" && finalCode !== generatedCode) {
+        setGeneratedCode(finalCode);
+        console.log("Code generated successfully, length:", finalCode.length);
+      }
       return finalCode;
     } catch (error) {
       console.error("Error generating code:", error);
@@ -622,7 +638,9 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
     };
   
     window.addEventListener("sensorData", handler);
-    return () => window.removeEventListener("sensorData", handler);
+    return () => {window.removeEventListener("sensorData", handler);
+      // window.removeEventListener("blocklyWorkspaceChange", blocklyWorkspaceChange);
+    }
   }, []);
   
   // Handle BLE connection state
@@ -662,7 +680,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   // Handle code reset cancellation
   const handleCodeResetCancel = () => {
     setShowCodeResetWarning(false);
-    // Stay on Code tab
   };
 
   // Function to get the current code (either edited or generated)
@@ -673,75 +690,29 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
     return generatedCode;
   };
 
-  // Initialize editable code when component loads
-  useEffect(() => {
-    setEditableCode(generatedCode);
-  }, [generatedCode]);
+  // Expose imperative API to parent
+  useImperativeHandle(ref, () => ({
+    getCurrentCode,
+  }));
+
+  // // Initialize editable code when component loads
+  // useEffect(() => {
+  //   setEditableCode(generatedCode);
+  // }, [generatedCode]);
 
   // Handle dashboard state
-  useEffect(() => {
-    try {
-      const isActive = activeTab === "Dashboard";
-      window.dispatchEvent(
-        new CustomEvent("dashboardActive", { detail: { active: isActive } })
-      );
-    } catch (error) {
-      console.error("Error dispatching dashboard state:", error);
-    }
-  }, [activeTab]);
+  // useEffect(() => {
+  //   try {
+  //     const isActive = activeTab === "Dashboard";
+  //     window.dispatchEvent(
+  //       new CustomEvent("dashboardActive", { detail: { active: isActive } })
+  //     );
+  //   } catch (error) {
+  //     console.error("Error dispatching dashboard state:", error);
+  //   }
+  // }, [activeTab]);
 
   // Handle workspace clearing
-  // useEffect(() => {
-  //   const handleClearWorkspace = () => {
-  //     console.log("🧹 handleClearWorkspace called - checking stack trace");
-  //     console.trace("Workspace clear stack trace");
-  //     if (workspaceRef.current) {
-  //       // Only clear if explicitly requested (e.g., from Erase button)
-  //       // Don't clear automatically after upload
-  //       console.log(
-  //         "Clearing workspace - this should only happen from Erase button"
-  //       );
-  //       workspaceRef.current.clear();
-  //       setGeneratedCode("");
-  //       localStorage.removeItem("blocklyWorkspace");
-  //       console.log("Workspace manually cleared");
-  //     } else {
-  //       console.log("Cannot clear workspace - no workspace available");
-  //     }
-  //   };
-
-  //   const handleGenerateCodeFromWorkspace = () => {
-  //     console.log("📡 handleGenerateCodeFromWorkspace event received");
-  //     console.log("workspaceRef.current exists:", !!workspaceRef.current);
-  //     if (workspaceRef.current) {
-  //       console.log("Calling generateCode from workspace event");
-  //       const code = generateCode();
-  //       console.log(
-  //         "Code generated from workspace event, length:",
-  //         code?.length
-  //       );
-  //       return code;
-  //     } else {
-  //       console.log("Cannot generate code: no workspace available");
-  //       return "";
-  //     }
-  //   };
-
-  //   window.addEventListener("clearBlocklyWorkspace", handleClearWorkspace);
-  //   window.addEventListener(
-  //     "generateCodeFromWorkspace",
-  //     handleGenerateCodeFromWorkspace
-  //   );
-  //   return () => {
-  //     window.removeEventListener("clearBlocklyWorkspace", handleClearWorkspace);
-  //     window.removeEventListener(
-  //       "generateCodeFromWorkspace",
-  //       handleGenerateCodeFromWorkspace
-  //     );
-  //   };
-  // }, [setGeneratedCode]);
-
-  // Save workspace on page unload/refresh
   
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -761,7 +732,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [activeTab]);
 
- 
   // Render chart for graph widgets
   const renderChart = (widget) => {
     const pin = widget.props.pin || 32;
@@ -900,8 +870,10 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
   };
 
   // Calculate dynamic margin based on sidebar state
-  const sidebarWidth = sidebarCollapsed ? 80 : 260;
-  const containerMarginLeft = sidebarWidth + 12; // Add some space from sidebar edge
+  const sidebarWidth = sidebarCollapsed ? 65 : window.location.href.includes("missions") ? 65 : 235;
+  const instructionColumnWidth = window.location.href.includes("missions") ? -50 : window.location.href.includes("playground") ? 30 : -50; // Mission page needs smaller gap (-50), playground keeps current gap (30)
+  const consistentGap =1 ; // Reduced gap between instruction and Blockly
+  const containerMarginLeft = sidebarWidth + instructionColumnWidth + consistentGap;
 
   return (
     <div className="h-full bg-white flex flex-col">
@@ -963,7 +935,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
           {/* Blocks Tab */}
           {activeTab === "Blocks" && (
             <div
-              key={`blocks-workspace-${workspaceInitialized}`}
               ref={initializeWorkspace}
               style={{
                 height: "100%",
@@ -1244,4 +1215,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       )}
     </div>
   );
-}
+};
+
+export default forwardRef(BlocklyComponent);

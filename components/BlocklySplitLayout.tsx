@@ -494,7 +494,7 @@ export default function BlocklySplitLayout({
             onMouseDown={handleMouseDown}
             style={{ cursor: isResizing ? "ew-resize" : "ew-resize" }}
           />
-          <div className="flex-grow mb-16">
+          <div className="w-full mb-16">
             {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
             <BlocklyComponent
               generatedCode={generatedCode}
