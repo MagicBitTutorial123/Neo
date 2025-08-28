@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from "react";
 import blocksTabIcon from "@/assets/blocksTabIcon.svg";
 import codingIcon from "@/assets/codingIcon.svg";
 import dashboardIcon from "@/assets/dashboardIcon.svg";
@@ -22,7 +22,7 @@ import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
-export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
+const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
   // Sidebar context
   const { sidebarCollapsed } = useSidebar();
   
@@ -690,6 +690,11 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
     return generatedCode;
   };
 
+  // Expose imperative API to parent
+  useImperativeHandle(ref, () => ({
+    getCurrentCode,
+  }));
+
   // // Initialize editable code when component loads
   // useEffect(() => {
   //   setEditableCode(generatedCode);
@@ -1208,4 +1213,6 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
       )}
     </div>
   );
-}
+};
+
+export default forwardRef(BlocklyComponent);

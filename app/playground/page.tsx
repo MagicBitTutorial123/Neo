@@ -63,6 +63,7 @@ interface BluetoothDevice {
 Blockly.setLocale(En);
 
 export default function Playground() {
+  const blocklyRef = useRef<{ getCurrentCode: () => string } | null>(null);
   const [generatedCode, setGeneratedCode] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
@@ -369,14 +370,17 @@ export default function Playground() {
 
   // Simple upload code
   const uploadCode = async () => {
-    if (!generatedCode) return;
+    // Prefer code from the active tab inside BlocklyComponent (edited Python when on Code tab)
+    const codeFromChild = blocklyRef.current?.getCurrentCode?.();
+    const codeToUpload = codeFromChild ?? generatedCode;
+    if (!codeToUpload) return;
     setIsUploading(true);
     try {
       if (connectionType === "bluetooth") {
         if (!isConnected) await connectBluetooth();
-        await bluetoothUpload(generatedCode, writeCharacteristicRef.current);
+        await bluetoothUpload(codeToUpload, writeCharacteristicRef.current);
       } else {
-        await usbUpload(generatedCode, portRef);
+        await usbUpload(codeToUpload, portRef);
         setIsConnected(true);
       }
     } catch (error) {
@@ -557,6 +561,7 @@ export default function Playground() {
               </div>
             ) : (
               <BlocklyComponent
+                ref={blocklyRef}
                 generatedCode={generatedCode}
                 setGeneratedCode={setGeneratedCode}
               />
