@@ -517,7 +517,7 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
         console.log("Loaded saved workspace");
       }
 
-      workspace.addChangeListener((event) => {
+      const blocklyWorkspaceChange = workspace.addChangeListener("blocklyWorkspaceChange",(event) => {
         if (
           event.type == "create" ||
           event.type == "move" ||
@@ -622,7 +622,9 @@ export default function BlocklyComponent({ generatedCode, setGeneratedCode }) {
     };
   
     window.addEventListener("sensorData", handler);
-    return () => window.removeEventListener("sensorData", handler);
+    return () => {window.removeEventListener("sensorData", handler);
+      window.removeEventListener("blocklyWorkspaceChange", blocklyWorkspaceChange);
+    }
   }, []);
   
   // Handle BLE connection state
