@@ -133,10 +133,6 @@ export default function BlocklySplitLayout({
     onCurrentStepChange?.(currentStep);
   }, [currentStep, onCurrentStepChange]);
 
-  // Notify parent when showMCQ changes
-  useEffect(() => {
-    // This will be handled by the parent page
-  }, [showMCQ]);
 
   // Listen for goToNextStep event
   useEffect(() => {
@@ -237,7 +233,7 @@ export default function BlocklySplitLayout({
         document.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isResizing, sidebarCollapsed]);
+  }, [handleMouseMove, isResizing]);
 
   const handleStart = () => {
     setShowCountdown(true);

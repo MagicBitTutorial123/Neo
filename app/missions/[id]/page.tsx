@@ -22,39 +22,61 @@ import FirmwareInstallModal from "@/components/FirmwareInstallModal";
 import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
 // Simple type declarations
+interface BluetoothRemoteGATTCharacteristic {
+  writeValue: (value: BufferSource) => Promise<void>;
+}
+
+interface BluetoothRemoteGATTService {
+  getCharacteristic: (uuid: string) => Promise<BluetoothRemoteGATTCharacteristic>;
+}
+
+interface BluetoothRemoteGATTServer {
+  connected: boolean;
+  connect: () => Promise<BluetoothRemoteGATTServer>;
+  getPrimaryService: (uuid: string) => Promise<BluetoothRemoteGATTService>;
+  disconnect: () => void;
+}
+
 interface BluetoothDevice {
-  gatt?: {
-    connected: boolean;
-    connect: () => Promise<any>;
-    disconnect: () => void;
-  };
+  name?: string;
+  gatt?: BluetoothRemoteGATTServer;
   addEventListener: (event: string, callback: () => void) => void;
+}
+
+interface RequestDeviceOptions {
+  filters?: Array<{ name?: string; services?: Array<string> }>;
+  optionalServices?: Array<string>;
+}
+
+interface SerialPort {
+  open: (options: { baudRate: number }) => Promise<void>;
+  close: () => Promise<void>;
+  readable?: unknown;
+  writable?: unknown;
+}
+
+interface NavigatorWithSerial {
+  serial: { requestPort: () => Promise<SerialPort> };
 }
 
 declare global {
   interface Navigator {
     bluetooth: {
-      requestDevice: (options: any) => Promise<BluetoothDevice>;
+      requestDevice: (options: RequestDeviceOptions) => Promise<BluetoothDevice>;
+    };
+  }
+  interface Window {
+    missionTimerControls?: {
+      resume: () => void;
+      pause: () => void;
+      reset: () => void;
     };
   }
 }
 import { useSidebar } from "@/context/SidebarContext";
 
-const validMissionIds = [
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "11",
-  "12",
-] as const;
-type MissionId = (typeof validMissionIds)[number];
+type MissionsType = typeof missions;
+type MissionKey = keyof MissionsType;
 
 export default function MissionPage() {
   const params = useParams();
@@ -62,8 +84,11 @@ export default function MissionPage() {
   let id = params.id;
   if (Array.isArray(id)) id = id[0];
   id = String(id);
-  const mission = missions[id as MissionId];
-  const layoutType = missionLayoutMap[id as MissionId] || "standardIntroLayout";
+  const numericId = Number(id);
+  const mission = missions[numericId as MissionKey];
+  const layoutType =
+    missionLayoutMap[numericId as keyof typeof missionLayoutMap] ||
+    "standardIntroLayout";
 
   // State for mission header buttons
 
@@ -77,27 +102,27 @@ export default function MissionPage() {
   const [isUploading, setIsUploading] = useState(false);
 
   // BLE Connection refs
-  const portRef = useRef<any>(null);
+  const portRef = useRef<SerialPort | null>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
-  const writeCharacteristicRef = useRef<any>(null);
-  const server = useRef<any>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const { sidebarCollapsed } = useSidebar();
+  const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const server = useRef<BluetoothRemoteGATTServer | null>(null);
+  const [isRunning] = useState(false);
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
-    const handleSidebarCollapsed = (event: CustomEvent) => {
+    const handleSidebarCollapsed = (event: CustomEvent<{ collapsed: boolean }>) => {
       setSidebarCollapsed(event.detail.collapsed);
     };
 
-    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as unknown as EventListener);
     
     return () => {
-      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as unknown as EventListener);
     };
-  }, []);
+  }, [setSidebarCollapsed]);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
 
@@ -153,7 +178,8 @@ export default function MissionPage() {
       const timeout = setTimeout(() => {
         // Navigate to the next mission intro (not directly to steps)
         const nextMissionId = String(Number(mission.id) + 1);
-        if ((missions as any)[nextMissionId]) {
+        const nextIdNum = Number(nextMissionId);
+        if (nextIdNum in missions) {
           router.push(`/missions/${nextMissionId}`);
         } else {
           router.push("/missions");
@@ -167,14 +193,15 @@ export default function MissionPage() {
   useEffect(() => {
     return () => {
       // Cleanup Bluetooth
-      if (bluetoothDeviceRef.current?.gatt?.connected) {
-        bluetoothDeviceRef.current.gatt.disconnect();
+      const gatt = bluetoothDeviceRef.current?.gatt;
+      if (gatt?.connected) {
+        gatt.disconnect();
       }
       
       // Cleanup Serial port
       if (portRef.current) {
         try {
-          const port = portRef.current as any;
+          const port = portRef.current;
           if (port && (port.readable || port.writable)) {
             port.close().catch(console.error);
           }
@@ -186,7 +213,7 @@ export default function MissionPage() {
   }, []);
 
   // Simple Bluetooth connection
-  const connectBluetooth = async () => {
+  const connectBluetooth = useCallback(async () => {
     try {
       console.log("Starting BLE connection...");
       setConnectionStatus("connecting");
@@ -232,11 +259,11 @@ export default function MissionPage() {
       } else {
         console.log("GATT server already connected");
       }
-    } catch (error) {
-      console.error("BLE connection failed:", error);
-      
+    } catch (e) {
+      console.error("BLE connection failed:", e);
+      const error = e as { name?: string };
       // Check if user cancelled the device selection
-      if (error.name === "NotFoundError" || error.name === "NotAllowedError") {
+      if (error?.name === "NotFoundError" || error?.name === "NotAllowedError") {
         console.log("Bluetooth connection canceled by user");
         setConnectionStatus("disconnected");
         setIsConnected(false);
@@ -254,7 +281,7 @@ export default function MissionPage() {
         }, 1000);
       }
     }
-  };
+  }, [tryingToConnect]);
 
   // Simple upload code
   const uploadCode = async (generatedCode: string) => {
@@ -313,14 +340,14 @@ export default function MissionPage() {
           setIsConnected(false);
           
           try {
-            const navSerial = (navigator as unknown as { serial: { requestPort: () => Promise<any> } }).serial;
-            let port = (portRef.current as any) || null;
+            const navSerial = (navigator as unknown as NavigatorWithSerial).serial;
+            let port = portRef.current || null;
             
             // Request port selection if needed
             if (!port || !port.readable || !port.writable) {
               port = await navSerial.requestPort();
               await port.open({ baudRate: 115200 });
-              (portRef as any).current = port;
+              portRef.current = port;
             }
             
             // Only set connected after successful port opening
@@ -331,11 +358,12 @@ export default function MissionPage() {
             const needs = await checkIfMicroPythonNeeded(port, undefined);
             if (needs) setShowFirmwareModal(true);
             
-          } catch (error) {
-            console.error("Serial connection failed:", error);
+          } catch (e) {
+            const err = e as unknown;
+            console.error("Serial connection failed:", err);
             setConnectionStatus("disconnected");
             setIsConnected(false);
-            throw error; // Re-throw to be caught by outer catch
+            throw (e instanceof Error ? e : new Error(String(e))); // Re-throw to be caught by outer catch
           }
         }
       } catch {
@@ -346,8 +374,9 @@ export default function MissionPage() {
       setConnectionStatus("disconnecting");
       
       // Handle Bluetooth disconnection
-      if (bluetoothDeviceRef.current?.gatt?.connected) {
-        bluetoothDeviceRef.current.gatt.disconnect();
+      const gatt = bluetoothDeviceRef.current?.gatt;
+      if (gatt?.connected) {
+        gatt.disconnect();
       }
       bluetoothDeviceRef.current = null;
       writeCharacteristicRef.current = null;
@@ -355,7 +384,7 @@ export default function MissionPage() {
       // Handle Serial port disconnection
       if (portRef.current) {
         try {
-          const port = portRef.current as any;
+          const port = portRef.current;
           if (port && (port.readable || port.writable)) {
             await port.close();
           }
@@ -382,7 +411,7 @@ export default function MissionPage() {
       }
     }
     connect();
-  }, [tryingToConnect]);
+  }, [connectBluetooth, tryingToConnect]);
 
   // Load mission state on mount
   useEffect(() => {
@@ -401,12 +430,12 @@ export default function MissionPage() {
         setTimeout(() => {
           if (
             typeof window !== "undefined" &&
-            (window as any).missionTimerControls
+            window.missionTimerControls
           ) {
             const savedTimerState = TimerPersistence.loadTimerState();
             if (savedTimerState && savedTimerState.missionId === id) {
               console.log("🔄 Resuming existing timer for mission", id);
-              (window as any).missionTimerControls.resume();
+              window.missionTimerControls.resume();
             }
           }
         }, 100);
@@ -424,10 +453,10 @@ export default function MissionPage() {
   };
 
   // Function to stop timer and calculate time taken
-  const stopTimerAndCalculateTime = () => {
-    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+  const stopTimerAndCalculateTime = useCallback(() => {
+    if (typeof window !== "undefined" && window.missionTimerControls) {
       // Pause the timer first
-      (window as any).missionTimerControls.pause();
+      window.missionTimerControls.pause();
 
       // Get the current timer state to calculate time taken
       const savedTimerState = TimerPersistence.loadTimerState();
@@ -450,7 +479,7 @@ export default function MissionPage() {
         console.log("⏱️ Time taken to complete mission:", formattedTime);
       }
     }
-  };
+  }, [id]);
 
   // Save mission state when it changes
   useEffect(() => {
@@ -475,7 +504,7 @@ export default function MissionPage() {
     if (showCongrats) {
       stopTimerAndCalculateTime();
     }
-  }, [showCongrats]);
+  }, [showCongrats, stopTimerAndCalculateTime]);
 
   // Show header when forceHideIntro is true (backup method)
   useEffect(() => {
@@ -488,8 +517,8 @@ export default function MissionPage() {
   const handleRun = () => {
     console.log("🚀 Run button clicked from page level!");
     // Resume timer if persistence is enabled
-    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
-      (window as any).missionTimerControls.resume();
+    if (typeof window !== "undefined" && window.missionTimerControls) {
+      window.missionTimerControls.resume();
     }
     
     // If we're in blocklySplitLayout, generate code first, then trigger upload
@@ -571,8 +600,8 @@ export default function MissionPage() {
     // Clear mission state and timer for new mission
     MissionStatePersistence.clearMissionState();
     TimerPersistence.clearTimerState();
-    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
-      (window as any).missionTimerControls.reset();
+    if (typeof window !== "undefined" && window.missionTimerControls) {
+      window.missionTimerControls.reset();
     }
     // Navigate to next mission
     const nextMissionId = String(Number(mission.id) + 1);
@@ -583,8 +612,8 @@ export default function MissionPage() {
     setShowDontWorry(false);
     setFromNo(false);
     // Reset timer when restarting the same mission
-    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
-      (window as any).missionTimerControls.reset();
+    if (typeof window !== "undefined" && window.missionTimerControls) {
+      window.missionTimerControls.reset();
     }
     // Reset to previous step
   };
@@ -683,15 +712,15 @@ export default function MissionPage() {
     setShowHeader(true); // Ensure header is visible after countdown
 
     // Start timer when countdown completes (only if no saved timer exists)
-    if (typeof window !== "undefined" && (window as any).missionTimerControls) {
+    if (typeof window !== "undefined" && window.missionTimerControls) {
       // Check if there's already a saved timer state for this mission
       const savedTimerState = TimerPersistence.loadTimerState();
       if (!savedTimerState || savedTimerState.missionId !== id) {
         // Only reset if no saved timer exists for this mission
-        (window as any).missionTimerControls.reset();
+        window.missionTimerControls.reset();
       } else {
         // Resume existing timer
-        (window as any).missionTimerControls.resume();
+        window.missionTimerControls.resume();
       }
     }
 

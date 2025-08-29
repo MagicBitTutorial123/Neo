@@ -107,8 +107,8 @@ Blockly.Blocks['magicbit_ultrasonic'] = {
 pythonGenerator['magicbit_ultrasonic'] = block => {
   const pin = block.getFieldValue("PIN");
   pythonGenerator.definitions_['import_time'] = 'import time';
-  pythonGenerator.definitions_['import_machine_ultra'] = 'from machine import Pin';
-  pythonGenerator.definitions_['ultrasonic_func'] = `\ndef read_ultrasonic(pin):\n    trig = Pin(pin, Pin.OUT)\n    echo = Pin(pin, Pin.IN)\n    trig.value(0)\n    time.sleep_us(2)\n    trig.value(1)\n    time.sleep_us(10)\n    trig.value(0)\n    while echo.value() == 0:\n        pass\n    start = time.ticks_us()\n    while echo.value() == 1:\n        pass\n    end = time.ticks_us()\n    dist = (end - start) * 0.0343 / 2\n    return dist\n`;
+  pythonGenerator.definitions_['import_machine_ultra'] = 'from machine import Pin\nimport machine';
+  pythonGenerator.definitions_['ultrasonic_func_single_pin'] = `\ndef read_ultrasonic(pin_num):\n    try:\n        # Send trigger pulse\n        ULTRASOUND_PIN = Pin(pin_num, Pin.OUT)\n        ULTRASOUND_PIN.value(0)\n        time.sleep_us(2)\n        ULTRASOUND_PIN.value(1)\n        time.sleep_us(10)\n        ULTRASOUND_PIN.value(0)\n\n        # Switch to input to read echo\n        ULTRASOUND_PIN.init(Pin.IN)\n        duration = machine.time_pulse_us(ULTRASOUND_PIN, 1, 30000)  # max 30ms\n        distance_cm = (duration / 2) / 29.1\n        return round(distance_cm, 2)\n    except Exception as e:\n        print('Ultrasound read error:', e)\n        return None\n`;
   return [`read_ultrasonic(${pin})`, pythonGenerator.ORDER_FUNCTION_CALL];
 };
 
@@ -180,6 +180,8 @@ pythonGenerator['magicbit_play_tone'] = block => {
   const freq = block.getFieldValue("FREQ");
   const duration = block.getFieldValue("DURATION");
   pythonGenerator.definitions_['import_machine_tone'] = 'from machine import Pin, PWM';
+  pythonGenerator.definitions_['import_time'] = 'import time';
+
   return `buzzer = PWM(Pin(25), freq=${freq}, duty=512)\ntime.sleep(${duration})\nbuzzer.deinit()\n`;
 };
 

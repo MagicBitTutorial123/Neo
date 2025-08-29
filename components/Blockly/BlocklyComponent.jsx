@@ -634,6 +634,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
           return newHistory;
         });
       }
+
   
     };
   
@@ -1215,6 +1216,6 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
       )}
     </div>
   );
-};
+}
 
 export default forwardRef(BlocklyComponent);

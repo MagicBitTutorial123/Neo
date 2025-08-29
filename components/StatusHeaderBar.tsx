@@ -172,16 +172,28 @@ export default function Header({
               {/* Play/Pause button */}
               <button
                 onClick={isRunning ? onPause : onRun}
-                className="p-2 bg-[#599CFF] hover:bg-[#8ebbff] rounded-full transition-colors cursor-pointer"
-                title={isRunning ? "Pause" : "Play"}
+                disabled={isUploading}
+                className={`p-2 rounded-full transition-colors cursor-pointer ${
+                  isUploading
+                    ? "bg-[#599CFF] opacity-60 cursor-not-allowed"
+                    : "bg-[#599CFF] hover:bg-[#8ebbff]"
+                }`}
+                title={isUploading ? "Uploading..." : isRunning ? "Pause" : "Play"}
               >
-                <Image
-                  src={isRunning ? "/stop button.png" : "/play button.png"}
-                  alt={isRunning ? "Pause" : "Play"}
-                  width={15}
-                  height={15}
-                  className="text-white"
-                />
+                {isUploading ? (
+                  <div
+                    className="h-[15px] w-[15px] border-2 border-white border-t-transparent rounded-full animate-spin"
+                    aria-label="Uploading"
+                  />
+                ) : (
+                  <Image
+                    src={isRunning ? "/stop button.png" : "/play button.png"}
+                    alt={isRunning ? "Pause" : "Play"}
+                    width={15}
+                    height={15}
+                    className="text-white"
+                  />
+                )}
               </button>
 
               {/* Erase/Reset button */}

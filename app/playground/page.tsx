@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import "blockly/javascript";
 import "@/components/Blockly/customblocks/magicbitblocks";
 import "@/components/Blockly/customblocks/keyboardBlocks";
@@ -63,6 +63,7 @@ interface BluetoothDevice {
 Blockly.setLocale(En);
 
 export default function Playground() {
+  const blocklyRef = useRef<{ getCurrentCode: () => string } | null>(null);
   const [generatedCode, setGeneratedCode] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
@@ -75,10 +76,7 @@ export default function Playground() {
   const [selectedSensor, setSelectedSensor] = useState<"ldr" | "ultrasound">(
     "ldr"
   );
-  const [latestValues, setLatestValues] = useState<{
-    ldr: number | null;
-    ultrasound: number | null;
-  }>({ ldr: null, ultrasound: null });
+  
 
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
 
@@ -88,7 +86,7 @@ export default function Playground() {
     useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothGATTServer | null>(null);
-  const watchedPinsRef = useRef<Set<number>>(new Set());
+  // const watchedPinsRef = useRef<Set<number>>(new Set());
 
   // Simple cleanup
   useEffect(() => {
@@ -124,89 +122,89 @@ export default function Playground() {
       const action = keyMap[e.key]; // ... existing code ...
 
       // Update the connection handling to detect cancellations
-      const connectBluetooth = async () => {
-        try {
-          setConnectionStatus("connecting");
-          // Request device
-          if (!bluetoothDeviceRef.current) {
-            const navBle = (
-              navigator as unknown as {
-                bluetooth: {
-                  requestDevice: (options: {
-                    filters: Array<{ name: string }>;
-                    optionalServices: string[];
-                  }) => Promise<BluetoothDevice>;
-                };
-              }
-            ).bluetooth;
+      // const connectBluetooth = async () => {
+      //   try {
+      //     setConnectionStatus("connecting");
+      //     // Request device
+      //     if (!bluetoothDeviceRef.current) {
+      //       const navBle = (
+      //         navigator as unknown as {
+      //           bluetooth: {
+      //             requestDevice: (options: {
+      //               filters: Array<{ name: string }>;
+      //               optionalServices: string[];
+      //             }) => Promise<BluetoothDevice>;
+      //           };
+      //         }
+      //       ).bluetooth;
 
-            try {
-              bluetoothDeviceRef.current = await navBle.requestDevice({
-                filters: [{ name: "Neo" }],
-                optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
-              });
-            } catch (error) {
-              // Handle user cancellation
-              if (
-                error.name === "NotFoundError" ||
-                error.name === "NotAllowedError"
-              ) {
-                console.log("Bluetooth connection canceled by user");
-                setConnectionStatus("disconnected");
-                setIsConnected(false);
-                // Dispatch cancellation event
-                try {
-                  window.dispatchEvent(new CustomEvent("connectionCanceled"));
-                } catch {}
-                return;
-              }
-              throw error;
-            }
+      //       try {
+      //         bluetoothDeviceRef.current = await navBle.requestDevice({
+      //           filters: [{ name: "Neo" }],
+      //           optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
+      //         });
+      //       } catch (error) {
+      //         // Handle user cancellation
+      //         if (
+      //           error.name === "NotFoundError" ||
+      //           error.name === "NotAllowedError"
+      //         ) {
+      //           console.log("Bluetooth connection canceled by user");
+      //           setConnectionStatus("disconnected");
+      //           setIsConnected(false);
+      //           // Dispatch cancellation event
+      //           try {
+      //             window.dispatchEvent(new CustomEvent("connectionCanceled"));
+      //           } catch {}
+      //           return;
+      //         }
+      //         throw error;
+      //       }
 
-            // Handle disconnection
-            bluetoothDeviceRef.current.addEventListener(
-              "gattserverdisconnected",
-              async () => {
-                setIsConnected(false);
-                setConnectionStatus("disconnected");
-                try {
-                  window.dispatchEvent(
-                    new CustomEvent("bleConnection", {
-                      detail: { connected: false },
-                    })
-                  );
-                } catch {}
-              }
-            );
-          }
+      //       // Handle disconnection
+      //       bluetoothDeviceRef.current.addEventListener(
+      //         "gattserverdisconnected",
+      //         async () => {
+      //           setIsConnected(false);
+      //           setConnectionStatus("disconnected");
+      //           try {
+      //             window.dispatchEvent(
+      //               new CustomEvent("bleConnection", {
+      //                 detail: { connected: false },
+      //               })
+      //             );
+      //           } catch {}
+      //         }
+      //       );
+      //     }
 
-          // ... rest of existing connection logic ...
-        } catch (error) {
-          console.error("Connection failed:", error);
+      //     // ... rest of existing connection logic ...
+      //   } catch (error) {
+      //     console.error("Connection failed:", error);
 
-          // Handle specific cancellation errors
-          if (
-            error.name === "NotFoundError" ||
-            error.name === "NotAllowedError"
-          ) {
-            console.log("Bluetooth connection canceled by user");
-            setConnectionStatus("disconnected");
-            setIsConnected(false);
-            // Dispatch cancellation event
-            try {
-              window.dispatchEvent(new CustomEvent("connectionCanceled"));
-            } catch {}
-            return;
-          }
+      //     // Handle specific cancellation errors
+      //     if (
+      //       error.name === "NotFoundError" ||
+      //       error.name === "NotAllowedError"
+      //     ) {
+      //       console.log("Bluetooth connection canceled by user");
+      //       setConnectionStatus("disconnected");
+      //       setIsConnected(false);
+      //       // Dispatch cancellation event
+      //       try {
+      //         window.dispatchEvent(new CustomEvent("connectionCanceled"));
+      //       } catch {}
+      //       return;
+      //     }
 
-          if (tryingToConnect) {
-            setTimeout(async () => {
-              setTryingToConnect(false);
-              await connectBluetooth();
-            }, 2000);
-          }
-        }
-      };
+      //     if (tryingToConnect) {
+      //       setTimeout(async () => {
+      //         setTryingToConnect(false);
+      //         await connectBluetooth();
+      //       }, 2000);
+      //     }
+      //   }
+      // };
 
      
       if (action) {
@@ -224,7 +222,7 @@ export default function Playground() {
   }, [connectionStatus]);
 
   // Simple Bluetooth connection
-  const connectBluetooth = async () => {
+  const connectBluetooth = useCallback(async () => {
     try {
       setConnectionStatus("connecting");
       // Request device
@@ -299,7 +297,7 @@ export default function Playground() {
               .forEach((line) => {
                 try {
                   const msg = JSON.parse(line);
-                  if (msg?.type === "analog_sensors") {
+                  if (msg?.type === "sensors") {
                       Object.entries(msg.analog).forEach(([pinStr, val]) => {
                           window.dispatchEvent(
                             new CustomEvent("sensorData", {
@@ -311,8 +309,18 @@ export default function Playground() {
                             })
                           );
                       });
+                      if (msg.ultrasound) {
+                        window.dispatchEvent(
+                          new CustomEvent("sensorData", {
+                            detail: {
+                              sensor: "ultrasound",
+                              value: msg.ultrasound,
+                            },
+                          })
+                        );
+                      }
                   }
-                } catch {
+                } catch(e) {
                   console.log("BLE raw:", line);
                 }
               });
@@ -341,7 +349,7 @@ export default function Playground() {
       console.error("Connection failed:", error);
       
       // Check if user cancelled the device selection
-      if (error.name === "NotFoundError" || error.name === "NotAllowedError") {
+      if (error instanceof Error && (error.name === "NotFoundError" || error.name === "NotAllowedError")) {
         console.log("Bluetooth connection canceled by user");
         setConnectionStatus("disconnected");
         setIsConnected(false);
@@ -359,7 +367,7 @@ export default function Playground() {
         }, 2000);
       }
     }
-  };
+  }, [tryingToConnect]);
 
   const clearWorkspace = () => {
     console.log("test");
@@ -372,14 +380,17 @@ export default function Playground() {
 
   // Simple upload code
   const uploadCode = async () => {
-    if (!generatedCode) return;
+    // Prefer code from the active tab inside BlocklyComponent (edited Python when on Code tab)
+    const codeFromChild = blocklyRef.current?.getCurrentCode?.();
+    const codeToUpload = codeFromChild ?? generatedCode;
+    if (!codeToUpload) return;
     setIsUploading(true);
     try {
       if (connectionType === "bluetooth") {
         if (!isConnected) await connectBluetooth();
-        await bluetoothUpload(generatedCode, writeCharacteristicRef.current);
+        await bluetoothUpload(codeToUpload, writeCharacteristicRef.current);
       } else {
-        await usbUpload(generatedCode, portRef);
+        await usbUpload(codeToUpload, portRef);
         setIsConnected(true);
       }
     } catch (error) {
@@ -463,7 +474,7 @@ export default function Playground() {
     }
   };
 
-  const sendBleControl = async (payload: BleControlPayload) => {
+  const sendBleControl = useCallback(async (payload: BleControlPayload) => {
     try {
       if (!writeCharacteristicRef.current) return;
       const text = JSON.stringify(payload) + "\n";
@@ -472,7 +483,7 @@ export default function Playground() {
     } catch (e) {
       console.error("BLE control send failed", e);
     }
-  };
+  }, []);
 
   const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
     if (isConnected) onConnectToggle(false);
@@ -486,7 +497,7 @@ export default function Playground() {
       }
     }
     connect();
-  }, [tryingToConnect]);
+  }, [connectBluetooth, tryingToConnect]);
 
   // // Listen for batch pin requests and forward to firmware (optional future multi-stream)
   useEffect(() => {
@@ -553,17 +564,14 @@ export default function Playground() {
                       <div className="text-sm text-gray-500 mb-1">
                         Current value
                       </div>
-                      <div className="text-3xl font-semibold text-[#222E3A]">
-                        {selectedSensor === "ldr"
-                          ? latestValues.ldr ?? "—"
-                          : latestValues.ultrasound ?? "—"}
-                      </div>
+                     
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
               <BlocklyComponent
+                ref={blocklyRef}
                 generatedCode={generatedCode}
                 setGeneratedCode={setGeneratedCode}
               />
