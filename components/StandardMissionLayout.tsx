@@ -248,6 +248,7 @@ export default function StandardMissionLayout({
       const timeout = setTimeout(() => {
         // Navigate to next mission for all missions
         const nextMissionId = String(Number(mission.id) + 1);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((missions as any)[nextMissionId]) {
           router.push(`/missions/${nextMissionId}`);
         } else {
@@ -354,7 +355,7 @@ export default function StandardMissionLayout({
         </div>
       )}
       {/* Overlay for PlaygroundUnlockedCard */}
-      {showPlaygroundUnlocked && (
+      {/* {showPlaygroundUnlocked && (
         <PlaygroundUnlockedCard
           onContinue={async () => {
             setShowPlaygroundUnlocked(false);
@@ -386,37 +387,37 @@ export default function StandardMissionLayout({
             }
           }}
         />
-      )}
+      )} */}
     </div>
   );
 }
 
-function PlaygroundUnlockedCard({ onContinue }: { onContinue: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-[60]"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-    >
-      <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-        <div className="mb-4 text-3xl font-extrabold text-center">
-          Playground Unlocked!
-        </div>
-        <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-          You can now access the Playground from the sidebar and try out your
-          own robot code!
-        </div>
-        <img
-          src="/playground-unlocked-placeholder.png"
-          alt="Playground Unlocked"
-          className="mb-8 w-32 h-20 object-contain"
-        />
-        <button
-          onClick={onContinue}
-          className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-        >
-          Continue
-        </button>
-      </div>
-    </div>
-  );
-}
+// function PlaygroundUnlockedCard({ onContinue }: { onContinue: () => void }) {
+//   return (
+//     <div
+//       className="fixed inset-0 flex items-center justify-center z-[60]"
+//       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+//     >
+//       <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
+//         <div className="mb-4 text-3xl font-extrabold text-center">
+//           Playground Unlocked!
+//         </div>
+//         <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
+//           You can now access the Playground from the sidebar and try out your
+//           own robot code!
+//         </div>
+//         <img
+//           src="/playground-unlocked-placeholder.png"
+//           alt="Playground Unlocked"
+//           className="mb-8 w-32 h-20 object-contain"
+//         />
+//         <button
+//           onClick={onContinue}
+//           className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
+//         >
+//           Continue
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }

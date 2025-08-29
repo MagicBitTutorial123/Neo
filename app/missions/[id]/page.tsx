@@ -75,6 +75,7 @@ declare global {
   }
 }
 import { useSidebar } from "@/context/SidebarContext";
+import Image from "next/image";
 
 type MissionsType = typeof missions;
 type MissionKey = keyof MissionsType;
@@ -962,9 +963,11 @@ export default function MissionPage() {
               <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
                 {/* Left Side - Happy Robot */}
                 <div className="mr-8">
-                  <img
+                  <Image
                     src="/happy-robot-correct-3.png"
                     alt="Happy Robot"
+                    width={256}
+                    height={256}
                     className="w-64 h-64 object-contain"
                   />
                 </div>
@@ -1002,9 +1005,11 @@ export default function MissionPage() {
                 <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
                   Check the images of elevation and try again.
                 </div>
-                <img
+                <Image
                   src="/dont-worry-card-image.png"
                   alt="Don't worry"
+                  width={128}
+                  height={80}
                   className="mb-8 w-32 h-20 object-contain"
                 />
                 <button
@@ -1082,9 +1087,11 @@ export default function MissionPage() {
                   You can now access the Playground from the sidebar and try out
                   your own robot code!
                 </div>
-                <img
+                <Image
                   src="/playground-unlocked-placeholder.png"
                   alt="Playground Unlocked"
+                  width={128}
+                  height={80}
                   className="mb-8 w-32 h-20 object-contain"
                 />
                 <button
@@ -1252,9 +1259,11 @@ export default function MissionPage() {
               <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
                 {/* Left Side - Happy Robot */}
                 <div className="mr-8">
-                  <img
+                  <Image
                     src="/happy-robot-correct-3.png"
                     alt="Happy Robot"
+                    width={256}
+                    height={256}
                     className="w-64 h-64 object-contain"
                   />
                 </div>
@@ -1292,9 +1301,11 @@ export default function MissionPage() {
                 <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
                   Check the images of elevation and try again.
                 </div>
-                <img
+                <Image
                   src="/dont-worry-card-image.png"
                   alt="Don't worry"
+                  width={128}
+                  height={80}
                   className="mb-8 w-32 h-20 object-contain"
                 />
                 <button
@@ -1372,7 +1383,9 @@ export default function MissionPage() {
                   You can now access the Playground from the sidebar and try out
                   your own robot code!
                 </div>
-                <img
+                <Image
+                  width={128}
+                  height={80}
                   src="/playground-unlocked-placeholder.png"
                   alt="Playground Unlocked"
                   className="mb-8 w-32 h-20 object-contain"

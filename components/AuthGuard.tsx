@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 // import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -12,18 +12,12 @@ interface AuthGuardProps {
 export default function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  // const router = useRouter();
 
   useEffect(() => {
     checkAuth();
-    
-    // Set up interval to check auth every few seconds
-    const interval = setInterval(checkAuth, 3000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  },);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -49,7 +43,7 @@ export default function AuthGuard({ children, redirectTo = "/" }: AuthGuardProps
     } finally {
       setLoading(false);
     }
-  };
+  }, [redirectTo]);
 
   // Additional protection: check on every render
   useEffect(() => {

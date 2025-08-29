@@ -11,7 +11,7 @@ export default function SignupMain() {
 
   useEffect(() => {
     clearRegistrationData();
-  }, []);
+  }, [clearRegistrationData]);
 
   const handleNext = () => {
     // Navigate to email page instead of mobile
