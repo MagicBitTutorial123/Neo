@@ -66,6 +66,7 @@ interface BluetoothDevice {
 Blockly.setLocale(En);
 
 export default function Playground() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blocklyRef = useRef<{ getCurrentCode: () => string; workspaceRef: React.RefObject<any> } | null>(null);
   const [generatedCode, setGeneratedCode] = useState("");
   const [isConnected, setIsConnected] = useState(false);
