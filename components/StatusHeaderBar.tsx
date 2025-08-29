@@ -84,8 +84,8 @@ export default function Header({
         <div className="flex flex-col xl:flex-row xl:items-center gap-0 xl:gap-8 min-w-0 h-full justify-center xl:justify-start">
           <span className="text-lg sm:text-xl md:text-2xl font-extrabold text-white whitespace-nowrap leading-tight">
             {!isPlayground
-              ? `Mission ${missionNumber.toString().padStart(2, "0")}`
-              : "Playground"}
+              ? `Your App Mission ${missionNumber.toString().padStart(2, "0")}`
+              : "Your App Playground"}
           </span>
           {/* Vertical separator - Only visible on extra large screens */}
           {!isPlayground && (
