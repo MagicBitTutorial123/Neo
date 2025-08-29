@@ -5,16 +5,8 @@ import { useState } from "react";
 import NextButton from "@/components/NextButton";
 //import { supabase } from "@/lib/supabaseClient";
 
-
-
 import { createClient } from "@supabase/supabase-js";
 
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-   { auth: { autoRefreshToken: false, persistSession: false } }
-
-);
 /* ---------------- helpers ---------------- */
 function validatePassword(password: string) {
   // min 8 chars, upper, lower, number, special
@@ -23,6 +15,12 @@ function validatePassword(password: string) {
 
 /** Registers a new user in Supabase Auth and passes extra fields as metadata. */
 async function signUpNewUser(password: string) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
   const name  = localStorage.getItem("name") || "";
   const phone = localStorage.getItem("fullPhone") || "";
   const age   = localStorage.getItem("age") || "";

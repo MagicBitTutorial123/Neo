@@ -40,8 +40,8 @@ export default function ProfilePage() {
   return (
     <div className="flex h-screen bg-white overflow-x-hidden">
       <SideNavbar
-        avatar={userAvatar}
-        name={userName}
+        avatar={userData.avatar}
+        name={userData.name}
       />
       <main
         className="flex-1 flex flex-col items-center px-4 lg:px-8 py-3 lg:py-6 overflow-hidden transition-all duration-300 ease-in-out"
