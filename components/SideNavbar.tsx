@@ -486,7 +486,7 @@ export default function SideNavbar({
           href: "#",
           disabled: true as const,
         },
-        
+
     {
       icon: "/demo.svg",
       label: "Demo",
@@ -709,8 +709,8 @@ export default function SideNavbar({
                      <Image
              src={
                sidebarCollapsed
-                 ? "/your-new-logo-collapsed.svg"
-                 : "/your-new-logo-expanded.svg"
+                 ? "/BuddyNeo-collapsed.svg"
+                 : "/BuddyNeo-expanded.svg"
              }
              alt="Your New App Logo"
              width={sidebarCollapsed ? 40 : 120}
