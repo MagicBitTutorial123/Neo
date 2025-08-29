@@ -704,6 +704,7 @@ export default function SideNavbar({
             ) : (
               <Link
                 key={item.label}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 href={(item as any).href}
                 className={`flex flex-row items-center gap-3 ${
                   sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"

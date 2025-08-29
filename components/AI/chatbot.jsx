@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaChevronRight, FaRegPaperPlane } from "react-icons/fa";
 import * as Blockly from "blockly";
-import downloadImg from '@/assets/download.png';
+import downloadImg from '@/public/happy-robot-correct-3.png';
 import ChatBubbleSVG from "@/assets/chat-bubble.svg";
 import Image from 'next/image';
 
@@ -20,26 +20,62 @@ export default function AIChatbot({ position = "right", workspaceRef,onClose }) 
   const [collapseLevel, setCollapseLevel] = useState(0);
   // draggable position
   const chatbotRef = useRef(null);
-  const posRef = useRef({ x: 20, y: 430 }); 
+  const posRef = useRef({ x: 800, y: 430 }); 
  
 
 
   
   // block list for Gemini to know
   const blockList = `
-- magicbit_set_digital: sets a digital pin high/low
-- magicbit_clear_display: clears the OLED
-- magicbit_display_text: writes text on the OLED at x,y
-- magicbit_set_pwm: sets PWM duty on a pin
-- magicbit_set_servo: sets servo angle
-- magicbit_read_analog: reads analog pin
-- magicbit_touch: reads touch pin
-- magicbit_read_button: reads left/right button
-- magicbit_ultrasonic: reads ultrasonic distance
-- magicbit_read_humidity: reads humidity
-- magicbit_neopixel_rgb: sets NeoPixel color
-- magicbit_play_tone: plays a tone
-- delay_block: adds a delay in seconds
+Available Magicbit blocks with parameters:
+
+**Digital Control:**
+- magicbit_set_digital(PIN: number, STATE: "HIGH"|"LOW") - sets digital pin high/low
+- magicbit_clear_display() - clears the OLED display
+
+**Display:**
+- magicbit_display_text(TEXT: string, X: number, Y: number) - writes text on OLED at x,y coordinates
+
+**Analog Control:**
+- magicbit_set_pwm(PIN: number, VALUE: number 0-255) - sets PWM duty cycle on pin
+- magicbit_set_servo(PIN: number, ANGLE: number 0-180) - sets servo angle in degrees
+- magicbit_read_analog(PIN: number) - reads analog value from pin
+
+**Sensors:**
+- magicbit_touch(PIN: number) - reads touch sensor on pin
+- magicbit_read_button(BUTTON: "LEFT"|"RIGHT") - reads left/right button state
+- magicbit_ultrasonic(PIN: number) - reads distance from ultrasonic sensor
+- magicbit_read_humidity(PIN: number) - reads humidity sensor value
+
+**Output:**
+- magicbit_neopixel_rgb(PIN: number, R: number 0-255, G: number 0-255, B: number 0-255) - sets NeoPixel color
+- magicbit_play_tone(PIN: number, FREQUENCY: number, DURATION: number) - plays tone on pin
+
+**Motion:**
+- magicbit_motor(SIDE: "LEFT"|"RIGHT", DIR: "FWD"|"BWD", SPEED: number 0-100) - controls left/right motor forward/backward with speed percentage
+
+**Control:**
+- delay_block(DELAY: number) - adds delay in seconds
+
+**Keyboard Events:**
+- keyboard_when_key_pressed(KEY: "up"|"down"|"left"|"right") - handles arrow key press events
+- keyboard_when_custom_key_pressed(CUSTOM_KEY: string) - handles custom key press events (e.g., "a", "space", "1")
+
+**Important Notes:**
+- Only use the Magicbit blocks listed above - do NOT use standard Blockly control blocks
+- **ALWAYS use keyboard blocks for user input events:**
+  - Use \`keyboard_when_key_pressed\` for arrow keys (up, down, left, right)
+  - Use \`keyboard_when_custom_key_pressed\` for other keys (a, space, 1, etc.)
+- For button/keyboard events: blocks can be added independently without loops since they work as event handlers
+- Keep programs simple and focused on the available Magicbit blocks
+
+**Parameter Notes:**
+- PIN: Use valid GPIO pin numbers (e.g., 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39)
+- ANGLE: Servo angles typically 0-180 degrees
+- PWM: Values 0-255 (0=off, 255=full on)
+- RGB: Each color component 0-255 (0=off, 255=full brightness)
+- FREQUENCY: Sound frequency in Hz (e.g., 440 for A4 note)
+- DURATION: Time in milliseconds
 `;
 useEffect(() => {
   chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -192,6 +228,47 @@ useEffect(() => {
 
 
 
+
+
+// Get current workspace XML
+const getCurrentWorkspaceXML = () => {
+  const workspace = (workspaceRef && workspaceRef.current) ? workspaceRef.current : Blockly.getMainWorkspace();
+  if (!workspace) {
+    console.error("No Blockly workspace found");
+    return null;
+  }
+  try {
+    return Blockly.Xml.workspaceToDom(workspace);
+  } catch (err) {
+    console.error("Error getting workspace XML:", err);
+    return null;
+  }
+};
+
+// Replace entire workspace with new XML
+const replaceWorkspaceWithXML = (xmlString) => {
+  const workspace = (workspaceRef && workspaceRef.current) ? workspaceRef.current : Blockly.getMainWorkspace();
+  if (!workspace) {
+    console.error("No Blockly workspace found");
+    return false;
+  }
+  try {
+    // Clear current workspace
+    workspace.clear();
+    
+    // Parse and add new XML
+    const xmlDom = Blockly.utils.xml.textToDom(xmlString);
+    Blockly.Xml.domToWorkspace(xmlDom, workspace);
+    
+    // Render the workspace
+    workspace.render();
+    return true;
+  } catch (err) {
+    console.error("Error replacing workspace:", err);
+    return false;
+  }
+};
+
 const addBlockToWorkspace = (type, fields = {}, offset = [20, 20]) => {
   // Defensive: use workspaceRef if available, else fallback to Blockly.getMainWorkspace()
   const workspace = (workspaceRef && workspaceRef.current) ? workspaceRef.current : Blockly.getMainWorkspace();
@@ -243,8 +320,8 @@ const handleCommand = (text) => {
 const turnRightMatch = lower.match(/turn\s+right\s+(\d+)(?:\s+degrees?)?/i);
   if (turnRightMatch) {
 const angle = turnRightMatch[1];
-if (addBlockToWorkspace("motion_turn_right", { ANGLE: angle })) {
-  return `✅ Added *turn right ${angle} degrees* block.`;
+if (addBlockToWorkspace("magicbit_motor", { SIDE: "LEFT", DIR: "FWD", SPEED: 50 })) {
+  return `✅ Added *turn right* block (left motor forward at 50% speed).`;
 }
 return "⚠️ Failed to add turn right block.";
 }
@@ -253,8 +330,8 @@ return "⚠️ Failed to add turn right block.";
 const turnLeftMatch = lower.match(/turn\s+left\s+(\d+)(?:\s+degrees?)?/i);
 if (turnLeftMatch) {
 const angle = turnLeftMatch[1];
-if (addBlockToWorkspace("motion_turn_left", { ANGLE: angle })) {  
-  return `✅ Added *turn left ${degrees} degrees* block.`;
+if (addBlockToWorkspace("magicbit_motor", { SIDE: "RIGHT", DIR: "FWD", SPEED: 50 })) {  
+  return `✅ Added *turn left* block (right motor forward at 50% speed).`;
 }
 return "⚠️ Failed to add turn left block.";
 }
@@ -329,8 +406,8 @@ return "⚠️ Failed to add ultrasonic block.";
   const moveMatch = lower.match(/move (\d+) steps/);
   if (moveMatch) {
     const steps = moveMatch[1];
-    if (addBlockToWorkspace("motion_move_steps", { STEPS: steps })) {
-      return `✅ Added *move ${steps} steps* block.`;
+    if (addBlockToWorkspace("magicbit_motor", { SIDE: "LEFT", DIR: "FWD", SPEED: 50 })) {
+      return `✅ Added *move forward* block with left motor at 50% speed.`;
     }
     return "⚠️ Failed to add move block.";
   }
@@ -350,6 +427,53 @@ return "⚠️ Failed to add ultrasonic block.";
   // simple info command
   if (lower.includes("magicbit blocks") || lower.includes("list blocks")) {
     return `🟦 Available Magicbit blocks:\n${blockList}`;
+  }
+
+  // show current blocks
+  if (lower.includes("show blocks") || lower.includes("current blocks") || lower.includes("what blocks")) {
+    const currentXML = getCurrentWorkspaceXML();
+    if (currentXML) {
+      const xmlText = Blockly.Xml.domToText(currentXML);
+      return `📋 Current blocks in workspace:\n\`\`\`xml\n${xmlText}\n\`\`\``;
+    } else {
+      return "📋 No blocks currently in the workspace.";
+    }
+  }
+
+  // clear workspace
+  if (lower.includes("clear") || lower.includes("clear all") || lower.includes("reset")) {
+    const workspace = (workspaceRef && workspaceRef.current) ? workspaceRef.current : Blockly.getMainWorkspace();
+    if (workspace) {
+      workspace.clear();
+      workspace.render();
+      return "🧹 Workspace cleared!";
+    }
+    return "⚠️ Failed to clear workspace.";
+  }
+
+  // help command
+  if (lower.includes("help") || lower.includes("what can you do")) {
+    return `🤖 I can help you with Magicbit blocks! Here's what I can do:
+
+📋 **Commands:**
+• "show blocks" - See current blocks in workspace
+• "clear" - Clear all blocks
+• "magicbit blocks" - List available block types with parameters
+
+💬 **Natural language examples:**
+• "Add a servo block that turns to 90 degrees on pin 15"
+• "Make the robot move forward when up arrow is pressed"
+• "Add a delay of 2 seconds"
+• "Show text 'Hello' at position x=10, y=20"
+• "Set pin 13 to HIGH"
+• "Add a NeoPixel on pin 18 with red color (255,0,0)"
+• "Read analog value from pin 32"
+• "When 'a' key is pressed, turn the robot left"
+
+🔧 **I can modify existing blocks or create new ones based on your requests!**
+📝 **I now have full parameter details for all blocks, so I can create more accurate code.**
+⚠️ **Note: I can only use the Magicbit blocks listed above - no standard Blockly control structures.**
+💡 **For button events: blocks work as event handlers, so no loops needed!**`;
   }
 
   return null;
@@ -376,11 +500,31 @@ const handleSend = async (e) => {
     const apiKey = "AIzaSyD2o7sXV8577lISSvLVG4YbQkXdNM5zh-Q";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
+    // Get current workspace XML
+    const currentXML = getCurrentWorkspaceXML();
+    const currentXMLString = currentXML ? Blockly.Xml.domToText(currentXML) : "No existing blocks";
+
     const payload = {
 contents: [{
   role: "user",
   parts: [{
-    text: `You are a Blockly assistant. Reply ONLY with valid Blockly XML using these blocks: ${blockList}. Do not explain or use markdown. Convert this to blocks: ${input}`
+         text: `You are a Blockly assistant for Magicbit. Here are the available blocks: ${blockList}
+
+Current workspace XML:
+${currentXMLString}
+
+User request: ${input}
+
+IMPORTANT: Only use the Magicbit blocks listed above. Do NOT use standard Blockly control blocks like controls_forever, controls_if, logic_compare, etc. These are not available in this workspace.
+
+**CRITICAL: For ANY user input or button press events, you MUST use keyboard blocks:**
+- Use \`keyboard_when_key_pressed\` for arrow keys (up, down, left, right)
+- Use \`keyboard_when_custom_key_pressed\` for other keys (a, space, 1, etc.)
+- These blocks work as event handlers and don't need loops
+
+For button/keyboard events: blocks can be added independently without loops since they work as event handlers.
+
+Please modify the current blocks or create new ones based on the user's request. Reply ONLY with valid Blockly XML using only the available Magicbit blocks. Do not explain or use markdown.`
   }]
 }],
 generationConfig: {
@@ -417,16 +561,12 @@ console.log("AI Raw XML Response:\n", rawXml);
 
 if (rawXml.startsWith("<xml")) {
   try {
-    const xmlDom = Blockly.utils.xml.textToDom(rawXml);
-    const workspace = (workspaceRef && workspaceRef.current) ? workspaceRef.current : Blockly.getMainWorkspace();
-    if (!workspace) {
-    setMessages(prev => [...prev, { role: "ai", text: "⚠️ Blockly workspace not ready yet. Try again in a moment." }]);
-    setLoading(false);
-    return;
-}
-
-    Blockly.Xml.domToWorkspace(xmlDom, workspace);
-    setMessages((prev) => [...prev, { role: "ai", text: "✅ Blocks added to the workspace." }]);
+    // Replace the entire workspace with the new XML
+    if (replaceWorkspaceWithXML(rawXml)) {
+      setMessages((prev) => [...prev, { role: "ai", text: "✅ Workspace updated with new blocks!" }]);
+    } else {
+      setMessages((prev) => [...prev, { role: "ai", text: "⚠️ Failed to update workspace." }]);
+    }
     return;
   } catch (err) {
     console.error("XML Parse Error:", err);
@@ -462,7 +602,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
       {/* Bubble absolutely above the minimized widget */}
       {collapseLevel === 2 && (
         <div style={{ position: "relative", width: "210px", height: "60px" }}>
-  <img
+  <Image
     src={ChatBubbleSVG}
     alt="Bubble"
     style={{ width: "100%", height: "100%" }}
@@ -486,7 +626,15 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
 </div>
 
       )}
-      <div className={`chatbot-container collapse-${collapseLevel}`}>
+             <div 
+         className={`chatbot-container collapse-${collapseLevel}`}
+         style={{
+           minWidth: '200px',
+           minHeight: '200px',
+           maxWidth: '600px',
+           maxHeight: '800px'
+         }}
+       >
         {/* Header */}
         <div className="chatbot-header">
           {/* Dots grid (always show) */}
@@ -497,9 +645,9 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
           </div>
           {/* Avatar with active dot */}
           <div className="chatbot-avatar-wrapper">
-            <img
+            <Image
               src={downloadImg}
-              alt="Neo"
+              alt="AI Assistant"
               className="chatbot-avatar"
             />
             <span className="chatbot-avatar-active" />
@@ -534,20 +682,34 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
               ))}
             </div>
             <div
-              className="flex items-center bg-white border-2 border-gray-300 rounded-full px-4 py-2 shadow max-w-xs"
-              style={{ marginTop: 8 }}
+               className="flex items-center bg-white border-2 border-gray-300 rounded-full px-4 py-2 shadow"
+               style={{ 
+                 marginTop: 8,
+                 maxWidth: 'calc(100% - 20px)',
+                 minWidth: '200px'
+               }}
             >
               <input
                 className="flex-1 bg-transparent outline-none text-gray-700 placeholder-gray-400 text-sm"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend(e)}
+                 onKeyDown={e => {
+                   e.stopPropagation();
+                   if (e.key === 'Enter') {
+                     handleSend(e);
+                   }
+                 }}
+                 onKeyUp={e => e.stopPropagation()}
+                 onKeyPress={e => e.stopPropagation()}
                 placeholder="Hey! Can you help me with...."
                 style={{ border: "none" }}
               />
               <button
                 className="ml-2 p-1 rounded-full hover:bg-blue-50 transition"
-                onClick={handleSend}
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   handleSend(e);
+                 }}
                 style={{ border: "none", background: "none" }}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -557,6 +719,7 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
             </div>
           </>
         )}
+        
       </div>
     </div>
   );

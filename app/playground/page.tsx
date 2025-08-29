@@ -14,6 +14,9 @@ import Header from "@/components/StatusHeaderBar";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
 import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
+import AIChatbot from "@/components/AI/chatbot";
+import "@/components/AI/chatbot.css";
+
 
 // Simple type declarations
 interface BluetoothGATT {
@@ -63,7 +66,7 @@ interface BluetoothDevice {
 Blockly.setLocale(En);
 
 export default function Playground() {
-  const blocklyRef = useRef<{ getCurrentCode: () => string } | null>(null);
+  const blocklyRef = useRef<{ getCurrentCode: () => string; workspaceRef: React.RefObject<any> } | null>(null);
   const [generatedCode, setGeneratedCode] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
@@ -705,6 +708,7 @@ export default function Playground() {
         onClose={() => setShowFirmwareModal(false)} 
         portRef={portRef}
       />
+      <AIChatbot workspaceRef={blocklyRef.current?.workspaceRef} onClose={() => {}} />
     </div>
   );
 }

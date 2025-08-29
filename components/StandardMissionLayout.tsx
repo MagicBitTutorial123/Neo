@@ -25,6 +25,7 @@ export default function StandardMissionLayout({
   onCurrentStepChange,
   onFinish,
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mission: any;
   onStateChange?: (state: {
     showIntro: boolean;
@@ -205,7 +206,8 @@ export default function StandardMissionLayout({
       setShowPlaygroundUnlocked(true);
     } else {
       // Find the next mission id
-      const nextMissionId = String(Number(mission.id) + 1);
+      const nextMissionId = String(Number(mission.id) + 1); 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((missions as any)[nextMissionId]) {
         router.push(`/missions/${nextMissionId}`);
       } else {

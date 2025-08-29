@@ -32,6 +32,7 @@ export default function BlocklySplitLayout({
   onUploadCode,
   // isUploading = false,
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mission: any;
   sidebarCollapsed?: boolean;
   onStateChange?: (state: {
@@ -401,6 +402,7 @@ export default function BlocklySplitLayout({
                       </h3>
                       <ul className="space-y-2">
                         {mission.steps[currentStep].blocks.map(
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           (block: any, index: number) => (
                             <li key={index} className="flex items-center">
                               <span className="w-2 h-2 bg-[#F28B20] rounded-full mr-2"></span>

@@ -224,7 +224,8 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
               {/* Mission Image - flush with top/edges, rounded top corners */}
               <div className="w-full sm:w-[370px] h-[200px] sm:h-[260px] rounded-t-2xl overflow-hidden max-w-full">
                 <Image
-                  src={getSafeImageSrc(
+                  src={getSafeImageSrc( 
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (selectedMission as any).missionPageImage
                   )}
                   alt={selectedMission.title}
@@ -371,13 +372,15 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                       >
                         <div className="relative w-full h-[160px] rounded-2xl mb-2 border border-[#E0E6ED] hover:border-[#E0E6ED] bg-white transition-transform duration-200 focus:outline-none focus:ring-0">
                           {/* Mission image always in the background */}
-                          <img
+                          <Image
                             src={getSafeImageSrc(
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
                               (mission as any).missionPageImage
                             )}
                             alt={mission.title}
                             width={160}
                             height={160}
+                            unoptimized
                             className="object-cover w-full h-full"
                             style={{
                               objectFit: "cover",
@@ -566,6 +569,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
             {/* Mission Image - flush with top/edges, rounded top corners */}
             <div className="w-full sm:w-[370px] h-[200px] sm:h-[260px] rounded-t-2xl overflow-hidden max-w-full">
               <Image
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 src={getSafeImageSrc((selectedMission as any).missionPageImage)}
                 alt={selectedMission.title}
                 width={370}
@@ -720,8 +724,9 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                     >
                       <div className="relative w-full h-[160px] rounded-2xl mb-2 border border-[#E0E6ED] hover:border-[#E0E6ED] bg-white transition-transform duration-200 focus:outline-none focus:ring-0">
                         {/* Mission image always in the background */}
-                        <img
+                        <Image
                           src={getSafeImageSrc(
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             (mission as any).missionPageImage
                           )}
                           alt={mission.title}

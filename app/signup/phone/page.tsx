@@ -299,7 +299,7 @@ export default function SignupPhone() {
 
           <div className="mb-12 flex items-center w-full justify-center" style={{ minHeight: 100 }}>
             <h1 className="text-3xl md:text-4xl font-extrabold text-[#222E3A] text-center font-poppins leading-tight">
-              What's your phone number?
+              What&apos;s your phone number?
             </h1>
           </div>
 

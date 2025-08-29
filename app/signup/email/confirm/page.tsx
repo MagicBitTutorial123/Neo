@@ -199,13 +199,13 @@ export default function EmailConfirm() {
                   {email}
                 </p>
                 <p className="text-gray-600">
-                  You're ready to continue with your account setup!
+                  You&apos;re ready to continue with your account setup!
                 </p>
               </>
             ) : (
               <>
                 <p className="text-lg text-gray-600 mb-4">
-                  We've sent a confirmation link to:
+                  We&apos;ve sent a confirmation link to:
                 </p>
                 <p className="text-xl font-semibold text-[#222E3A] mb-6">
                   {email}
@@ -219,7 +219,7 @@ export default function EmailConfirm() {
 
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-500">
-              Didn't receive the email? Check your spam folder or try resending.
+              Didn&apos;t receive the email? Check your spam folder or try resending.
             </p>
           </div>
         </div>
