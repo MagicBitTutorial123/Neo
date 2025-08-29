@@ -127,6 +127,7 @@ export default function SideNavbar({
   // Loading and error states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileCreationAttempted, setProfileCreationAttempted] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -135,7 +136,13 @@ export default function SideNavbar({
   const dropRef = useRef<HTMLLabelElement>(null);
 
   // Fetch user data from Supabase table
-  const fetchUserDataFromSupabase = async () => {
+  const fetchUserDataFromSupabase = async (forceRefresh = false) => {
+    // Don't fetch again if we already have data and it's not a force refresh
+    if (supabaseUserData && !forceRefresh) {
+      console.log('🔍 Skipping fetch - data already available');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -231,25 +238,30 @@ export default function SideNavbar({
   useEffect(() => {
     const handleProfileUpdate = () => {
       console.log('🔄 Profile update event received, refreshing sidebar data...');
-      fetchUserDataFromSupabase();
+      fetchUserDataFromSupabase(true); // Force refresh when profile is updated
     };
 
-    // Listen for custom event when profile is updated
+    const handleAvatarUpdate = (event: CustomEvent) => {
+      console.log('🔄 Avatar update event received:', event.detail);
+      // Immediately update localStorage and refresh from localStorage
+      if (event.detail?.avatar) {
+        localStorage.setItem('avatar', event.detail.avatar);
+        refreshFromLocalStorage();
+      }
+    };
+
+    // Listen for custom events when profile is updated
     window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     };
   }, []);
 
-  // Refresh data periodically to catch changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchUserDataFromSupabase();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+  // Only refresh data when needed, not periodically
+  // Removed the 30-second interval that was causing constant loading
 
   // Try to create user profile if it doesn't exist
   const createUserProfileIfNeeded = async () => {
@@ -299,14 +311,19 @@ export default function SideNavbar({
     }
   };
 
-  // Try to create profile after fetching data
+  // Only try to create profile if we don't have data, there's no error, and we haven't tried before
   useEffect(() => {
-    if (supabaseUserData === null) {
-      // Wait a bit then try to create profile
-      const timer = setTimeout(createUserProfileIfNeeded, 1000);
+    if (supabaseUserData === null && !error && !profileCreationAttempted) {
+      // Wait a bit then try to create profile, but only once
+      const timer = setTimeout(() => {
+        if (supabaseUserData === null && !error && !profileCreationAttempted) {
+          setProfileCreationAttempted(true);
+          createUserProfileIfNeeded();
+        }
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [supabaseUserData]);
+  }, [supabaseUserData, error, profileCreationAttempted]);
 
   // We'll use the user data from Supabase table (what user selected during signup)
   console.log('🔍 Using user data from Supabase table:', {
@@ -413,7 +430,7 @@ export default function SideNavbar({
     if (registrationData?.avatar) {
       return registrationData.avatar;
     }
-    return "/User.png";
+    return "/Avatar02.png"; // Default avatar
   })();
 
   const userName = (() => {
@@ -438,7 +455,7 @@ export default function SideNavbar({
 
   // Ensure avatar has proper path
   const finalAvatar = (() => {
-    if (!userAvatar) return "/Avatar01.png";
+    if (!userAvatar) return "/Avatar02.png";
     if (userAvatar.startsWith('/') || userAvatar.startsWith('http')) {
       return userAvatar;
     }
@@ -446,6 +463,17 @@ export default function SideNavbar({
   })();
 
   const finalName = userName || "User";
+  
+  // Debug logging for avatar changes
+  console.log('🔍 Avatar source debug:', {
+    supabaseAvatar: supabaseUserData?.avatar,
+    lsAvatar,
+    propAvatar: avatar,
+    userDataAvatar: userData?.avatar,
+    registrationAvatar: registrationData?.avatar,
+    finalUserAvatar: userAvatar,
+    finalAvatar: finalAvatar
+  });
 
   // Debug logging
   console.log('🔍 SideNavbar data sources:', {

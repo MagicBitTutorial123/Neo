@@ -18,6 +18,14 @@ const splitName = (full: string) => {
 const joinName = (first: string, last: string) =>
   [first.trim(), last.trim()].filter(Boolean).join(" ");
 
+const avatars = [
+  "/Avatar01.png",
+  "/Avatar02.png",
+  "/Avatar03.png",
+  "/Avatar04.png",
+  "/Avatar05.png",
+];
+
 export default function SettingsPage() {
   // const { registrationData, userData, updateUserData } = useUser();
   const { sidebarCollapsed } = useSidebar();
@@ -36,6 +44,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'subscription' | 'firmware' | 'delete'>('profile');
+  const [avatarChanged, setAvatarChanged] = useState(false);
 
   // Supabase user data
   // const [supabaseUserData, setSupabaseUserData] = useState<{
@@ -251,6 +260,78 @@ export default function SettingsPage() {
 
   const canSave = !!firstName.trim() && phoneValid && ageValid && !saving;
 
+  // Handle immediate avatar update
+  const handleAvatarChange = (newAvatar: string) => {
+    setAvatar(newAvatar);
+    setAvatarChanged(true);
+    setOk(null); // Clear any previous success message
+  };
+
+  // Handle immediate avatar save
+  const handleAvatarSave = async () => {
+    if (!avatarChanged) return;
+    
+    setSaving(true);
+    setError(null);
+    
+    try {
+      // Get current authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        setError("No authenticated user found. Please log in again.");
+        return;
+      }
+
+      // Update avatar in user_profiles table
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ 
+          avatar: avatar.startsWith('/') ? avatar.substring(1) : avatar,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (profileError) {
+        console.error('❌ Error updating avatar:', profileError);
+        setError(`Failed to update avatar: ${profileError.message}`);
+        return;
+      }
+
+      // Update user metadata in auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          avatar: avatar.replace('/', '')
+        }
+      });
+
+      if (updateError) {
+        console.error('❌ Error updating user metadata:', updateError);
+        // Don't fail the whole operation for metadata update
+      }
+
+      // Update localStorage
+      localStorage.setItem("avatar", avatar.replace('/', ''));
+
+      // Dispatch events to notify sidebar
+      window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+        detail: { avatar: avatar.replace('/', '') } 
+      }));
+      window.dispatchEvent(new CustomEvent('avatarChanged', { 
+        detail: { avatar: avatar.replace('/', '') } 
+      }));
+
+      setOk("Avatar updated successfully!");
+      setAvatarChanged(false);
+      
+    } catch (error) {
+      console.error('❌ Error saving avatar:', error);
+      setError("Failed to update avatar. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     setError(null);
     setOk(null);
@@ -344,9 +425,16 @@ export default function SettingsPage() {
       localStorage.setItem("avatar", avatar.replace('/', '')); // Store without leading slash
 
       setOk("Profile updated successfully!");
+      setAvatarChanged(false);
 
-      // Dispatch custom event to notify sidebar to refresh
+      // Dispatch custom events to notify sidebar to refresh
       window.dispatchEvent(new CustomEvent('profileUpdated'));
+      window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+        detail: { avatar: avatar.replace('/', '') } 
+      }));
+      window.dispatchEvent(new CustomEvent('avatarChanged', { 
+        detail: { avatar: avatar.replace('/', '') } 
+      }));
 
       // Refresh data to ensure consistency
       await fetchUserDataFromSupabase();
@@ -508,12 +596,77 @@ export default function SettingsPage() {
                   onClick={handleSave}
                   disabled={!canSave}
                 >
-                  {saving ? "Saving..." : "Save"}
+                  {saving ? "Saving..." : avatarChanged ? "Save Changes" : "Save"}
                 </button>
               </div>
 
               {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
               {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
+
+              {/* Avatar Selection Section */}
+              <div className="mb-8">
+                <label className="block text-sm text-[#6B7280] mb-3">Profile Avatar</label>
+                <div className="flex flex-wrap gap-4">
+                  {avatars.map((avatarSrc, idx) => (
+                    <button
+                      key={avatarSrc}
+                      type="button"
+                      className={`relative rounded-full p-2 transition-all border-4 ${
+                        avatar === avatarSrc
+                          ? "border-[#00AEEF] bg-[#F3F8FF]"
+                          : "border-transparent bg-[#F8FAFC] hover:bg-[#F1F5F9]"
+                      } focus:outline-none focus:ring-2 focus:ring-[#CFE2FF]`}
+                      style={{
+                        width: 80,
+                        height: 80,
+                      }}
+                      onClick={() => handleAvatarChange(avatarSrc)}
+                      tabIndex={0}
+                      aria-label={`Select avatar ${idx + 1}`}
+                    >
+                      <Image
+                        src={avatarSrc}
+                        alt={`Avatar ${idx + 1}`}
+                        width={64}
+                        height={64}
+                        className="rounded-full object-cover"
+                      />
+                      {avatar === avatarSrc && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#00AEEF] rounded-full flex items-center justify-center">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                            <path
+                              d="M5 12l4 4L19 6"
+                              stroke="white"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs text-[#6B7280]">
+                    Click on an avatar to select it. Your selection will be saved when you click the Save button.
+                    {avatarChanged && (
+                      <span className="ml-2 text-[#00AEEF] font-medium">
+                        • Changes pending
+                      </span>
+                    )}
+                  </p>
+                  {avatarChanged && (
+                    <button
+                      onClick={handleAvatarSave}
+                      disabled={saving}
+                      className="px-3 py-1.5 text-xs bg-[#00AEEF] text-white rounded-lg hover:bg-[#0098D4] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {saving ? "Saving..." : "Save Avatar"}
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
                 <div className="flex flex-col gap-1">
