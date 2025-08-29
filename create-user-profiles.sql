@@ -94,7 +94,7 @@ BEGIN
       THEN (NEW.raw_user_meta_data->>'age')::INTEGER 
       ELSE NULL 
     END,
-    COALESCE(NEW.raw_user_meta_data->>'avatar', '/Avatar01.png'),
+    COALESCE(NEW.raw_user_meta_data->>'avatar', '/Avatar02.png'),
     ''
   );
   RETURN NEW;

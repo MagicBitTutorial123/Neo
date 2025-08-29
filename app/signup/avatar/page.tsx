@@ -1,13 +1,12 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 
 const avatars = [
-  "/Avatar01.png",
   "/Avatar02.png",
   "/Avatar03.png",
   "/Avatar04.png",
@@ -16,23 +15,48 @@ const avatars = [
 
 export default function SignupAvatar() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { registrationData, updateRegistrationData, clearRegistrationData } = useUser();
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
 
   //DISPLAY NAME
   const [displayName, setDisplayName] = useState(registrationData.name || "");
+  
   useEffect(() => {
-    if (!displayName) {
+    // Check if this is an OAuth user
+    const oauthParam = searchParams.get('oauth');
+    const oauthEmail = searchParams.get('email');
+    const oauthName = searchParams.get('name');
+    
+    if (oauthParam === 'true' && oauthEmail && oauthName) {
+      setIsOAuthUser(true);
+      setDisplayName(oauthName);
+      
+      // Set default avatar for OAuth users (Avatar02.png - index 0)
+      setSelected(0);
+      
+      // Store OAuth user info in localStorage for later use
+      localStorage.setItem("oauthEmail", oauthEmail);
+      localStorage.setItem("oauthName", oauthName);
+      
+      console.log('🆕 OAuth user detected:', { email: oauthEmail, name: oauthName });
+    } else if (!displayName) {
       const saved = typeof window !== "undefined" ? localStorage.getItem("name") : null;
       if (saved) setDisplayName(saved);
     }
-  }, []); // Remove displayName from dependency array to prevent infinite loop
+  }, [searchParams, displayName]); // Include searchParams in dependency array
 
-  // Add navigation guard to ensure user has completed previous steps
+  // Add navigation guard to ensure user has completed previous steps (only for non-OAuth users)
   useEffect(() => {
+    if (isOAuthUser) {
+      // OAuth users skip the previous steps validation
+      return;
+    }
+    
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     const phone = localStorage.getItem("fullPhone");
     const name = localStorage.getItem("name");
@@ -68,9 +92,15 @@ export default function SignupAvatar() {
       router.push("/signup/setpassword");
       return;
     }
-  }, [router]);
+  }, [router, isOAuthUser]);
 
   const handleBack = () => {
+    if (isOAuthUser) {
+      // OAuth users go back to signin page
+      router.push("/signin");
+      return;
+    }
+    
     // Clear phone verification flag when going back
     localStorage.removeItem("phoneVerified");
     localStorage.removeItem("otpSkipped");
@@ -85,196 +115,258 @@ export default function SignupAvatar() {
     setError(null);
 
     try {
-      // Collect all signup data from localStorage
-      const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
-      let phone = localStorage.getItem("fullPhone");
-      const name = localStorage.getItem("name");
-      const age = localStorage.getItem("age");
-      const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
-      const avatar = avatars[selected];
-      
-      // Ensure phone number has proper format (add + if missing)
-      if (phone && !phone.startsWith('+')) {
-        phone = '+' + phone;
-        console.log('📱 Phone number format corrected:', phone);
+      if (isOAuthUser) {
+        // Handle OAuth user avatar selection
+        await handleOAuthUserAvatarSelection();
+      } else {
+        // Handle regular signup flow
+        await handleRegularSignup();
       }
-
-      // Comprehensive validation of all required fields
-      if (!email || !email.trim()) {
-        throw new Error("Email address is required. Please go back to the email step.");
-      }
-
-      if (!phone || !phone.trim()) {
-        throw new Error("Phone number is required. Please go back to the phone step.");
-      }
-
-      if (!name || !name.trim()) {
-        throw new Error("Full name is required. Please go back to the name step.");
-      }
-
-      if (!age || !age.trim()) {
-        throw new Error("Age is required. Please go back to the age step.");
-      }
-
-      // Validate age is a valid number between 13-120
-      const ageNum = parseInt(age);
-      if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
-        throw new Error("Age must be between 13 and 120 years. Please go back to the age step.");
-      }
-
-      if (!password || !password.trim()) {
-        throw new Error("Password is required. Please go back to the password step.");
-      }
-
-      if (password.length < 8) {
-        throw new Error("Password must be at least 8 characters long. Please go back to the password step.");
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new Error("Please enter a valid email address. Please go back to the email step.");
-      }
-
-      // Validate phone format (exactly 10 digits)
-      const cleanPhone = phone.replace(/[+\s-]/g, "");
-      if (!/^\d{10}$/.test(cleanPhone)) {
-        console.error('❌ Phone validation failed:', { phone, cleanPhone });
-        throw new Error("Please enter a valid phone number (exactly 10 digits). Please go back to the phone step.");
-      }
-      
-      console.log('📱 Phone validation passed:', { phone, cleanPhone });
-
-      // Validate name format (only letters and spaces, at least 2 characters)
-      const nameRegex = /^[a-zA-Z ]{2,32}$/;
-      if (!nameRegex.test(name)) {
-        throw new Error("Name should only contain letters and spaces, 2-32 characters. Please go back to the name step.");
-      }
-
-      console.log('📋 Collected signup data:', { 
-        email, 
-        phone, 
-        name, 
-        age, 
-        avatar,
-        localStorage: {
-          userEmail: localStorage.getItem("userEmail"),
-          signupEmail: localStorage.getItem("signupEmail"),
-          fullPhone: localStorage.getItem("fullPhone"),
-          name: localStorage.getItem("name"),
-          age: localStorage.getItem("age"),
-          password: localStorage.getItem("password"),
-          userPassword: localStorage.getItem("userPassword")
-        }
-      });
-      
-      // Final data format check before Supabase
-      console.log('📋 Final data for Supabase:', {
-        email: email,
-        full_name: name,
-        phone: phone,
-        age: age,
-        avatar: avatar
-      });
-
-      // Step 1: Create user in Supabase Auth (basic only - no custom metadata)
-      console.log('🚀 About to call supabase.auth.signUp with data:', {
-        email,
-        password: password ? '***' : 'MISSING',
-        options: {
-          emailRedirectTo: `${window.location.origin}/home?newUser=true`,
-          data: {
-            full_name: name,
-            phone: phone,
-            age: age,
-            avatar: avatar
-          }
-        }
-      });
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/signup/email/confirmed?newUser=true`,
-          data: {
-            full_name: name,
-            phone: phone,
-            age: age,
-            avatar: avatar
-          }
-        }
-      });
-
-      if (authError) {
-        console.error('❌ Auth signup error:', authError);
-        throw new Error(`Authentication failed: ${authError.message}`);
-      }
-
-      if (!authData.user) {
-        throw new Error('No user data returned from signup');
-      }
-
-      console.log('✅ User created successfully:', authData.user.id);
-      console.log('📧 Confirmation email sent to:', email);
-      console.log('✅ Profile will be created automatically by database trigger');
-      console.log('🔍 User metadata from Supabase:', authData.user.user_metadata);
-      console.log('🔍 User data from Supabase:', authData.user);
-      
-      // Step 2: Manually create user profile if trigger fails
-      try {
-        console.log('🔄 Creating user profile manually as backup...');
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .insert([{
-            user_id: authData.user.id, // Use 'user_id' column name as this is standard
-            email: email,
-            full_name: name,
-            phone: phone,
-            age: parseInt(age),
-            avatar: avatar,
-            bio: '',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
-          .select()
-          .single();
-
-        if (profileError) {
-          console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
-        } else {
-          console.log('✅ User profile created manually as backup:', profileData);
-        }
-      } catch (profileError) {
-        console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
-      }
-      
-      // Save avatar selection to context
-      updateRegistrationData({ avatar: avatar });
-      
-      // Clear registration data from context and localStorage
-      clearRegistrationData();
-      localStorage.removeItem("signupEmail");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("fullPhone");
-      localStorage.removeItem("name");
-      localStorage.removeItem("age");
-      localStorage.removeItem("password");
-      localStorage.removeItem("userPassword");
-      localStorage.removeItem("currentOTP");
-      localStorage.removeItem("phoneVerified");
-      localStorage.removeItem("otpSkipped");
-      localStorage.removeItem("signupStarted");
-      
-      // Navigate to email confirmation page
-      router.push("/signup/email/confirm");
-
     } catch (error) {
       console.error('❌ Registration failed:', error);
       setError(error instanceof Error ? error.message : "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOAuthUserAvatarSelection = async () => {
+    try {
+      const oauthEmail = localStorage.getItem("oauthEmail");
+      const oauthName = localStorage.getItem("oauthName");
+      const avatar = avatars[selected];
+      
+      if (!oauthEmail || !oauthName) {
+        throw new Error("OAuth user information not found. Please try signing in again.");
+      }
+
+      console.log('🆕 Processing OAuth user avatar selection:', { email: oauthEmail, name: oauthName, avatar });
+
+      // Get current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("User not authenticated. Please try signing in again.");
+      }
+
+      // Create user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert([{
+          user_id: user.id,
+          email: oauthEmail,
+          full_name: oauthName,
+          avatar: avatar,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('❌ Profile creation error:', profileError);
+        throw new Error(`Failed to create user profile: ${profileError.message}`);
+      }
+
+      console.log('✅ OAuth user profile created successfully:', profileData);
+      
+      // Clear OAuth data from localStorage
+      localStorage.removeItem("oauthEmail");
+      localStorage.removeItem("oauthName");
+      
+      // Redirect to home page
+      router.push("/home");
+      
+    } catch (error) {
+      console.error('❌ OAuth user avatar selection failed:', error);
+      throw error;
+    }
+  };
+
+  const handleRegularSignup = async () => {
+    // Collect all signup data from localStorage
+    const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
+    let phone = localStorage.getItem("fullPhone");
+    const name = localStorage.getItem("name");
+    const age = localStorage.getItem("age");
+    const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
+    const avatar = avatars[selected];
+    
+    // Ensure phone number has proper format (add + if missing)
+    if (phone && !phone.startsWith('+')) {
+      phone = '+' + phone;
+      console.log('📱 Phone number format corrected:', phone);
+    }
+
+    // Comprehensive validation of all required fields
+    if (!email || !email.trim()) {
+      throw new Error("Email address is required. Please go back to the email step.");
+    }
+
+    if (!phone || !phone.trim()) {
+      throw new Error("Phone number is required. Please go back to the phone step.");
+    }
+
+    if (!name || !name.trim()) {
+      throw new Error("Full name is required. Please go back to the name step.");
+    }
+
+    if (!age || !age.trim()) {
+      throw new Error("Age is required. Please go back to the age step.");
+    }
+
+    // Validate age is a valid number between 13-120
+    const ageNum = parseInt(age);
+    if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
+      throw new Error("Age must be between 13 and 120 years. Please go back to the age step.");
+    }
+
+    if (!password || !password.trim()) {
+      throw new Error("Password is required. Please go back to the password step.");
+    }
+
+    if (password.length < 8) {
+      throw new Error("Password must be at least 8 characters long. Please go back to the password step.");
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error("Please enter a valid email address. Please go back to the email step.");
+    }
+
+    // Validate phone format (exactly 10 digits)
+    const cleanPhone = phone.replace(/[+\s-]/g, "");
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      console.error('❌ Phone validation failed:', { phone, cleanPhone });
+      throw new Error("Please enter a valid phone number (exactly 10 digits). Please go back to the phone step.");
+    }
+    
+    console.log('📱 Phone validation passed:', { phone, cleanPhone });
+
+    // Validate name format (only letters and spaces, at least 2 characters)
+    const nameRegex = /^[a-zA-Z ]{2,32}$/;
+    if (!nameRegex.test(name)) {
+      throw new Error("Name should only contain letters and spaces, 2-32 characters. Please go back to the name step.");
+    }
+
+    console.log('📋 Collected signup data:', { 
+      email, 
+      phone, 
+      name, 
+      age, 
+      avatar,
+      localStorage: {
+        userEmail: localStorage.getItem("userEmail"),
+        signupEmail: localStorage.getItem("signupEmail"),
+        fullPhone: localStorage.getItem("fullPhone"),
+        name: localStorage.getItem("name"),
+        age: localStorage.getItem("age"),
+        password: localStorage.getItem("password"),
+        userPassword: localStorage.getItem("userPassword")
+      }
+    });
+    
+    // Final data format check before Supabase
+    console.log('📋 Final data for Supabase:', {
+      email: email,
+      full_name: name,
+      phone: phone,
+      age: age,
+      avatar: avatar
+    });
+
+    // Step 1: Create user in Supabase Auth (basic only - no custom metadata)
+    console.log('🚀 About to call supabase.auth.signUp with data:', {
+      email,
+      password: password ? '***' : 'MISSING',
+      options: {
+        emailRedirectTo: `${window.location.origin}/home?newUser=true`,
+        data: {
+          full_name: name,
+          phone: phone,
+          age: age,
+          avatar: avatar
+        }
+      }
+    });
+    
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/signup/email/confirmed?newUser=true`,
+        data: {
+          full_name: name,
+          phone: phone,
+          age: age,
+          avatar: avatar
+        }
+      }
+    });
+
+    if (authError) {
+      console.error('❌ Auth signup error:', authError);
+      throw new Error(`Authentication failed: ${authError.message}`);
+    }
+
+    if (!authData.user) {
+      throw new Error('No user data returned from signup');
+    }
+
+    console.log('✅ User created successfully:', authData.user.id);
+    console.log('📧 Confirmation email sent to:', email);
+    console.log('✅ Profile will be created automatically by database trigger');
+    console.log('🔍 User metadata from Supabase:', authData.user.user_metadata);
+    console.log('🔍 User data from Supabase:', authData.user);
+    
+    // Step 2: Manually create user profile if trigger fails
+    try {
+      console.log('🔄 Creating user profile manually as backup...');
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert([{
+          user_id: authData.user.id, // Use 'user_id' column name as this is standard
+          email: email,
+          full_name: name,
+          phone: phone,
+          age: parseInt(age),
+          avatar: avatar,
+          bio: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (profileError) {
+        console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
+      } else {
+        console.log('✅ User profile created manually as backup:', profileData);
+      }
+    } catch (profileError) {
+      console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
+    }
+    
+    // Save avatar selection to context
+    updateRegistrationData({ avatar: avatar });
+    
+    // Clear registration data from context and localStorage
+    clearRegistrationData();
+    localStorage.removeItem("signupEmail");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("fullPhone");
+    localStorage.removeItem("name");
+    localStorage.removeItem("age");
+    localStorage.removeItem("password");
+    localStorage.removeItem("userPassword");
+    localStorage.removeItem("currentOTP");
+    localStorage.removeItem("phoneVerified");
+    localStorage.removeItem("otpSkipped");
+    localStorage.removeItem("signupStarted");
+    
+    // Navigate to email confirmation page
+    router.push("/signup/email/confirm");
   };
 
   return (
@@ -284,7 +376,7 @@ export default function SignupAvatar() {
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
         style={{ minWidth: 96, minHeight: 96 }}
-        aria-label="Back to password step"
+        aria-label={isOAuthUser ? "Back to sign in" : "Back to password step"}
       >
         <svg
           width="48"
@@ -349,8 +441,14 @@ export default function SignupAvatar() {
             <div className="text-2xl font-bold text-[#888] mb-2">{displayName||"Name"}</div>
           </div>
           <div className="mb-4 mt-2 text-2xl md:text-3xl font-extrabold text-[#222E3A] text-center font-poppins">
-            Select your avatar
+            {isOAuthUser ? "Choose your avatar" : "Select your avatar"}
           </div>
+          
+          {isOAuthUser && (
+            <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg text-blue-700 text-sm text-center max-w-[400px]">
+              Welcome! Your default avatar (Avatar02.png) has been selected. You can change it below or proceed with the current selection.
+            </div>
+          )}
 
           {/* Error message */}
           {error && (
@@ -392,10 +490,13 @@ export default function SignupAvatar() {
             ))}
           </div>
           <NextButton 
-            disabled={selected === null || loading} 
+            disabled={isOAuthUser ? false : (selected === null || loading)} 
             onClick={handleNext}
           >
-            {loading ? "Creating Account..." : "Complete Signup & Send Confirmation"}
+            {loading 
+              ? (isOAuthUser ? "Setting up profile..." : "Creating Account...") 
+              : (isOAuthUser ? "Complete Setup with Default Avatar" : "Complete Signup & Send Confirmation")
+            }
           </NextButton>
         </div>
       </div>

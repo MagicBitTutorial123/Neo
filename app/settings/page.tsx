@@ -18,6 +18,13 @@ const splitName = (full: string) => {
 const joinName = (first: string, last: string) =>
   [first.trim(), last.trim()].filter(Boolean).join(" ");
 
+const avatars = [
+  "/Avatar02.png",
+  "/Avatar03.png",
+  "/Avatar04.png",
+  "/Avatar05.png",
+];
+
 export default function SettingsPage() {
   // const { registrationData, userData, updateUserData } = useUser();
   const { sidebarCollapsed } = useSidebar();
@@ -29,7 +36,8 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("");
   const [age, setAge] = useState<number | null>(null);
   const [bio, setBio] = useState("");
-  const [avatar, setAvatar] = useState("/Avatar01.png");
+  const [avatar, setAvatar] = useState("/Avatar02.png");
+  const [selectedAvatarIndex, setSelectedAvatarIndex] = useState(0);
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -65,7 +73,7 @@ export default function SettingsPage() {
         full_name: userMetadata?.full_name || 'User',
         phone: userMetadata?.phone || '',
         age: userMetadata?.age ? parseInt(userMetadata.age) : null,
-        avatar: userMetadata?.avatar || '/Avatar01.png',
+        avatar: userMetadata?.avatar || '/Avatar02.png',
         bio: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -85,7 +93,7 @@ export default function SettingsPage() {
         // Even if profile creation fails, try to use metadata
         const fallbackProfile = {
           full_name: userMetadata?.full_name || 'User',
-          avatar: userMetadata?.avatar || '/Avatar01.png',
+          avatar: userMetadata?.avatar || '/Avatar02.png',
           email: user.email || '',
           phone: userMetadata?.phone || '',
           bio: '',
@@ -106,7 +114,7 @@ export default function SettingsPage() {
       const userMetadata = user.user_metadata;
       const fallbackProfile = {
         full_name: userMetadata?.full_name || 'User',
-        avatar: userMetadata?.avatar || '/Avatar01.png',
+        avatar: userMetadata?.avatar || '/Avatar02.png',
         email: user.email || '',
         phone: userMetadata?.phone || '',
         bio: '',
@@ -187,6 +195,13 @@ export default function SettingsPage() {
     }
   }, [createUserProfileManually]);
 
+  const handleAvatarChange = (index: number) => {
+    console.log('🔄 Avatar change requested:', { index, newAvatar: avatars[index] });
+    setSelectedAvatarIndex(index);
+    setAvatar(avatars[index]);
+    console.log('✅ Avatar state updated:', { selectedAvatarIndex: index, avatar: avatars[index] });
+  };
+
 
 
   // Populate form fields with user data
@@ -198,6 +213,10 @@ export default function SettingsPage() {
         ? profile.avatar
         : `/${profile.avatar}`;
       setAvatar(avatarPath);
+      
+      // Find the index of the current avatar
+      const avatarIndex = avatars.findIndex((av: string) => av === avatarPath);
+      setSelectedAvatarIndex(avatarIndex >= 0 ? avatarIndex : 0);
     }
 
     // Set name fields
@@ -514,6 +533,41 @@ export default function SettingsPage() {
 
               {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
               {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
+
+              {/* Avatar Selection Section */}
+              <div className="mb-6">
+                <label className="text-sm text-[#6B7280] mb-3 block">Profile Avatar</label>
+                <div className="flex flex-wrap gap-3">
+                  {avatars.map((avatarSrc: string, index: number) => (
+                    <button
+                      key={avatarSrc}
+                      type="button"
+                      className={`rounded-full p-2 transition-all border-4 ${
+                        selectedAvatarIndex === index
+                          ? "border-[#00AEEF] bg-[#FFFBEA]"
+                          : "border-transparent bg-[#FFFBEA] hover:border-[#CFE2FF]"
+                      } focus:outline-none`}
+                      style={{
+                        width: 80,
+                        height: 80,
+                      }}
+                      onClick={() => handleAvatarChange(index)}
+                      aria-label={`Select avatar ${index + 1}`}
+                    >
+                      <Image
+                        src={avatarSrc}
+                        alt={`Avatar ${index + 1}`}
+                        width={64}
+                        height={64}
+                        className="rounded-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-[#6B7280] mt-2">
+                  Click on an avatar to select it. Your selection will be saved when you click the Save button.
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
                 <div className="flex flex-col gap-1">

@@ -438,7 +438,7 @@ export default function SideNavbar({
 
   // Ensure avatar has proper path
   const finalAvatar = (() => {
-    if (!userAvatar) return "/Avatar01.png";
+    if (!userAvatar) return "/Avatar02.png";
     if (userAvatar.startsWith('/') || userAvatar.startsWith('http')) {
       return userAvatar;
     }

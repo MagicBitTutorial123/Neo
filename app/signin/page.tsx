@@ -1,17 +1,105 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    checkExistingAuth();
+    
+    // Check for error messages from OAuth callback
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
+
+  const checkExistingAuth = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (user && !error) {
+        // User is already authenticated, check if they have a profile
+        await checkUserProfileAndRedirect(user);
+      }
+    } catch (err) {
+      console.log("No existing auth session");
+    }
+  };
+
+  const checkUserProfileAndRedirect = async (user: any) => {
+    try {
+      // Check if user profile exists
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError && profileError.code === 'PGRST116') {
+        // No profile exists - this is a first-time user
+        console.log("🆕 First-time user detected");
+        
+        // Check if this is a Google user (has provider metadata)
+        if (user.app_metadata?.provider === 'google') {
+          console.log("🆕 Google user - profile will be created automatically, redirecting to home");
+          router.push("/home");
+        } else {
+          console.log("🆕 Email user - redirecting to signup flow");
+          router.push("/signup/avatar");
+        }
+      } else if (profile) {
+        // Profile exists, redirect to home
+        console.log("✅ Existing user with profile, redirecting to home");
+        router.push("/home");
+      }
+    } catch (err) {
+      console.error("Error checking user profile:", err);
+      // On error, redirect to home as fallback
+      router.push("/home");
+    }
+  };
+
+  // Google Sign In function
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+
+      if (error) {
+        console.error("❌ Google sign in error:", error);
+        setError(error.message);
+      } else {
+        console.log("✅ Google sign in initiated:", data);
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error during Google sign in:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   // Sign in function following Supabase tutorial
   async function signInWithEmail() {
@@ -57,8 +145,8 @@ export default function SignIn() {
       if (data.user) {  
         console.log("✅ Sign in successful:", data.user.email);
         
-        // Redirect to home page
-        router.push("/home");
+        // Check if user profile exists and redirect accordingly
+        await checkUserProfileAndRedirect(data.user);
       }
     } catch (err) {
       console.error("❌ Unexpected error during sign in:", err);
@@ -74,6 +162,9 @@ export default function SignIn() {
   };
 
   const handleSignUp = () => {
+    // Clear any OAuth-related state when switching to email signup
+    setError(null);
+    setGoogleLoading(false);
     router.push("/signup");
   };
 
@@ -104,6 +195,20 @@ export default function SignIn() {
     }
   };
 
+  // Function to handle switching to email login
+  const handleSwitchToEmail = () => {
+    setError(null);
+    setGoogleLoading(false);
+    setEmail("");
+    setPassword("");
+    setLoading(false);
+    // Focus on email input for better UX
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+      emailInput.focus();
+    }
+  };
+
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">
       {/* Logo */}
@@ -125,9 +230,49 @@ export default function SignIn() {
               <h1 className="text-3xl font-extrabold text-[#222E3A] mb-2">
                 Welcome Back!
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-4">
                 Sign in to your BuddyNeo account
               </p>
+              <p className="text-sm text-gray-500">
+                Choose your preferred sign-in method below
+              </p>
+            </div>
+
+            {/* Google Sign In Button */}
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="w-full rounded-full py-3 text-lg font-bold font-poppins bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center gap-3 mb-6"
+              aria-label="Sign in with Google"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 40 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                className="shrink-0"
+              >
+                <g>
+                  <path d="M36.545 20.233c0-1.36-.122-2.36-.388-3.393H20.204v6.16h9.32c-.188 1.52-1.2 3.8-3.45 5.34l-.032.21 5.012 3.89.348.034c3.19-2.94 5.033-7.27 5.033-12.24z" fill="#4285F4" />
+                  <path d="M20.204 37c4.56 0 8.39-1.5 11.187-4.09l-5.33-4.14c-1.44 1.02-3.38 1.74-5.857 1.74-4.48 0-8.28-2.94-9.64-7.01l-.198.017-5.22 4.06-.068.19C7.66 33.36 13.48 37 20.204 37z" fill="#34A853" />
+                  <path d="M10.564 23.5c-.36-1.02-.57-2.12-.57-3.24 0-1.12 .21-2.22 .55-3.24l-.01-.217-5.29-4.13-.173 .08A16.77 16.77 0 003.204 20.26c0 2.7 .66 5.25 1.82 7.49l5.74-4.25z" fill="#FBBC05" />
+                  <path d="M20.204 11.96c3.17 0 5.31 1.36 6.53 2.5l4.77-4.65C28.58 6.97 24.76 5 20.204 5c-6.72 0-12.54 3.64-15.27 8.97l5.87 4.55c1.36-4.07 5.16-7.01 9.64-7.01z" fill="#EB4335" />
+                </g>
+              </svg>
+              <span>{googleLoading ? "Signing in..." : "Sign in with Google"}</span>
+            </button>
+
+            {/* Divider */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -210,6 +355,20 @@ export default function SignIn() {
                 </button>
               </p>
             </div>
+            
+            {/* Switch Login Methods */}
+            <div className="text-center mt-4">
+              <p className="text-gray-600 text-sm">
+                Want to try a different method?{" "}
+                <button
+                  onClick={handleSwitchToEmail}
+                  className="text-[#00AEEF] hover:text-[#0088CC] font-medium transition-colors"
+                >
+                  Clear form
+                </button>
+              </p>
+            </div>
+            
             {/* Forgot Password */}
              <div className="text-center mt-4">
                <button className="text-gray-500 hover:text-gray-700 text-sm transition-colors">
