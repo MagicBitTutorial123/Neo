@@ -9,13 +9,14 @@ export default function SignupMain() {
   const router = useRouter();
   const { clearRegistrationData } = useUser();
 
-  useEffect(() => {
-    clearRegistrationData();
-  }, [clearRegistrationData]);
+  // useEffect(() => {
+  //   clearRegistrationData();
+  // }, []);
 
   const handleNext = () => {
     // Navigate to email page instead of mobile
     setTimeout(() => router.push("/signup/email"), 300);
+    console.log("Navigating to email page");
   };
 
   return (

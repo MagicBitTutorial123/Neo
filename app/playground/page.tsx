@@ -117,6 +117,17 @@ export default function Playground() {
     };
   }, []);
 
+  // Periodic status check when connected and running
+  useEffect(() => {
+    if (!isConnected || !isRunning) return;
+    
+    const statusInterval = setInterval(() => {
+      checkDeviceStatus();
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(statusInterval);
+  }, [isConnected, isRunning]);
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const keyMap: Record<string, string> = {
@@ -421,6 +432,16 @@ export default function Playground() {
                           })
                         );
                       }
+                  } else if (msg?.ack === "stop") {
+                      // Handle stop acknowledgment
+                      console.log("Stop command acknowledged:", msg.status);
+                      setIsRunning(false);
+                  } else if (msg?.ack === "status") {
+                      // Handle status response
+                      console.log("Status received:", msg);
+                      if (!msg.running) {
+                          setIsRunning(false);
+                      }
                   }
                 } catch {
                   console.log("BLE raw:", line);
@@ -508,6 +529,19 @@ export default function Playground() {
     }
   };
 
+  // Check device status
+  const checkDeviceStatus = async () => {
+    try {
+      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
+        const statusCommand = JSON.stringify({ mode: "status" }) + "\n";
+        const encoder = new TextEncoder();
+        await writeCharacteristicRef.current.writeValue(encoder.encode(statusCommand));
+      }
+    } catch (error) {
+      console.error("Status check failed:", error);
+    }
+  };
+
   // Stop code execution
   const stopCode = async () => {
     try {
@@ -515,7 +549,15 @@ export default function Playground() {
         const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
         const encoder = new TextEncoder();
         await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
-        setIsRunning(false);
+        
+        // Wait a bit for the device to process the stop command
+        // The actual stop confirmation will come via notification
+        setTimeout(() => {
+          // If we haven't received a stop acknowledgment, check status
+          if (isRunning) {
+            checkDeviceStatus();
+          }
+        }, 500);
       }
     } catch (error) {
       console.error("Stop failed:", error);

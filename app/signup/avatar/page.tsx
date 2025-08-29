@@ -29,7 +29,7 @@ export default function SignupAvatar() {
       const saved = typeof window !== "undefined" ? localStorage.getItem("name") : null;
       if (saved) setDisplayName(saved);
     }
-  }, [displayName]);
+  }, []); // Remove displayName from dependency array to prevent infinite loop
 
   // Add navigation guard to ensure user has completed previous steps
   useEffect(() => {
