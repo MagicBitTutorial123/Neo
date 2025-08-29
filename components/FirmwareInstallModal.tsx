@@ -4,6 +4,7 @@ import { firmwareInstaller } from '@/utils/firmwareInstaller';
 interface FirmwareInstallModalProps {
   open: boolean;
   onClose: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   portRef?: React.MutableRefObject<any>; // Accept existing port reference
 }
 
@@ -13,7 +14,9 @@ export default function FirmwareInstallModal({ open, onClose, portRef: externalP
   const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const fallbackPortRef = useRef<SerialPort | null>(null);
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fallbackPortRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
   // Use external port ref if provided, otherwise use fallback
@@ -39,6 +42,7 @@ export default function FirmwareInstallModal({ open, onClose, portRef: externalP
       }, abortControllerRef.current.signal);
       setSuccess(result.message);
       setStatus('Installation completed successfully!');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (err.message === 'Installation cancelled by user') {
         setError('Installation cancelled');

@@ -193,7 +193,7 @@ export default function EmailConfirmed() {
               {email}
             </p>
             <p className="text-gray-600">
-              You're all set to continue with your account setup. Let's get you started!
+              You&apos;re all set to continue with your account setup. Let&apos;s get you started!
             </p>
           </div>
 

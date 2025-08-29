@@ -272,7 +272,7 @@ export default function SignupOtp() {
 
         {/* Description */}
         <p className="text-gray-600 text-center mb-6">
-          We've sent a 6-digit code to your phone and email
+        We&apos;ve sent a 6-digit code to your phone and email
         </p>
 
         {/* OTP Form */}
@@ -372,7 +372,7 @@ export default function SignupOtp() {
 
           <div className="text-center mt-4">
             <p className="text-sm text-gray-500">
-              Didn't receive the code? Check your phone and email
+              Didn&apos;t receive the code? Check your phone and email
             </p>
           </div>
         </form>

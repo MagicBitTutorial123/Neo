@@ -152,6 +152,7 @@ export default function MissionTimer({
   // Expose methods to parent component
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).missionTimerControls = {
         pause: pauseTimer,
         resume: resumeTimer,

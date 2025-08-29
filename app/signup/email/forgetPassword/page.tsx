@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
           </div>
 
           <p className="text-lg text-[#6B7280] text-center mb-8 max-w-[400px]">
-            Enter your email and we'll send you a reset link.
+            Enter your email and we&apos;ll send you a reset link.
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-[400px] items-center">
@@ -138,7 +138,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <p className="mt-6 text-xs text-[#6B7280] text-center max-w-[400px]">
-              Didn't receive the email? Check your spam folder or try again in a few minutes.
+              Didn&apos;t receive the email? Check your spam folder or try again in a few minutes.
             </p>
           </form>
         </div>

@@ -54,7 +54,7 @@ export default function SignIn() {
         return;
       }
 
-      if (data.user) {
+      if (data.user) {  
         console.log("✅ Sign in successful:", data.user.email);
         
         // Redirect to home page
@@ -201,7 +201,7 @@ export default function SignIn() {
             {/* Sign Up Link */}
             <div className="text-center mt-6">
               <p className="text-gray-600">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <button
                   onClick={handleSignUp}
                   className="text-[#00AEEF] hover:text-[#0088CC] font-medium transition-colors"

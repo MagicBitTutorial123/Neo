@@ -122,6 +122,7 @@ export default function SettingsPage() {
   };
 
   // Create user profile manually if it doesn't exist
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const createUserProfileManually = async (user: any) => {
     try {
       console.log('🔧 Creating user profile manually...');
@@ -187,6 +188,7 @@ export default function SettingsPage() {
   };
 
   // Populate form fields with user data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const populateFormFields = (profile: any) => {
     // Set avatar
     if (profile.avatar) {
@@ -213,7 +215,7 @@ export default function SettingsPage() {
   // Fetch user data when component mounts
   useEffect(() => {
     fetchUserDataFromSupabase();
-  }, []);
+  }, [fetchUserDataFromSupabase]);
 
   // Load data from localStorage as fallback
   useEffect(() => {

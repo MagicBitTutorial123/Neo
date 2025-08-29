@@ -697,6 +697,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
   // Expose imperative API to parent
   useImperativeHandle(ref, () => ({
     getCurrentCode,
+    workspaceRef,
   }));
 
   // // Initialize editable code when component loads
