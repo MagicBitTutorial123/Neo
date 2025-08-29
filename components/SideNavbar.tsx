@@ -711,7 +711,7 @@ export default function SideNavbar({
                  ? "/BuddyNeo-collapsed.svg"
                  : "/BuddyNeo-expanded.svg"
              }
-             alt="Your New App Logo"
+             alt="BuddyNeo Logo"
              width={sidebarCollapsed ? 40 : 120}
              height={sidebarCollapsed ? 40 : 40}
            />
