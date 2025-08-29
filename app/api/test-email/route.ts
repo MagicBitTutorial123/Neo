@@ -5,7 +5,6 @@ import sgMail from '@sendgrid/mail';
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
-
 export async function GET() {
   try {
     const testEmail = 'dtheekshana@gmail.com';
@@ -46,7 +45,10 @@ export async function GET() {
       otp: testOTP
     });
     
-  } catch (error: any) {
+  } 
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  catch (error: any) {
     console.error('❌ Test email failed:', error);
     return NextResponse.json({
       success: false,

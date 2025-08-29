@@ -9,6 +9,7 @@ declare global {
 }
 
 // Access the global OTP storage with better error handling
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const otpStorage = (global as any)?.otpStorage || new Map();
 
 // File-based OTP storage functions for development
@@ -19,7 +20,7 @@ async function getOTPFromFile(key: string) {
     const fileContent = await fs.readFile(OTP_STORAGE_FILE, 'utf-8');
     const storageData = JSON.parse(fileContent);
     return storageData.otps[key] || null;
-  } catch (error) {
+  } catch {
     console.log('📁 No OTP storage file found or error reading');
     return null;
   }

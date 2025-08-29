@@ -87,7 +87,6 @@ export default function Playground() {
     useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothGATTServer | null>(null);
-  const keyThrottleRef = useRef<{ [key: string]: number }>({});
   const keyStateRef = useRef<{ [key: string]: boolean }>({});
   // const watchedPinsRef = useRef<Set<number>>(new Set());
 
@@ -102,6 +101,7 @@ export default function Playground() {
       // Cleanup Serial port
       if (portRef.current) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const port = portRef.current as any;
           if (port && (port.readable || port.writable)) {
             port.close().catch(console.error);
@@ -418,7 +418,7 @@ export default function Playground() {
                         );
                       }
                   }
-                } catch(e) {
+                } catch {
                   console.log("BLE raw:", line);
                 }
               });
@@ -530,13 +530,17 @@ export default function Playground() {
           setIsConnected(false);
           
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const navSerial = (navigator as unknown as { serial: { requestPort: () => Promise<any> } }).serial;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let port = (portRef.current as any) || null;
             
             // Request port selection if needed
             if (!port || !port.readable || !port.writable) {
               port = await navSerial.requestPort();
               await port.open({ baudRate: 115200 });
+              
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (portRef as any).current = port;
             }
             
@@ -573,6 +577,7 @@ export default function Playground() {
       // Handle Serial port disconnection
       if (portRef.current) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const port = portRef.current as any;
           if (port && (port.readable || port.writable)) {
             await port.close();
