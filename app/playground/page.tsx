@@ -85,6 +85,14 @@ export default function Playground() {
 
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
   const [hasKeyboardBlocksPresent, setHasKeyboardBlocksPresent] = useState(false);
+  
+  // Dashboard widget state
+  const [widgets, setWidgets] = useState<Array<{ id: string; type: string; props: Record<string, unknown> }>>([]);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [latestAnalogByPin, setLatestAnalogByPin] = useState<{ [key: number]: number }>({});
+  const [latestDigitalByPin, setLatestDigitalByPin] = useState<{ [key: number]: number }>({});
+  const [widgetData, setWidgetData] = useState<{ [key: string]: Record<string, unknown> }>({});
+  const [sensorHistory, setSensorHistory] = useState<{ [key: string]: number[] }>({});
 
   const portRef = useRef<unknown>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
@@ -121,6 +129,60 @@ export default function Playground() {
     }
   }, []);
 
+  // BLE command queue processing - MUST be defined before use
+  const processBleCommandQueue = useCallback(async () => {
+    if (isProcessingQueue.current || bleCommandQueue.current.length === 0) {
+      return;
+    }
+
+    isProcessingQueue.current = true;
+
+    while (bleCommandQueue.current.length > 0) {
+      const now = Date.now();
+      const timeSinceLastCommand = now - lastCommandTime.current;
+
+      // Rate limiting: ensure minimum time between commands
+      if (timeSinceLastCommand < commandRateLimit) {
+        await new Promise(resolve => setTimeout(resolve, commandRateLimit - timeSinceLastCommand));
+      }
+
+      const commandItem = bleCommandQueue.current.shift();
+      if (!commandItem) continue;
+
+      try {
+        // Check connection health before sending
+        if (connectionStatus !== "connected" || !writeCharacteristicRef.current) {
+          console.log("BLE not connected, skipping command:", commandItem.command);
+          continue;
+        }
+
+        await keyboardSendBLE(commandItem.command, writeCharacteristicRef.current);
+        lastCommandTime.current = Date.now();
+        console.log("BLE command sent successfully:", commandItem.command);
+        
+      } catch (error) {
+        console.error("Failed to send BLE command:", commandItem.command, error);
+        
+        // Retry logic
+        if (commandItem.retries > 0) {
+          commandItem.retries--;
+          bleCommandQueue.current.unshift(commandItem);
+          console.log(`Retrying command ${commandItem.command}, ${commandItem.retries} retries left`);
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } else {
+          console.error("Command failed after all retries:", commandItem.command);
+          // If command fails completely, check connection health
+          setConnectionStatus("disconnected");
+          setIsConnected(false);
+        }
+      }
+    }
+
+    isProcessingQueue.current = false;
+  }, [connectionStatus]);
+
   // BLE command queuing and rate limiting system
   const queueBleCommand = useCallback(async (command: string, maxRetries: number = 2) => {
     bleCommandQueue.current.push({ command, retries: maxRetries });
@@ -128,7 +190,7 @@ export default function Playground() {
     if (!isProcessingQueue.current) {
       processBleCommandQueue();
     }
-  }, []);
+  }, [processBleCommandQueue]);
 
 
 
@@ -530,59 +592,7 @@ export default function Playground() {
     }
   }, [tryingToConnect]);
 
-  // BLE command queue processing
-  const processBleCommandQueue = useCallback(async () => {
-    if (isProcessingQueue.current || bleCommandQueue.current.length === 0) {
-      return;
-    }
 
-    isProcessingQueue.current = true;
-
-    while (bleCommandQueue.current.length > 0) {
-      const now = Date.now();
-      const timeSinceLastCommand = now - lastCommandTime.current;
-
-      // Rate limiting: ensure minimum time between commands
-      if (timeSinceLastCommand < commandRateLimit) {
-        await new Promise(resolve => setTimeout(resolve, commandRateLimit - timeSinceLastCommand));
-      }
-
-      const commandItem = bleCommandQueue.current.shift();
-      if (!commandItem) continue;
-
-      try {
-        // Check connection health before sending
-        if (connectionStatus !== "connected" || !writeCharacteristicRef.current) {
-          console.log("BLE not connected, skipping command:", commandItem.command);
-          continue;
-        }
-
-        await keyboardSendBLE(commandItem.command, writeCharacteristicRef.current);
-        lastCommandTime.current = Date.now();
-        console.log("BLE command sent successfully:", commandItem.command);
-        
-      } catch (error) {
-        console.error("Failed to send BLE command:", commandItem.command, error);
-        
-        // Retry logic
-        if (commandItem.retries > 0) {
-          commandItem.retries--;
-          bleCommandQueue.current.unshift(commandItem);
-          console.log(`Retrying command ${commandItem.command}, ${commandItem.retries} retries left`);
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } else {
-          console.error("Command failed after all retries:", commandItem.command);
-          // If command fails completely, check connection health
-          setConnectionStatus("disconnected");
-          setIsConnected(false);
-        }
-      }
-    }
-
-    isProcessingQueue.current = false;
-  }, [connectionStatus]);
 
   const clearWorkspace = () => {
     console.log("test");
@@ -749,6 +759,75 @@ export default function Playground() {
     return () => window.removeEventListener("setAdcPins", listener);
   }, [sendBleControl]);
 
+  // Handle sensor data for dashboard widgets
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent<{ sensor: string; value: number; pin?: number }>;
+      const detail = customEvent?.detail || {};
+      const sensor = detail.sensor;
+      const value = detail.value;
+      const pin = detail.pin;
+
+      // Handle analog sensor data
+      if (sensor === "analog" && pin !== undefined) {
+        setLatestAnalogByPin((prev) => ({ ...prev, [pin]: value }));
+
+        setSensorHistory((prev) => {
+          const newHistory = { ...prev };
+          if (!newHistory[`pin_${pin}`]) {
+            newHistory[`pin_${pin}`] = [];
+          }
+          const existing = newHistory[`pin_${pin}`];
+          const next = [...existing, Number(value)].slice(-60); // Keep last 60 readings
+          newHistory[`pin_${pin}`] = next;
+          return newHistory;
+        });
+
+        // Update widget data for graphs
+        setWidgetData((prev) => ({
+          ...prev,
+          [`pin_${pin}`]: {
+            value: value,
+            history: sensorHistory[`pin_${pin}`] || []
+          }
+        }));
+      }
+
+      // Handle ultrasound sensor data
+      if (sensor === "ultrasound") {
+        setWidgetData((prev) => {
+          const currentHistory = prev.ultrasound?.history;
+          const historyArray = Array.isArray(currentHistory) ? currentHistory : [];
+          return {
+            ...prev,
+            ultrasound: {
+              value: value,
+              history: [...historyArray, value].slice(-60)
+            }
+          };
+        });
+      }
+    };
+
+    window.addEventListener("sensorData", handler as EventListener);
+    return () => window.removeEventListener("sensorData", handler as EventListener);
+  }, [sensorHistory]);
+
+  // Widget utility functions
+  const removeWidget = (id: string) => {
+    setWidgets((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const updateWidgetProps = (id: string, prop: string, value: unknown) => {
+    setWidgets((prev) =>
+      prev.map((widget) =>
+        widget.id === id
+          ? { ...widget, props: { ...widget.props, [prop]: value } }
+          : widget
+      )
+    );
+  };
+
   return (
     <div className="app-wrapper">
       <div>
@@ -779,31 +858,212 @@ export default function Playground() {
                          {dashboardActive ? (
                <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]">
                  <div className="max-w-4xl mx-auto">
-                   <div className="mb-4">
-                     <label className="block text-sm font-medium text-[#222E3A] mb-2">
-                       Sensor
-                     </label>
-                     <select
-                       value={selectedSensor}
-                       onChange={(e) =>
-                         setSelectedSensor(
-                           e.target.value as "ldr" | "ultrasound"
-                         )
-                       }
-                       className="w-56 px-3 py-2 border rounded-lg bg-white text-[#222E3A]"
+                   <div className="flex items-center justify-between mb-4">
+                     <button
+                       onClick={() => setShowAddMenu(true)}
+                       className="px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-sm font-medium text-[#222E3A]"
                      >
-                       <option value="ldr">LDR</option>
-                       <option value="ultrasound">Ultrasound</option>
-                     </select>
+                       + Add widget
+                     </button>
                    </div>
+
                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                     <div className="bg-white border rounded-xl shadow-sm p-5">
-                       <div className="text-sm text-gray-500 mb-1">
-                         Current value
-                       </div>
-                      
-                     </div>
+                     {widgets.map((widget) => {
+                       // Analog Widget
+                       if (widget.type === "analog") {
+                         const pin = widget.props.pin as number;
+                         const widgetInfo = widgetData[widget.id];
+                         const value = widgetInfo?.value ?? latestAnalogByPin[pin] ?? 0;
+
+                         return (
+                           <div
+                             key={widget.id}
+                             className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
+                           >
+                             <div className="flex items-center justify-between mb-3">
+                               <div className="text-sm font-medium text-[#222E3A] opacity-80">
+                                 Analog
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <select
+                                   value={pin}
+                                   onChange={(e) =>
+                                     updateWidgetProps(
+                                       widget.id,
+                                       "pin",
+                                       parseInt(e.target.value)
+                                     )
+                                   }
+                                   className="text-xs text-black border border-gray-200 rounded px-2 py-1"
+                                 >
+                                   {[0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39].map((pinNum) => (
+                                     <option key={pinNum} value={pinNum}>
+                                       Pin {pinNum}
+                                     </option>
+                                   ))}
+                                 </select>
+                                 <button
+                                   onClick={() => removeWidget(widget.id)}
+                                   aria-label="Remove widget"
+                                   className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
+                                 >
+                                   ×
+                                 </button>
+                               </div>
+                             </div>
+                             <div className="text-2xl font-bold text-[#222E3A]">
+                               {isConnected ? value : "—"}
+                             </div>
+                           </div>
+                         );
+                       }
+
+                       // Graph Widget
+                       if (widget.type === "graph") {
+                         const pin = (widget.props.pin as number) || 32;
+                         const widgetInfo = widgetData[`pin_${pin}`];
+                         const series = widgetInfo?.history || [];
+                         const currentValue = widgetInfo?.value;
+
+                         return (
+                           <div key={widget.id} className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:col-span-1 lg:col-span-2">
+                             <div className="flex items-center justify-between mb-3">
+                               <div className="text-sm font-medium text-[#222E3A] opacity-80">
+                                 Analog Graph
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <select
+                                   value={pin}
+                                   onChange={(e) => {
+                                     const nextPin = parseInt(e.target.value, 10);
+                                     updateWidgetProps(widget.id, "pin", nextPin);
+                                     setWidgetData((prev) => ({
+                                       ...prev,
+                                       [`pin_${nextPin}`]: { ...prev[`pin_${nextPin}`], history: [] },
+                                     }));
+                                   }}
+                                   className="px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white text-[#222E3A] text-sm hover:bg-gray-50 focus:outline-none shadow-sm"
+                                 >
+                                   {[0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39].map((pinNum) => (
+                                     <option key={pinNum} value={pinNum}>
+                                       Pin {pinNum}
+                                     </option>
+                                   ))}
+                                 </select>
+                                 <button
+                                   onClick={() => removeWidget(widget.id)}
+                                   aria-label="Remove widget"
+                                   className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
+                                 >
+                                   ×
+                                 </button>
+                               </div>
+                             </div>
+                             
+                             {/* Simple SVG Graph */}
+                             <div className="w-full h-48 bg-gray-50 rounded-lg p-4">
+                               {series.length > 0 ? (
+                                 <svg width="100%" height="100%" viewBox="0 0 400 200">
+                                   <g>
+                                     {/* Grid lines */}
+                                     {[0, 50, 100, 150, 200].map((y) => (
+                                       <line
+                                         key={y}
+                                         x1="0"
+                                         y1={y}
+                                         x2="400"
+                                         y2={y}
+                                         stroke="#E5E7EB"
+                                         strokeWidth="1"
+                                         strokeDasharray="2,2"
+                                       />
+                                     ))}
+                                     {/* Data line */}
+                                     <path
+                                       d={series.map((value, index) => {
+                                         const x = (index / (series.length - 1)) * 400;
+                                         const y = 200 - ((value / 4095) * 200);
+                                         return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                       }).join(' ')}
+                                       fill="none"
+                                       stroke="#2563EB"
+                                       strokeWidth="2"
+                                     />
+                                   </g>
+                                 </svg>
+                               ) : (
+                                 <div className="flex items-center justify-center h-full text-gray-400">
+                                   No data yet
+                                 </div>
+                               )}
+                             </div>
+                             
+                             <div className="mt-2 text-xs text-gray-500">
+                               {isConnected
+                                 ? `Latest: ${currentValue !== undefined ? Math.round(currentValue) : "—"}`
+                                 : "—"}
+                             </div>
+                           </div>
+                         );
+                       }
+
+                       return null;
+                     })}
                    </div>
+
+                   {/* Add Widget Menu */}
+                   {showAddMenu && (
+                     <div
+                       className="fixed inset-0 z-30 flex items-center justify-center"
+                       onClick={() => setShowAddMenu(false)}
+                     >
+                       <div className="absolute inset-0 bg-black/20" />
+                       <div
+                         className="relative w-[320px] rounded-xl shadow-2xl overflow-hidden"
+                         onClick={(e) => e.stopPropagation()}
+                       >
+                         <div className="bg-white px-4 py-3 border-b border-gray-200 text-[#222E3A] text-sm font-semibold">
+                           Add a widget
+                         </div>
+                         <div className="bg-white p-3">
+                           <div className="flex flex-col gap-2">
+                             <button
+                               onClick={() => {
+                                 setWidgets((prev) => [
+                                   ...prev,
+                                   {
+                                     id: `${Date.now()}-analog`,
+                                     type: "analog",
+                                     props: { pin: 36 },
+                                   },
+                                 ]);
+                                 setShowAddMenu(false);
+                               }}
+                               className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
+                             >
+                               Analog
+                             </button>
+                             <button
+                               onClick={() => {
+                                 setWidgets((prev) => [
+                                   ...prev,
+                                   {
+                                     id: `${Date.now()}-graph`,
+                                     type: "graph",
+                                     props: { pin: 32 },
+                                   },
+                                 ]);
+                                 setShowAddMenu(false);
+                               }}
+                               className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
+                             >
+                               Graph
+                             </button>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   )}
                  </div>
                </div>
              ) : (

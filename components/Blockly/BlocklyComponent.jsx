@@ -624,17 +624,17 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     }
   };
 
-  useEffect(() => {
+    useEffect(() => {
     const handler = (e) => {
       const detail = e?.detail || {};
       const sensor = detail.sensor;
       const value = detail.value;
-  
+   
       // Handle Micropython analog_sensors format
       if (sensor === "analog" && detail?.pin !== undefined) {
         const pin = detail.pin;
         setLatestAnalogByPin((prev) => ({ ...prev, [pin]: value }));
-  
+   
         setSensorHistory((prev) => {
           const newHistory = { ...prev };
           if (!newHistory[`pin_${pin}`]) {
@@ -645,16 +645,42 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
           newHistory[`pin_${pin}`] = next;
           return newHistory;
         });
+
+        // Update widgetData for graph widgets that use this pin
+        setWidgetData((prev) => {
+          const newWidgetData = { ...prev };
+          
+          // Find all graph widgets that use this pin
+          widgets.forEach((widget) => {
+            if (widget.type === "graph" && widget.props.pin === pin) {
+              if (!newWidgetData[widget.id]) {
+                newWidgetData[widget.id] = {};
+              }
+              newWidgetData[widget.id] = {
+                ...newWidgetData[widget.id],
+                value: Number(value),
+                history: newWidgetData[widget.id].history || []
+              };
+              
+              // Update history for this widget
+              const existingHistory = newWidgetData[widget.id].history;
+              const updatedHistory = [...existingHistory, Number(value)].slice(-60);
+              newWidgetData[widget.id].history = updatedHistory;
+            }
+          });
+          
+          return newWidgetData;
+        });
       }
 
-  
+   
     };
-  
+   
     window.addEventListener("sensorData", handler);
     return () => {window.removeEventListener("sensorData", handler);
       // window.removeEventListener("blocklyWorkspaceChange", blocklyWorkspaceChange);
     }
-  }, []);
+  }, [widgets]);
   
   // Handle BLE connection state
   useEffect(() => {
@@ -751,14 +777,14 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     const pin = widget.props.pin || 32;
     const widgetInfo = widgetData[widget.id];
     const series = widgetInfo?.history || [];
-    const currentValue = widgetInfo?.value;
+    const currentValue = widgetInfo?.value ?? latestAnalogByPin[pin];
 
     const outerWidth = 420;
     const outerHeight = 240;
     const margin = { top: 12, right: 16, bottom: 32, left: 44 };
     const width = outerWidth - margin.left - margin.right;
     const height = outerHeight - margin.top - margin.bottom;
-    const points = series.length ? series : [0];
+    const points = series.length ? series : (latestAnalogByPin[pin] ? [latestAnalogByPin[pin]] : [0]);
 
     // Fixed scale for analog values (0-4095)
     const yMin = 0;
@@ -778,9 +804,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       Math.round((i * (n - 1)) / xTickCount)
     );
 
-    useEffect(() => {
-      console.log(widgetData);
-    }, [widgetData]);
+
     return (
       <div className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:col-span-1 lg:col-span-2">
         <div className="flex items-center justify-between mb-3">
@@ -1164,18 +1188,32 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
                           >
                             Digital
                           </button>
-                          <button
-                            onClick={() => {
-                              setWidgets((prev) => [
-                                ...prev,
-                                {
-                                  id: `${Date.now()}-graph`,
-                                  type: "graph",
-                                  props: { sensor: "ldr", pin: 32 },
-                                },
-                              ]);
-                              setShowAddMenu(false);
-                            }}
+                                                     <button
+                             onClick={() => {
+                               const newWidgetId = `${Date.now()}-graph`;
+                               setWidgets((prev) => [
+                                 ...prev,
+                                 {
+                                   id: newWidgetId,
+                                   type: "graph",
+                                   props: { sensor: "ldr", pin: 32 },
+                                 },
+                               ]);
+                               
+                               // Initialize widget data with current sensor value if available
+                               const currentPinValue = latestAnalogByPin[32];
+                               if (currentPinValue !== undefined) {
+                                 setWidgetData((prev) => ({
+                                   ...prev,
+                                   [newWidgetId]: {
+                                     value: currentPinValue,
+                                     history: [currentPinValue]
+                                   }
+                                 }));
+                               }
+                               
+                               setShowAddMenu(false);
+                             }}
                             className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
                           >
                             Graph
