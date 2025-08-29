@@ -705,16 +705,16 @@ export default function SideNavbar({
             sidebarCollapsed ? "w-14 h-14" : "w-[150px] h-[50px]"
           }`}
         >
-          <Image
-            src={
-              sidebarCollapsed
-                ? "/BuddyNeo-collapsed.svg"
-                : "/BuddyNeo-expanded.svg"
-            }
-            alt="BuddyNeo Logo"
-            width={sidebarCollapsed ? 40 : 120}
-            height={sidebarCollapsed ? 40 : 40}
-          />
+                     <Image
+             src={
+               sidebarCollapsed
+                 ? "/your-new-logo-collapsed.svg"
+                 : "/your-new-logo-expanded.svg"
+             }
+             alt="Your New App Logo"
+             width={sidebarCollapsed ? 40 : 120}
+             height={sidebarCollapsed ? 40 : 40}
+           />
         </div>
       </div>
 

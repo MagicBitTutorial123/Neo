@@ -284,17 +284,21 @@ export default function SignupPhone() {
       <div className="w-full h-full max-w-full max-h-full bg-[#F8F9FC] flex items-center justify-center relative p-8">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-full max-w-[600px] px-4 z-10">
           <div className="flex flex-col items-center mb-2">
-            <Image
-              src="/call_end.png"
-              alt="Call End Icon"
-              width={236}
-              height={236}
-              style={{
-                transform: "rotate(360deg)",
-                maxWidth: "100%",
-                maxHeight: "100%",
-              }}
-            />
+            <div className="relative group">
+              <Image
+                src="/call_end.png"
+                alt="Call End Icon"
+                width={236}
+                height={236}
+                className="transition-transform duration-700 group-hover:scale-110 group-hover:rotate-12"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                }}
+              />
+              {/* Subtle glow effect */}
+              <div className="absolute inset-0 bg-orange-400 rounded-full opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-700 -z-10"></div>
+            </div>
           </div>
 
           <div className="mb-12 flex items-center w-full justify-center" style={{ minHeight: 100 }}>
@@ -311,37 +315,39 @@ export default function SignupPhone() {
             }}
           >
                          <div
-               className={`flex items-center w-full bg-white rounded-full shadow-sm px-4 py-2 relative ${
+               className={`flex items-center w-full bg-white rounded-full shadow-md px-6 py-4 relative transition-all duration-300 ${
                  phone && !phoneValid 
-                   ? 'border-2 border-red-500' 
+                   ? 'border-2 border-red-500 shadow-lg shadow-red-100' 
                    : phone && phoneValid 
-                   ? 'border-2 border-green-500' 
-                   : ''
+                   ? 'border-2 border-green-500 shadow-lg shadow-green-100' 
+                   : 'border-2 border-gray-200 hover:border-gray-300 focus-within:border-[#00AEEF] focus-within:shadow-lg focus-within:shadow-blue-100'
                }`}
                style={{ height: 64 }}
              >
               {/* Country dropdown */}
               <button
                 type="button"
-                className="w-10 h-10 rounded-sm bg-[#00AEEF] flex items-center justify-center mr-3 focus:outline-none relative"
+                className="w-12 h-12 rounded-full bg-[#00AEEF] hover:bg-[#0A6CFF] flex items-center justify-center mr-3 focus:outline-none relative transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
                 onClick={() => setDropdownOpen((open) => !open)}
                 tabIndex={0}
                 aria-label="Select country code"
               >
                 <span className="text-xl">{selectedCountry.flag}</span>
                 {dropdownOpen && (
-                  <div className="absolute left-0 top-12 bg-white rounded-lg shadow-lg z-50 min-w-[120px]">
+                  <div className="absolute left-0 top-14 bg-white rounded-xl shadow-2xl z-50 min-w-[140px] border border-gray-100 overflow-hidden">
                     {countryOptions.map((opt) => (
                       <div
                         key={opt.code}
-                        className="flex items-center w-full px-3 py-2 hover:bg-gray-100 text-left cursor-pointer"
+                        className={`flex items-center w-full px-4 py-3 hover:bg-blue-50 text-left cursor-pointer transition-colors duration-200 ${
+                          selectedCountry.code === opt.code ? 'bg-blue-100 border-l-4 border-l-[#00AEEF]' : ''
+                        }`}
                         onClick={() => {
                           setSelectedCountry(opt);
                           setDropdownOpen(false);
                         }}
                       >
-                        <span className="mr-2 text-lg">{opt.flag}</span>
-                        <span className="font-bold">{opt.code}</span>
+                        <span className="mr-3 text-xl">{opt.flag}</span>
+                        <span className="font-bold text-gray-800">{opt.code}</span>
                       </div>
                     ))}
                   </div>
@@ -391,18 +397,18 @@ export default function SignupPhone() {
             {/* Email input fallback */}
             {showEmailInput && (
               <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
                   Email Address (Required for OTP)
                 </label>
                 <input
                   type="email"
                   placeholder="Enter your email address"
-                  className="w-full bg-white rounded-full shadow-sm px-6 py-4 text-lg text-center font-poppins border-2 border-gray-300 text-black placeholder:text-gray-400 focus:border-[#F28B20] focus:outline-none"
+                  className="w-full bg-white rounded-full shadow-md px-6 py-4 text-lg text-center font-poppins border-2 border-gray-300 text-black placeholder:text-gray-400 focus:border-[#00AEEF] focus:outline-none focus:shadow-lg focus:shadow-blue-100 transition-all duration-300"
                   value={manualEmail}
                   onChange={(e) => setManualEmail(e.target.value)}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1 text-center">
+                <p className="text-xs text-gray-500 mt-2 text-center">
                   We need your email to send the verification code
                 </p>
               </div>
@@ -421,10 +427,36 @@ export default function SignupPhone() {
               <p className="text-xs mt-1">You can verify OTP or skip to continue</p>
             </div>
 
-            <div className="flex flex-col gap-3 w-full">
-              <NextButton type="submit">Send OTP & Continue</NextButton>
+            <div className="flex flex-col gap-4 w-full">
+              {/* Primary Button - Send OTP */}
+              <button
+                type="submit"
+                disabled={!phoneValid}
+                className={`w-full rounded-full py-4 text-lg font-bold font-poppins transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-200 ${
+                  phoneValid
+                    ? 'bg-[#00AEEF] hover:bg-[#0A6CFF] text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-md'
+                }`}
+                style={{
+                  minHeight: '60px',
+                  boxShadow: phoneValid 
+                    ? '0 10px 25px rgba(0, 174, 239, 0.3)' 
+                    : '0 4px 12px rgba(0, 0, 0, 0.1)'
+                }}
+              >
+                {phoneValid ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-pulse">
+                      <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Send OTP & Continue
+                  </div>
+                ) : (
+                  'Enter a valid phone number'
+                )}
+              </button>
               
-              {/* Skip OTP button - gives users choice */}
+              {/* Secondary Button - Skip OTP */}
               <button
                 type="button"
                 onClick={() => {
@@ -451,9 +483,17 @@ export default function SignupPhone() {
                   console.log("📱 Phone stored, OTP skipped. Going to next step.");
                   router.push("/signup/name");
                 }}
-                className="w-full rounded-full py-3 text-lg font-bold font-poppins bg-white border-2 border-gray-300 text-[#222E3A] hover:bg-gray-50 transition-colors"
+                className="w-full rounded-full py-4 text-lg font-bold font-poppins bg-white border-2 border-gray-300 text-[#222E3A] hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-200 shadow-md hover:shadow-lg"
+                style={{
+                  minHeight: '60px'
+                }}
               >
-                Skip OTP & Continue
+                <div className="flex items-center justify-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Skip OTP & Continue
+                </div>
               </button>
             </div>
           </form>

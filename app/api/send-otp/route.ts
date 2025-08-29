@@ -145,11 +145,11 @@ export async function POST(request: NextRequest) {
         const emailMsg = {
           to: email,
           from: process.env.SENDGRID_FROM_EMAIL || 'noreply@buddyneo.com',
-          subject: 'Your BuddyNeo Verification Code',
-          text: `Your BuddyNeo verification code is: ${otp}`,
+                  subject: 'Your New App Verification Code',
+        text: `Your new app verification code is: ${otp}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h1 style="color: #F28B20; text-align: center;">BuddyNeo</h1>
+                              <h1 style="color: #F28B20; text-align: center;">Your New App</h1>
               <h2 style="color: #222E3A;">Your Verification Code</h2>
               <p>Hello!</p>
               <p>Your verification code for BuddyNeo is:</p>
