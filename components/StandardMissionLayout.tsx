@@ -248,6 +248,7 @@ export default function StandardMissionLayout({
       const timeout = setTimeout(() => {
         // Navigate to next mission for all missions
         const nextMissionId = String(Number(mission.id) + 1);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((missions as any)[nextMissionId]) {
           router.push(`/missions/${nextMissionId}`);
         } else {
@@ -354,7 +355,7 @@ export default function StandardMissionLayout({
         </div>
       )}
       {/* Overlay for PlaygroundUnlockedCard */}
-      {showPlaygroundUnlocked && (
+      {/* {showPlaygroundUnlocked && (
         <PlaygroundUnlockedCard
           onContinue={async () => {
             setShowPlaygroundUnlocked(false);
@@ -386,7 +387,7 @@ export default function StandardMissionLayout({
             }
           }}
         />
-      )}
+      )} */}
     </div>
   );
 }
