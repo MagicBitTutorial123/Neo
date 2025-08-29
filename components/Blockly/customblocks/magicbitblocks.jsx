@@ -229,19 +229,19 @@ pythonGenerator['magicbit_motor'] = block => {
   const speedPercent = block.getFieldValue('SPEED');
   
   // Map 0-100% to 1-1000 range (avoiding 0 to prevent motor stall)
-  const speed = speedPercent === 0 ? 200 : Math.round((speedPercent / 100) * 999) + 1;
+  const speed = speedPercent === 0 ? 0 : Math.round((speedPercent / 100) * 999) + 1;
   
   if (side === 'LEFT') {
     if (dir === 'BWD') {
-      return `M1_IN1.duty(${speed})\nM1_IN2.duty(1)\n`;
+      return `M1_IN1.duty(${speed})\nM1_IN2.duty(0)\n`;
     } else {
-      return `M1_IN1.duty(1)\nM1_IN2.duty(${speed})\n`;
+      return `M1_IN1.duty(0)\nM1_IN2.duty(${speed})\n`;
     }
   } else {
     if (dir === 'FWD') {
-      return `M2_IN1.duty(${speed})\nM2_IN2.duty(1)\n`;
+      return `M2_IN1.duty(${speed})\nM2_IN2.duty(0)\n`;
     } else {
-      return `M2_IN1.duty(1)\nM2_IN2.duty(${speed})\n`;
+      return `M2_IN1.duty(0)\nM2_IN2.duty(${speed})\n`;
     } 
   }
 };
