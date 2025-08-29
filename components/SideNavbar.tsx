@@ -486,6 +486,7 @@ export default function SideNavbar({
           href: "#",
           disabled: true as const,
         },
+        
     {
       icon: "/demo.svg",
       label: "Demo",
