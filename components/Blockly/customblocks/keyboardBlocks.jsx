@@ -52,19 +52,18 @@ pythonGenerator['keyboard_when_key_pressed'] = function(block) {
   // Always ensure stop_all function is defined
   if (!pythonGenerator.keyboardEventHandlers['stop_all']) {
     pythonGenerator.keyboardEventHandlers['stop_all'] = `def key_stop_all_pressed():
-    global M1_IN1, M1_IN2, M2_IN1, M2_IN2
     M1_IN1.duty(1)
     M1_IN2.duty(1) 
     M2_IN1.duty(1)
     M2_IN2.duty(1)
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.5)
 `;
   }
   
   const body = (statements && statements.trim().length > 0) ? statements : '  pass\n';
   pythonGenerator.keyboardEventHandlers[key] = `def key_${key}_pressed():
-  global M1_IN1, M1_IN2, M2_IN1, M2_IN2
-${body.endsWith('\n') ? body : body + '\n'}`;
+  await key_stop_all_pressed()
+  ${body.endsWith('\n') ? body : body + '\n'}`;
   return '';
 };
 
@@ -78,11 +77,11 @@ pythonGenerator['keyboard_when_custom_key_pressed'] = function(block) {
   // Always ensure stop_all function is defined
   if (!pythonGenerator.keyboardEventHandlers['stop_all']) {
     pythonGenerator.keyboardEventHandlers['stop_all'] = `def key_stop_all_pressed():
-    global M1_IN1, M1_IN2, M2_IN1, M2_IN2
     M1_IN1.duty(0)
     M1_IN2.duty(0) 
     M2_IN1.duty(0)
     M2_IN2.duty(0)
+    await asyncio.sleep(0.5)
 `;
   }
   
@@ -108,8 +107,8 @@ pythonGenerator['keyboard_when_custom_key_pressed'] = function(block) {
   
   const body = (statements && statements.trim().length > 0) ? statements : '  pass\n';
   pythonGenerator.keyboardEventHandlers[keyName] = `def key_${keyName}_pressed():
-  global M1_IN1, M1_IN2, M2_IN1, M2_IN2
-${body.endsWith('\n') ? body : body + '\n'}`;
+  await key_stop_all_pressed()
+  ${body.endsWith('\n') ? body : body + '\n'}`;
   return '';
 };
 
