@@ -11,7 +11,8 @@ export default function FirmwareInstaller({ className = '' }: FirmwareInstallerP
   const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const portRef = useRef<SerialPort | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const portRef = useRef<any | null>(null);
 
   const handleInstall = async () => {
     if (isInstalling) return;

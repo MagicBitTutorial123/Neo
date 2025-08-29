@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import NextButton from "@/components/NextButton";
 
 
@@ -22,14 +22,15 @@ export default function SignupOtp() {
   const ref3 = useRef<HTMLInputElement>(null);
   const ref4 = useRef<HTMLInputElement>(null);
   const ref5 = useRef<HTMLInputElement>(null);
-  const inputRefs = [ref0, ref1, ref2, ref3, ref4, ref5];
+
+  const inputRefs = useMemo(() => [ref0, ref1, ref2, ref3, ref4, ref5], []);
 
   const phone =
     typeof window !== "undefined" ? localStorage.getItem("fullPhone") || "" : "";
 
   useEffect(() => {
     inputRefs[0]?.current?.focus();
-  }, []);
+  }, [inputRefs]);
 
   const handleBack = () => router.push("/signup/mobile");
 
@@ -76,7 +77,7 @@ export default function SignupOtp() {
     if (last >= 0) inputRefs[last]?.current?.focus();
   };
 
-  const sendOtp = async () => {
+  const sendOtp = useCallback(async () => {
     setErrorMsg(null);
     if (!phone) {
       setErrorMsg("Phone number not found. Please go back and try again.");
@@ -103,12 +104,12 @@ export default function SignupOtp() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [phone, router, inputRefs]);
 
   useEffect(() => {
     // Auto-send when landing on OTP page (or call from previous page)
-    void sendOtp();
-  }, []);
+    sendOtp();
+  }, [sendOtp]);
 
   const resendOtp = async () => {
     await sendOtp();

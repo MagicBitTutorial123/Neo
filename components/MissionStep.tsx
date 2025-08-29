@@ -61,14 +61,14 @@ export default function MissionStep({
   tryAgainButtonText = "Try Again",
   onTryAgain,
 }: MissionStepProps) {
-  const [setCurrentStep] = useState(stepNumber);
+  const [currentStep, setCurrentStep] = useState(stepNumber);
   const { sidebarCollapsed } = useSidebar();
 
   const handleNext = () => {
     if (onNext) {
       onNext();
     } else {
-      setCurrentStep((prev) => prev + 1);
+      setCurrentStep((prev: number) => prev + 1);
     }
   };
 
@@ -76,7 +76,7 @@ export default function MissionStep({
     if (onPrevious) {
       onPrevious();
     } else {
-      setCurrentStep((prev) => Math.max(1, prev - 1));
+      setCurrentStep((prev: number) => Math.max(1, prev - 1));
     }
   };
 

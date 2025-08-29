@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import SideNavbar from "@/components/SideNavbar";
 import FirmwareInstaller from "@/components/FirmwareInstaller";
@@ -51,8 +51,74 @@ export default function SettingsPage() {
   // const [lsAvatar, setLsAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+    // Create user profile manually if it doesn't exist
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createUserProfileManually = useCallback(async (user: any) => {
+    try {
+      console.log('🔧 Creating user profile manually...');
+
+      // Get data from user metadata
+      const userMetadata = user.user_metadata;
+      const profileData = {
+        user_id: user.id, // Use 'user_id' column name as this is standard
+        email: user.email,
+        full_name: userMetadata?.full_name || 'User',
+        phone: userMetadata?.phone || '',
+        age: userMetadata?.age ? parseInt(userMetadata.age) : null,
+        avatar: userMetadata?.avatar || '/Avatar01.png',
+        bio: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('📝 Profile data to insert:', profileData);
+
+      // Insert profile into user_profiles table
+      const { data: newProfile, error: insertError } = await supabase
+        .from('user_profiles')
+        .insert([profileData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Error creating profile manually:', insertError);
+        // Even if profile creation fails, try to use metadata
+        const fallbackProfile = {
+          full_name: userMetadata?.full_name || 'User',
+          avatar: userMetadata?.avatar || '/Avatar01.png',
+          email: user.email || '',
+          phone: userMetadata?.phone || '',
+          bio: '',
+          age: userMetadata?.age ? parseInt(userMetadata.age) : null
+        };
+        populateFormFields(fallbackProfile);
+        console.log('✅ Using fallback data after failed profile creation:', fallbackProfile);
+        return;
+      }
+
+      if (newProfile) {
+        populateFormFields(newProfile);
+        console.log('✅ User profile created manually:', newProfile);
+      }
+    } catch (error) {
+      console.error('❌ Error creating profile manually:', error);
+      // Last resort: use whatever data we can get
+      const userMetadata = user.user_metadata;
+      const fallbackProfile = {
+        full_name: userMetadata?.full_name || 'User',
+        avatar: userMetadata?.avatar || '/Avatar01.png',
+        email: user.email || '',
+        phone: userMetadata?.phone || '',
+        bio: '',
+        age: userMetadata?.age ? parseInt(userMetadata.age) : null
+      };
+      populateFormFields(fallbackProfile);
+      console.log('✅ Using last resort fallback data:', fallbackProfile);
+    }
+  }, []);
+  
   // Fetch user data from Supabase
-  const fetchUserDataFromSupabase = async () => {
+  const fetchUserDataFromSupabase = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -119,73 +185,9 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [createUserProfileManually]);
 
-  // Create user profile manually if it doesn't exist
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createUserProfileManually = async (user: any) => {
-    try {
-      console.log('🔧 Creating user profile manually...');
 
-      // Get data from user metadata
-      const userMetadata = user.user_metadata;
-      const profileData = {
-        user_id: user.id, // Use 'user_id' column name as this is standard
-        email: user.email,
-        full_name: userMetadata?.full_name || 'User',
-        phone: userMetadata?.phone || '',
-        age: userMetadata?.age ? parseInt(userMetadata.age) : null,
-        avatar: userMetadata?.avatar || '/Avatar01.png',
-        bio: '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('📝 Profile data to insert:', profileData);
-
-      // Insert profile into user_profiles table
-      const { data: newProfile, error: insertError } = await supabase
-        .from('user_profiles')
-        .insert([profileData])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('❌ Error creating profile manually:', insertError);
-        // Even if profile creation fails, try to use metadata
-        const fallbackProfile = {
-          full_name: userMetadata?.full_name || 'User',
-          avatar: userMetadata?.avatar || '/Avatar01.png',
-          email: user.email || '',
-          phone: userMetadata?.phone || '',
-          bio: '',
-          age: userMetadata?.age ? parseInt(userMetadata.age) : null
-        };
-        populateFormFields(fallbackProfile);
-        console.log('✅ Using fallback data after failed profile creation:', fallbackProfile);
-        return;
-      }
-
-      if (newProfile) {
-        populateFormFields(newProfile);
-        console.log('✅ User profile created manually:', newProfile);
-      }
-    } catch (error) {
-      console.error('❌ Error creating profile manually:', error);
-      // Last resort: use whatever data we can get
-      const userMetadata = user.user_metadata;
-      const fallbackProfile = {
-        full_name: userMetadata?.full_name || 'User',
-        avatar: userMetadata?.avatar || '/Avatar01.png',
-        email: user.email || '',
-        phone: userMetadata?.phone || '',
-        bio: '',
-        age: userMetadata?.age ? parseInt(userMetadata.age) : null
-      };
-      populateFormFields(fallbackProfile);
-      console.log('✅ Using last resort fallback data:', fallbackProfile);
-    }
-  };
 
   // Populate form fields with user data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

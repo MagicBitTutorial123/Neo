@@ -19,7 +19,7 @@ export default function SignupEmail() {
 
   useEffect(() => {
     clearRegistrationData();
-  }, []);
+  }, [clearRegistrationData]);
 
   // Add navigation guard to ensure user came from signup flow
   useEffect(() => {
