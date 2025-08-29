@@ -46,14 +46,11 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   const workspaceRef = useRef(null);
   const isLoadingWorkspace = useRef(false);
 
-  // Constants
-  const ANALOG_PINS = [
-    0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
-    34, 35, 36, 39,
-  ];
-  const DIGITAL_PINS = [
-    0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
-  ];
+     // Constants
+   const ANALOG_PINS = [
+     0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
+     34, 35, 36, 39,
+   ];
 
   // Utility functions
   const removeWidget = (id) =>
@@ -646,31 +643,33 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
           return newHistory;
         });
 
-        // Update widgetData for graph widgets that use this pin
-        setWidgetData((prev) => {
-          const newWidgetData = { ...prev };
-          
-          // Find all graph widgets that use this pin
-          widgets.forEach((widget) => {
-            if (widget.type === "graph" && widget.props.pin === pin) {
-              if (!newWidgetData[widget.id]) {
-                newWidgetData[widget.id] = {};
-              }
-              newWidgetData[widget.id] = {
-                ...newWidgetData[widget.id],
-                value: Number(value),
-                history: newWidgetData[widget.id].history || []
-              };
-              
-              // Update history for this widget
-              const existingHistory = newWidgetData[widget.id].history;
-              const updatedHistory = [...existingHistory, Number(value)].slice(-60);
-              newWidgetData[widget.id].history = updatedHistory;
-            }
-          });
-          
-          return newWidgetData;
-        });
+                 // Update widgetData for graph and gauge widgets that use this pin
+         setWidgetData((prev) => {
+           const newWidgetData = { ...prev };
+           
+           // Find all graph and gauge widgets that use this pin
+           widgets.forEach((widget) => {
+             if ((widget.type === "graph" || widget.type === "gauge") && widget.props.pin === pin) {
+               if (!newWidgetData[widget.id]) {
+                 newWidgetData[widget.id] = {};
+               }
+               newWidgetData[widget.id] = {
+                 ...newWidgetData[widget.id],
+                 value: Number(value),
+                 history: newWidgetData[widget.id].history || []
+               };
+               
+               // Update history for graph widgets (gauge widgets don't need history)
+               if (widget.type === "graph") {
+                 const existingHistory = newWidgetData[widget.id].history;
+                 const updatedHistory = [...existingHistory, Number(value)].slice(-60);
+                 newWidgetData[widget.id].history = updatedHistory;
+               }
+             }
+           });
+           
+           return newWidgetData;
+         });
       }
 
    
@@ -1072,64 +1071,151 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
                       );
                     }
 
-                    // Digital Widget
-                    if (widget.type === "digital") {
-                      const pin = widget.props.pin ?? 32;
-                      const widgetInfo = widgetData[widget.id];
-                      let value = null;
+                                         // Gauge Widget
+                     if (widget.type === "gauge") {
+                       const pin = widget.props.pin ?? 32;
+                       const widgetInfo = widgetData[widget.id];
+                       const value = widgetInfo?.value ?? latestAnalogByPin[pin] ?? 0;
+                       
+                                               // Calculate gauge properties
+                        const minValue = 0;
+                        const maxValue = 4095;
+                        const percentage = Math.min(100, Math.max(0, ((value - minValue) / (maxValue - minValue)) * 100));
+                        const angle = (percentage / 100) * 180 - 90; 
+                        // Calculate the end point for the fill path
+                        const radius = 50;
+                        const centerX = 60;
+                        const centerY = 70;
+                        const startAngle = -180; // Start from left side
+                        const endAngle = startAngle + (percentage / 100) * 180;
+                        
+                        // Convert angles to radians and calculate end point
+                        const endAngleRad = (endAngle * Math.PI) / 180;
+                        const endX = centerX + radius * Math.cos(endAngleRad);
+                        const endY = centerY + radius * Math.sin(endAngleRad);
+                        
+                        // Color based on value
+                        const getGaugeColor = (val) => {
+                          const pct = (val / maxValue) * 100;
+                          if (pct < 33) return "#10B981"; // Green
+                          if (pct < 66) return "#F59E0B"; // Yellow
+                          return "#EF4444"; // Red
+                        };
 
-                      if (widgetInfo && widgetInfo.isDigital) {
-                        value = widgetInfo.value;
-                      } else {
-                        value = latestDigitalByPin[pin] ?? 0;
-                      }
-
-                      return (
-                        <div
-                          key={widget.id}
-                          className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="text-sm font-medium text-[#222E3A] opacity-80">
-                              Digital
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={pin}
-                                onChange={(e) =>
-                                  updateWidgetProps(
-                                    widget.id,
-                                    "pin",
-                                    parseInt(e.target.value)
-                                  )
-                                }
-                                className="text-xs border border-gray-200 rounded px-2 py-1"
-                              >
-                                {DIGITAL_PINS.map((pinNum) => (
-                                  <option key={pinNum} value={pinNum}>
-                                    Pin {pinNum}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                onClick={() => removeWidget(widget.id)}
-                                aria-label="Remove widget"
-                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </div>
-                          <div
-                            className={`text-2xl font-bold ${
-                              value ? "text-green-600" : "text-red-600"
-                            }`}
-                          >
-                            {bleConnected ? (value ? "ON" : "OFF") : "—"}
-                          </div>
-                        </div>
-                      );
-                    }
+                       return (
+                         <div
+                           key={widget.id}
+                           className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
+                         >
+                           <div className="flex items-center justify-between mb-4">
+                             <div className="text-sm font-medium text-[#222E3A] opacity-80">
+                               Gauge Meter
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <select
+                                 value={pin}
+                                 onChange={(e) =>
+                                   updateWidgetProps(
+                                     widget.id,
+                                     "pin",
+                                     parseInt(e.target.value)
+                                   )
+                                 }
+                                 className="text-xs text-black border border-gray-200 rounded px-2 py-1"
+                               >
+                                 {ANALOG_PINS.map((pinNum) => (
+                                   <option key={pinNum} value={pinNum}>
+                                     Pin {pinNum}
+                                   </option>
+                                 ))}
+                               </select>
+                               <button
+                                 onClick={() => removeWidget(widget.id)}
+                                 aria-label="Remove widget"
+                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
+                               >
+                                 ×
+                               </button>
+                             </div>
+                           </div>
+                           
+                           {/* Gauge SVG */}
+                           <div className="flex justify-center mb-3">
+                             <svg width="120" height="80" viewBox="0 0 120 80">
+                               {/* Gauge background */}
+                               <path
+                                 d="M 10 70 A 50 50 0 0 1 110 70"
+                                 fill="none"
+                                 stroke="#E5E7EB"
+                                 strokeWidth="8"
+                                 strokeLinecap="round"
+                               />
+                               
+                                                               {/* Gauge fill */}
+                                <path
+                                  d={`M 10 70 A 50 50 0 0 1 ${endX} ${endY}`}
+                                  fill="none"
+                                  stroke={getGaugeColor(value)}
+                                  strokeWidth="8"
+                                  strokeLinecap="round"
+                                  // className="transition-all duration-500 ease-out"
+                                />
+                               
+                               {/* Center point */}
+                               <circle
+                                 cx="60"
+                                 cy="70"
+                                 r="3"
+                                 fill="#6B7280"
+                               />
+                               
+                                                               {/* Needle */}
+                                <line
+                                  x1="60"
+                                  y1="70"
+                                  x2={centerX + Math.cos(endAngleRad) * 35}
+                                  y2={centerY + Math.sin(endAngleRad) * 35}
+                                  stroke="#374151"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  // className="transition-all duration-1 ease-out"
+                                />
+                               
+                               {/* Value text */}
+                               <text
+                                 x="60"
+                                 y="45"
+                                 textAnchor="middle"
+                                 fontSize="12"
+                                 fontWeight="600"
+                                 fill="#111827"
+                               >
+                                 {bleConnected ? Math.round(value) : "—"}
+                               </text>
+                               
+                               {/* Pin label */}
+                               <text
+                                 x="60"
+                                 y="60"
+                                 textAnchor="middle"
+                                 fontSize="10"
+                                 fill="#6B7280"
+                               >
+                                 PIN {pin}
+                               </text>
+                             </svg>
+                           </div>
+                           
+                           {/* Scale markers */}
+                           <div className="flex justify-between text-xs text-gray-500 px-2">
+                             <span>0</span>
+                             <span>2048</span>
+                             <span>4095</span>
+                           </div>
+                           
+                         </div>
+                       );
+                     }
 
                     // Graph Widget
                     if (widget.type === "graph") {
@@ -1172,22 +1258,36 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
                           >
                             Analog
                           </button>
-                          <button
-                            onClick={() => {
-                              setWidgets((prev) => [
-                                ...prev,
-                                {
-                                  id: `${Date.now()}-digital`,
-                                  type: "digital",
-                                  props: { pin: 5 },
-                                },
-                              ]);
-                              setShowAddMenu(false);
-                            }}
-                            className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
-                          >
-                            Digital
-                          </button>
+                                                     <button
+                             onClick={() => {
+                               const newWidgetId = `${Date.now()}-gauge`;
+                               setWidgets((prev) => [
+                                 ...prev,
+                                 {
+                                   id: newWidgetId,
+                                   type: "gauge",
+                                   props: { pin: 32 },
+                                 },
+                               ]);
+                               
+                               // Initialize widget data with current sensor value if available
+                               const currentPinValue = latestAnalogByPin[32];
+                               if (currentPinValue !== undefined) {
+                                 setWidgetData((prev) => ({
+                                   ...prev,
+                                   [newWidgetId]: {
+                                     value: currentPinValue,
+                                     history: [currentPinValue]
+                                   }
+                                 }));
+                               }
+                               
+                               setShowAddMenu(false);
+                             }}
+                             className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
+                           >
+                             Gauge Meter
+                           </button>
                                                      <button
                              onClick={() => {
                                const newWidgetId = `${Date.now()}-graph`;
