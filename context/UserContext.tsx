@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type UserRegistrationData = {
@@ -58,7 +58,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     checkAuthSimple();
   }, []);
 
-  const checkAuthSimple = async () => {
+  const checkAuthSimple = useCallback(async () => {
     try {
       setCheckingAuth(true);
       
@@ -96,35 +96,35 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
       setCheckingAuth(false);
     }
-  };
+  }, []);
 
-  const updateRegistrationData = (data: Partial<UserRegistrationData>) => {
+  const updateRegistrationData = useCallback((data: Partial<UserRegistrationData>) => {
     const updated = { ...registrationData, ...data };
     setRegistrationData(updated);
     localStorage.setItem("registrationData", JSON.stringify(updated));
-  };
+  }, [registrationData]);
 
-  const clearRegistrationData = () => {
+  const clearRegistrationData = useCallback(() => {
     setRegistrationData({});
     localStorage.removeItem("registrationData");
-  };
+  }, []);
 
-  const updateUserData = (data: Partial<UserData>) => {
+  const updateUserData = useCallback((data: Partial<UserData>) => {
     const updated = { ...userData, ...data };
     setUserData(updated);
     localStorage.setItem("userData", JSON.stringify(updated));
-  };
+  }, [userData]);
 
-  const handleSetUserData = (user: UserData | null) => {
+  const handleSetUserData = useCallback((user: UserData | null) => {
     setUserData(user);
     if (user) {
       localStorage.setItem("userData", JSON.stringify(user));
     } else {
       localStorage.removeItem("userData");
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       setUserData(null);
@@ -133,7 +133,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Logout failed:", error);
     }
-  };
+  }, []);
 
   return (
     <UserContext.Provider

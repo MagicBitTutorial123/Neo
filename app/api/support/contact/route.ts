@@ -164,6 +164,7 @@ neo@magicbit.cc
 
     console.log('✅ Confirmation email sent:', confirmationEmailResult.messageId);
 
+    
     // Log the contact request
     console.log('Neo Contact Support Request:', {
       email,
