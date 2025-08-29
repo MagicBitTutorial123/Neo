@@ -88,16 +88,27 @@ export default function SideNavbar({
   const [contactEmail, setContactEmail] = useState<string>("");
   const [contactMessage, setContactMessage] = useState<string>("");
   const [contactFile, setContactFile] = useState<File | null>(null);
+  const [contactFileUrl, setContactFileUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendOk, setSendOk] = useState<string | null>(null);
 
   // Function to close contact modal and reset form
   const closeContactModal = () => {
+    // Clean up object URL if it exists
+    if (contactFileUrl) {
+      try {
+        URL.revokeObjectURL(contactFileUrl);
+      } catch (error) {
+        console.error('Error revoking object URL:', error);
+      }
+    }
+    
     setContactOpen(false);
     setContactEmail("");
     setContactMessage("");
     setContactFile(null);
+    setContactFileUrl(null);
     setSendError(null);
     setSendOk(null);
   };
@@ -516,8 +527,18 @@ export default function SideNavbar({
 
   // File selection
   const onFileChange = (file: File | null) => {
+    // Clean up previous file URL if it exists
+    if (contactFileUrl) {
+      try {
+        URL.revokeObjectURL(contactFileUrl);
+      } catch (error) {
+        console.error('Error revoking previous object URL:', error);
+      }
+    }
+    
     if (!file) {
       setContactFile(null);
+      setContactFileUrl(null);
       return;
     }
     // basic size/type checks (optional)
@@ -532,6 +553,15 @@ export default function SideNavbar({
     }
     setSendError(null);
     setContactFile(file);
+    
+    // Create and store object URL
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      setContactFileUrl(objectUrl);
+    } catch (error) {
+      console.error('Error creating object URL:', error);
+      setSendError("Failed to process image file.");
+    }
   };
 
   // Drag & drop handlers
@@ -558,6 +588,19 @@ export default function SideNavbar({
       el.removeEventListener("drop", onDrop as EventListener);
     };
   }, []);
+
+  // Clean up object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (contactFileUrl) {
+        try {
+          URL.revokeObjectURL(contactFileUrl);
+        } catch (error) {
+          console.error('Error revoking object URL:', error);
+        }
+      }
+    };
+  }, []); // Empty dependency array to prevent infinite loops
 
   // Send contact form to backend
   const submitContact = async () => {
@@ -603,7 +646,16 @@ export default function SideNavbar({
       // reset fields
       setContactEmail("");
       setContactMessage("");
+      // Clean up object URL before clearing file
+      if (contactFileUrl) {
+        try {
+          URL.revokeObjectURL(contactFileUrl);
+        } catch (error) {
+          console.error('Error revoking object URL:', error);
+        }
+      }
       setContactFile(null);
+      setContactFileUrl(null);
     } catch {
       setSendError("Network error. Please try again.");
     } finally {
@@ -1000,7 +1052,7 @@ export default function SideNavbar({
           <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 w-[92vw] max-w-[520px] p-6 z-[10000]">
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-xl font-extrabold text-[#0F172A]">
-                Contact Support
+                Contact Neo Support
               </h3>
               <button
                 aria-label="Close"
@@ -1026,7 +1078,7 @@ export default function SideNavbar({
 
             <p className="text-sm text-[#475569] mb-4">
               Send us a message and we’ll email you back at{" "}
-              <span className="font-semibold">info@magicbit.cc</span>.
+              <span className="font-semibold">neo@magicbit.cc</span>.
             </p>
 
             {sendError && (
@@ -1074,39 +1126,73 @@ export default function SideNavbar({
                   Attachment (optional)
                 </label>
 
-                <label
-                  ref={dropRef}
-                  htmlFor="contact-file"
-                  className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#CBD5E1] px-4 py-6 text-center cursor-pointer hover:border-[#93C5FD]"
-                  title="Click or drop an image"
-                >
-                  <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
+                {contactFile ? (
+                  // Show image preview when file is selected
+                  <div className="relative">
+                    <div className="rounded-xl border border-[#E5E7EB] p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-[#374151]">
+                          {contactFile.name}
+                        </span>
+                        <button
+                          onClick={() => setContactFile(null)}
+                          className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                          title="Remove attachment"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      </div>
+                                             <div className="relative w-full h-32 bg-white rounded-lg overflow-hidden border border-gray-200">
+                         <img
+                           src={contactFileUrl || ''}
+                           alt="Preview"
+                           className="w-full h-full object-cover"
+                         />
+                       </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Size: {(contactFile.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Show upload area when no file is selected
+                  <label
+                    ref={dropRef}
+                    htmlFor="contact-file"
+                    className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#CBD5E1] px-4 py-6 text-center cursor-pointer hover:border-[#93C5FD] hover:bg-gray-50 transition-colors"
+                    title="Click or drop an image"
                   >
-                    <path
-                      d="M12 5v14M5 12h14"
-                      stroke="#64748B"
-                      strokeWidth="2"
-                      strokeLinecap="round"
+                    <svg
+                      width="28"
+                      height="28"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 5v14M5 12h14"
+                        stroke="#64748B"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="text-sm text-[#64748B]">
+                      Click to upload or drag & drop an image
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      PNG, JPG, WebP up to 5MB
+                    </span>
+                    <input
+                      id="contact-file"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
                     />
-                  </svg>
-                  <span className="text-sm text-[#64748B]">
-                    {contactFile
-                      ? `Selected: ${contactFile.name}`
-                      : "Click to upload or drag & drop an image"}
-                  </span>
-                  <input
-                    id="contact-file"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-                  />
-                </label>
+                  </label>
+                )}
               </div>
 
               {/* Actions */}
