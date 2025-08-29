@@ -538,6 +538,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
       console.error("Error initializing workspace:", error);
     }
   };
+  
 
   // Load saved workspace state and handle tab switching
   useEffect(() => {
