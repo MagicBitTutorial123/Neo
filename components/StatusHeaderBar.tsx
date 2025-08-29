@@ -12,8 +12,9 @@ interface HeaderProps {
   liveUsers: number;
   isConnected?: boolean;
   onConnectToggle?: (connected: boolean) => void;
-  setIsConnected: any;
+  setIsConnected: (connected: boolean) => void;
   onRun?: () => void;
+  onPause?: () => void;
   onErase?: () => void;
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
@@ -35,10 +36,10 @@ export default function Header({
   setIsConnected,
   onConnectToggle,
   onRun,
+  onPause,
   onErase,
 
   sidebarCollapsed: propSidebarCollapsed = false,
-  enableTimerPersistence = false,
   isPlayground = false,
   onConnectionTypeChange,
   connectionStatus,
@@ -54,11 +55,12 @@ export default function Header({
   const sidebarCollapsed = contextSidebarCollapsed ?? propSidebarCollapsed;
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
-  const parseTimeAllocated = (str: string) => {
+  const parseTimeAllocated = (str: string): number => {
     if (str){
       const match = str.match(/(\d+)/);
       return match ? parseInt(match[1], 10) * 60 : 0;
     }
+    return 0;
   };
   const allocatedSeconds = parseTimeAllocated(timeAllocated);
 
@@ -178,7 +180,7 @@ export default function Header({
                     ? "bg-[#599CFF] opacity-60 cursor-not-allowed"
                     : "bg-[#599CFF] hover:bg-[#8ebbff]"
                 }`}
-                title={isUploading ? "Uploading..." : isRunning ? "Pause" : "Play"}
+                title={isUploading ? "Uploading..." : isRunning ? "Stop" : "Run"}
               >
                 {isUploading ? (
                   <div
@@ -188,7 +190,7 @@ export default function Header({
                 ) : (
                   <Image
                     src={isRunning ? "/stop button.png" : "/play button.png"}
-                    alt={isRunning ? "Pause" : "Play"}
+                    alt={isRunning ? "Stop" : "Run"}
                     width={15}
                     height={15}
                     className="text-white"
@@ -215,7 +217,7 @@ export default function Header({
 
           {(missionNumber > 1 || isPlayground) && (
             <ToggleConnectButton
-              isConnected={isConnected}
+              isConnected={isConnected || false}
               onToggle={handleConnectToggle}
               onConnectionTypeChange={onConnectionTypeChange}
               connectionStatus={connectionStatus}

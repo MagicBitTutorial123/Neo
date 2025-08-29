@@ -1,4 +1,3 @@
-import bluetooth
 import uasyncio as asyncio
 from ble_uart_peripheral import BLEUART
 import machine
@@ -8,6 +7,7 @@ import gc
 import sys
 from machine import Pin, ADC
 import time
+import bluetooth
 
 # GPIO pins that can be reset
 GPIO_PINS = [0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
@@ -19,7 +19,28 @@ main_task = None
 ANALOG_PINS = [0, 2, 4,  12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 39]
 writing_code = False
 code = ""
+ULTRASOUND_PIN = Pin(26, Pin.OUT)  # single pin
 
+def read_ultrasound():
+    try:
+        # Send trigger pulse
+        ULTRASOUND_PIN.init(Pin.OUT)
+        ULTRASOUND_PIN.value(0)
+        time.sleep_us(2)
+        ULTRASOUND_PIN.value(1)
+        time.sleep_us(10)
+        ULTRASOUND_PIN.value(0)
+
+        # Switch to input to read echo
+        ULTRASOUND_PIN.init(Pin.IN)
+        duration = machine.time_pulse_us(ULTRASOUND_PIN, 1, 30000)  # max 30ms
+        distance_cm = (duration / 2) / 29.1
+        return round(distance_cm, 2)
+    except Exception as e:
+        print(f"Ultrasound read error: {e}")
+        return None
+ 
+    
 def reset_gpio_pins():
     """Reset all GPIO pins to low state"""
     for pin_num in GPIO_PINS:
@@ -93,7 +114,7 @@ def process_code_upload(code_buffer):
             f.write(final_code)
         
         with open('keyboardhandler.py', 'w') as f:
-            f.write("import uasyncio as asyncio\nfrom machine import Pin\nimport neopixel\n")
+            f.write("import uasyncio as asyncio\nfrom machine import Pin,PWM\nimport neopixel\nM1_IN1 = PWM(Pin(16), freq=500)\nM1_IN2 = PWM(Pin(17), freq=500)\nM2_IN1 = PWM(Pin(18), freq=500)\nM2_IN2 = PWM(Pin(27), freq=500)\n")
             # Convert to async functions
             handler_code = re.sub(r'time\.sleep', r'await asyncio.sleep', handler_code)
             handler_code = re.sub(r'def ', r'async def ', handler_code)
@@ -187,9 +208,9 @@ async def start_ble_service():
                     if len(uart._connections) > 0:
                         # Read all analog pins
                         payload = {
-                            "type": "analog_sensors",
+                            "type": "sensors",
                             "timestamp": time.ticks_ms() if hasattr(time, 'ticks_ms') else int(time.time() * 1000),
-                            "analog": {}
+                            "analog": {},
                         }
                         
                         # Read analog values from all analog pins
@@ -197,7 +218,10 @@ async def start_ble_service():
                             adc = get_adc(pin_num)
                             if adc is not None:
                                 try:
-                                    payload["analog"][str(pin_num)] = adc.read()
+                                    if (pin_num == 26):
+                                        payload["analog"][str(pin_num)] = read_ultrasound()
+                                    else:
+                                        payload["analog"][str(pin_num)] = adc.read()
                                 except Exception as e:
                                     print(f"Error reading pin {pin_num}: {e}")
 

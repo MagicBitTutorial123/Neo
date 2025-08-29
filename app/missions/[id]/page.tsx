@@ -18,6 +18,7 @@ import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { TimerPersistence } from "@/utils/timerPersistence";
 import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
+import { keyboardSendBLE } from "@/utils/keyboardPress";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
 import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
@@ -106,7 +107,8 @@ export default function MissionPage() {
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
   const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const server = useRef<BluetoothRemoteGATTServer | null>(null);
-  const [isRunning] = useState(false);
+  const keyStateRef = useRef<{ [key: string]: boolean }>({});
+  const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
@@ -123,6 +125,128 @@ export default function MissionPage() {
       window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as unknown as EventListener);
     };
   }, [setSidebarCollapsed]);
+
+  // Keyboard event handlers for mission control
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      let action = keyMap[e.key];
+      
+      // If not an arrow key, check if it's a custom key
+      if (!action) {
+        let customKey = e.key.toLowerCase();
+        
+        // Handle special keys
+        if (customKey === ' ') {
+          customKey = 'space';
+        } else if (customKey === 'enter') {
+          customKey = 'enter';
+        } else if (customKey === 'shift') {
+          customKey = 'shift';
+        } else if (customKey === 'control') {
+          customKey = 'ctrl';
+        } else if (customKey === 'alt') {
+          customKey = 'alt';
+        } else if (customKey.length === 1) {
+          // Single character keys (a-z, 0-9, etc.)
+          action = customKey;
+        } else {
+          // For other keys, make safe for function names
+          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+        
+        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
+          action = customKey;
+        }
+      }
+      
+      // Prevent key repeat - only send if key is not already pressed
+      if (action) {
+        if (keyStateRef.current[action]) {
+          console.log(`Key "${action}" already pressed, ignoring repeat`);
+          return; // Key is already pressed, ignore this event
+        }
+        
+        // Mark key as pressed
+        keyStateRef.current[action] = true;
+      }
+
+      if (action) {
+        try {
+          await keyboardSendBLE(action, writeCharacteristicRef.current);
+        } catch (error) {
+          console.error("Failed to send key:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
+    const handleKeyUp = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      let action = keyMap[e.key];
+      
+      // If not an arrow key, check if it's a custom key
+      if (!action) {
+        let customKey = e.key.toLowerCase();
+        
+        // Handle special keys
+        if (customKey === ' ') {
+          customKey = 'space';
+        } else if (customKey === 'enter') {
+          customKey = 'enter';
+        } else if (customKey === 'shift') {
+          customKey = 'shift';
+        } else if (customKey === 'control') {
+          customKey = 'ctrl';
+        } else if (customKey === 'alt') {
+          customKey = 'alt';
+        } else if (customKey.length === 1) {
+          // Single character keys (a-z, 0-9, etc.)
+          action = customKey;
+        } else {
+          // For other keys, make safe for function names
+          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+        
+        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
+          action = customKey;
+        }
+      }
+      
+      if (action) {
+        // Mark key as released
+        keyStateRef.current[action] = false;
+        
+        try {
+          // Send stop_all command twice for reassurance when any arrow key is released
+          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
+         
+        } catch (error) {
+          console.error("Failed to send stop command:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [connectionStatus]);
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
 
@@ -317,6 +441,7 @@ export default function MissionPage() {
         setIsConnected(true);
         console.log("USB upload completed successfully");
       }
+      setIsRunning(true); // Set running state after successful upload
     } catch (error) {
       console.error("Upload failed:", error);
       alert(
@@ -532,6 +657,22 @@ export default function MissionPage() {
     }
   };
 
+  // Stop code execution
+  const handleStop = async () => {
+    console.log("🛑 Stop button clicked from page level!");
+    try {
+      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
+        const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
+        const encoder = new TextEncoder();
+        await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
+        setIsRunning(false);
+      }
+    } catch (error) {
+      console.error("Stop failed:", error);
+      setIsRunning(false); // Set to false anyway
+    }
+  };
+
   const handleErase = () => {
     console.log("🧹 Erase button clicked from page level!");
     // If we're in blocklySplitLayout, clear the workspace
@@ -740,6 +881,7 @@ export default function MissionPage() {
                 timeAllocated={mission.intro.timeAllocated}
                 liveUsers={17}
                 onRun={handleRun}
+                onPause={handleStop}
                 onErase={handleErase}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}
@@ -751,6 +893,7 @@ export default function MissionPage() {
                 onConnectionTypeChange={onConnectionTypeChange}
                 connectionType={connectionType}
                 isUploading={isUploading}
+                isRunning={isRunning}
               />
             </div>
           )}
@@ -973,6 +1116,7 @@ export default function MissionPage() {
                 timeAllocated={mission.intro.timeAllocated}
                 liveUsers={17}
                 onRun={handleRun}
+                onPause={handleStop}
                 onErase={handleErase}
                 sidebarCollapsed={sidebarCollapsed}
                 enableTimerPersistence={true}

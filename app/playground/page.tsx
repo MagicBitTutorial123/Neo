@@ -73,6 +73,7 @@ export default function Playground() {
   const [dashboardActive, setDashboardActive] = useState(false);
   const [tryingToConnect, setTryingToConnect] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const [selectedSensor, setSelectedSensor] = useState<"ldr" | "ultrasound">(
     "ldr"
   );
@@ -86,6 +87,7 @@ export default function Playground() {
     useRef<BluetoothRemoteGATTCharacteristic | null>(null);
   const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothGATTServer | null>(null);
+  const keyStateRef = useRef<{ [key: string]: boolean }>({});
   // const watchedPinsRef = useRef<Set<number>>(new Set());
 
   // Simple cleanup
@@ -99,6 +101,7 @@ export default function Playground() {
       // Cleanup Serial port
       if (portRef.current) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const port = portRef.current as any;
           if (port && (port.readable || port.writable)) {
             port.close().catch(console.error);
@@ -119,7 +122,46 @@ export default function Playground() {
         ArrowRight: "right",
       };
 
-      const action = keyMap[e.key]; // ... existing code ...
+      let action = keyMap[e.key];
+      
+      // If not an arrow key, check if it's a custom key
+      if (!action) {
+        let customKey = e.key.toLowerCase();
+        
+        // Handle special keys
+        if (customKey === ' ') {
+          customKey = 'space';
+        } else if (customKey === 'enter') {
+          customKey = 'enter';
+        } else if (customKey === 'shift') {
+          customKey = 'shift';
+        } else if (customKey === 'control') {
+          customKey = 'ctrl';
+        } else if (customKey === 'alt') {
+          customKey = 'alt';
+        } else if (customKey.length === 1) {
+          // Single character keys (a-z, 0-9, etc.)
+          action = customKey;
+        } else {
+          // For other keys, make safe for function names
+          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+        
+        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
+          action = customKey;
+        }
+      }
+      
+      // Prevent key repeat - only send if key is not already pressed
+      if (action) {
+        if (keyStateRef.current[action]) {
+          console.log(`Key "${action}" already pressed, ignoring repeat`);
+          return; // Key is already pressed, ignore this event
+        }
+        
+        // Mark key as pressed
+        keyStateRef.current[action] = true;
+      }
 
       // Update the connection handling to detect cancellations
       // const connectBluetooth = async () => {
@@ -217,8 +259,64 @@ export default function Playground() {
       }
     };
 
+    const handleKeyUp = async (e: KeyboardEvent) => {
+      const keyMap: Record<string, string> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+
+      let action = keyMap[e.key];
+      
+      // If not an arrow key, check if it's a custom key
+      if (!action) {
+        let customKey = e.key.toLowerCase();
+        
+        // Handle special keys
+        if (customKey === ' ') {
+          customKey = 'space';
+        } else if (customKey === 'enter') {
+          customKey = 'enter';
+        } else if (customKey === 'shift') {
+          customKey = 'shift';
+        } else if (customKey === 'control') {
+          customKey = 'ctrl';
+        } else if (customKey === 'alt') {
+          customKey = 'alt';
+        } else if (customKey.length === 1) {
+          // Single character keys (a-z, 0-9, etc.)
+          action = customKey;
+        } else {
+          // For other keys, make safe for function names
+          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+        
+        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
+          action = customKey;
+        }
+      }
+      
+      if (action) {
+        // Mark key as released
+        keyStateRef.current[action] = false;
+        
+        try {
+          // Send stop_all command when any arrow key is released
+          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
+        } catch (error) {
+          console.error("Failed to send stop command:", error);
+          setConnectionStatus("disconnected");
+        }
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
   }, [connectionStatus]);
 
   // Simple Bluetooth connection
@@ -320,7 +418,7 @@ export default function Playground() {
                         );
                       }
                   }
-                } catch(e) {
+                } catch {
                   console.log("BLE raw:", line);
                 }
               });
@@ -393,6 +491,7 @@ export default function Playground() {
         await usbUpload(codeToUpload, portRef);
         setIsConnected(true);
       }
+      setIsRunning(true); // Set running state after successful upload
     } catch (error) {
       console.error("Upload failed:", error);
       alert(
@@ -402,6 +501,21 @@ export default function Playground() {
       );
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Stop code execution
+  const stopCode = async () => {
+    try {
+      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
+        const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
+        const encoder = new TextEncoder();
+        await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
+        setIsRunning(false);
+      }
+    } catch (error) {
+      console.error("Stop failed:", error);
+      setIsRunning(false); // Set to false anyway
     }
   };
 
@@ -416,13 +530,17 @@ export default function Playground() {
           setIsConnected(false);
           
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const navSerial = (navigator as unknown as { serial: { requestPort: () => Promise<any> } }).serial;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let port = (portRef.current as any) || null;
             
             // Request port selection if needed
             if (!port || !port.readable || !port.writable) {
               port = await navSerial.requestPort();
               await port.open({ baudRate: 115200 });
+              
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (portRef as any).current = port;
             }
             
@@ -459,6 +577,7 @@ export default function Playground() {
       // Handle Serial port disconnection
       if (portRef.current) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const port = portRef.current as any;
           if (port && (port.readable || port.writable)) {
             await port.close();
@@ -527,6 +646,7 @@ export default function Playground() {
               liveUsers={17}
               isPlayground={true}
               onRun={uploadCode}
+              onPause={stopCode}
               timeAllocated="100"
               isConnected={isConnected}
               setIsConnected={setIsConnected}
@@ -537,6 +657,7 @@ export default function Playground() {
               onConnectionTypeChange={onConnectionTypeChange}
               connectionType={connectionType}
               isUploading={isUploading}
+              isRunning={isRunning}
             />
 
             {dashboardActive ? (
