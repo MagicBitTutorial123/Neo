@@ -12,6 +12,7 @@ import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import Header from "@/components/StatusHeaderBar";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
+import { hasKeyboardBlocks } from "@/utils/keyboardBlockDetector";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
 import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 import AIChatbot from "@/components/AI/chatbot";
@@ -77,13 +78,13 @@ export default function Playground() {
   const [dashboardActive, setDashboardActive] = useState(false);
   const [tryingToConnect, setTryingToConnect] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
   const [selectedSensor, setSelectedSensor] = useState<"ldr" | "ultrasound">(
     "ldr"
   );
   
 
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
+  const [hasKeyboardBlocksPresent, setHasKeyboardBlocksPresent] = useState(false);
 
   const portRef = useRef<unknown>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
@@ -92,7 +93,46 @@ export default function Playground() {
   const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothGATTServer | null>(null);
   const keyStateRef = useRef<{ [key: string]: boolean }>({});
+  
+  // BLE connection stability improvements
+  const bleCommandQueue = useRef<Array<{ command: string; retries: number }>>([]);
+  const isProcessingQueue = useRef(false);
+  const lastCommandTime = useRef(0);
+  const connectionHealthCheck = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 3;
+  const commandRateLimit = 50; // Minimum ms between commands
+  const healthCheckInterval = 5000; // Check connection health every 5 seconds
+  
   // const watchedPinsRef = useRef<Set<number>>(new Set());
+
+  // Function to check for keyboard blocks and update state
+  const checkForKeyboardBlocks = useCallback(() => {
+    console.log("checkForKeyboardBlocks called");
+    console.log("blocklyRef.current:", blocklyRef.current);
+    console.log("workspaceRef.current:", blocklyRef.current?.workspaceRef?.current);
+    
+    if (blocklyRef.current?.workspaceRef?.current) {
+      const hasBlocks = hasKeyboardBlocks(blocklyRef.current.workspaceRef.current);
+      setHasKeyboardBlocksPresent(hasBlocks);
+      console.log("Keyboard blocks detected:", hasBlocks);
+    } else {
+      console.log("Workspace not ready yet");
+    }
+  }, []);
+
+  // BLE command queuing and rate limiting system
+  const queueBleCommand = useCallback(async (command: string, maxRetries: number = 2) => {
+    bleCommandQueue.current.push({ command, retries: maxRetries });
+    
+    if (!isProcessingQueue.current) {
+      processBleCommandQueue();
+    }
+  }, []);
+
+
+
+
 
   // Simple cleanup
   useEffect(() => {
@@ -117,18 +157,15 @@ export default function Playground() {
     };
   }, []);
 
-  // Periodic status check when connected and running
-  useEffect(() => {
-    if (!isConnected || !isRunning) return;
-    
-    const statusInterval = setInterval(() => {
-      checkDeviceStatus();
-    }, 2000); // Check every 2 seconds
-    
-    return () => clearInterval(statusInterval);
-  }, [isConnected, isRunning]);
+
 
   useEffect(() => {
+    // Only add event listeners if keyboard blocks are present
+    if (!hasKeyboardBlocksPresent) {
+      console.log("No keyboard blocks present, skipping event listeners");
+      return;
+    }
+
     const handleKeyDown = async (e: KeyboardEvent) => {
       const keyMap: Record<string, string> = {
         ArrowUp: "up",
@@ -176,6 +213,11 @@ export default function Playground() {
         
         // Mark key as pressed
         keyStateRef.current[action] = true;
+      }
+
+      // Only proceed if connected
+      if (connectionStatus !== "connected") {
+        return;
       }
 
       // Update the connection handling to detect cancellations
@@ -264,14 +306,15 @@ export default function Playground() {
       // };
 
      
-      if (action) {
-        try {
-          await keyboardSendBLE(action, writeCharacteristicRef.current);
-        } catch (error) {
-          console.error("Failed to send key:", error);
-          setConnectionStatus("disconnected");
-        }
-      }
+             if (action) {
+         // Queue the command instead of sending directly
+         bleCommandQueue.current.push({ command: action, retries: 2 });
+         
+         // Process queue if not already processing
+         if (!isProcessingQueue.current) {
+           processBleCommandQueue();
+         }
+       }
     };
 
     const handleKeyUp = async (e: KeyboardEvent) => {
@@ -312,17 +355,22 @@ export default function Playground() {
         }
       }
       
-      if (action) {
-        // Mark key as released
+                   if (action) {
+        // Mark key as released for key repeat prevention
         keyStateRef.current[action] = false;
         
-        try {
-          // Send stop_all command when any arrow key is released
-          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
-        } catch (error) {
-          console.error("Failed to send stop command:", error);
-          setConnectionStatus("disconnected");
+        // Only proceed if connected
+        if (connectionStatus !== "connected") {
+          return;
         }
+        
+                 // Queue stop_all command instead of sending directly
+         bleCommandQueue.current.push({ command: "stop_all", retries: 2 });
+         
+         // Process queue if not already processing
+         if (!isProcessingQueue.current) {
+           processBleCommandQueue();
+         }
       }
     };
 
@@ -332,7 +380,7 @@ export default function Playground() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [connectionStatus]);
+  }, [connectionStatus, hasKeyboardBlocksPresent]);
 
   // Simple Bluetooth connection
   const connectBluetooth = useCallback(async () => {
@@ -422,30 +470,20 @@ export default function Playground() {
                             })
                           );
                       });
-                      if (msg.ultrasound) {
-                        window.dispatchEvent(
-                          new CustomEvent("sensorData", {
-                            detail: {
-                              sensor: "ultrasound",
-                              value: msg.ultrasound,
-                            },
-                          })
-                        );
-                      }
-                  } else if (msg?.ack === "stop") {
-                      // Handle stop acknowledgment
-                      console.log("Stop command acknowledged:", msg.status);
-                      setIsRunning(false);
-                  } else if (msg?.ack === "status") {
-                      // Handle status response
-                      console.log("Status received:", msg);
-                      if (!msg.running) {
-                          setIsRunning(false);
-                      }
-                  }
-                } catch {
-                  console.log("BLE raw:", line);
-                }
+                                             if (msg.ultrasound) {
+                         window.dispatchEvent(
+                           new CustomEvent("sensorData", {
+                             detail: {
+                               sensor: "ultrasound",
+                               value: msg.ultrasound,
+                             },
+                           })
+                         );
+                       }
+                   }
+                 } catch {
+                   console.log("BLE raw:", line);
+                 }
               });
           } catch (e) {
             console.error("Notification parse error", e);
@@ -492,6 +530,60 @@ export default function Playground() {
     }
   }, [tryingToConnect]);
 
+  // BLE command queue processing
+  const processBleCommandQueue = useCallback(async () => {
+    if (isProcessingQueue.current || bleCommandQueue.current.length === 0) {
+      return;
+    }
+
+    isProcessingQueue.current = true;
+
+    while (bleCommandQueue.current.length > 0) {
+      const now = Date.now();
+      const timeSinceLastCommand = now - lastCommandTime.current;
+
+      // Rate limiting: ensure minimum time between commands
+      if (timeSinceLastCommand < commandRateLimit) {
+        await new Promise(resolve => setTimeout(resolve, commandRateLimit - timeSinceLastCommand));
+      }
+
+      const commandItem = bleCommandQueue.current.shift();
+      if (!commandItem) continue;
+
+      try {
+        // Check connection health before sending
+        if (connectionStatus !== "connected" || !writeCharacteristicRef.current) {
+          console.log("BLE not connected, skipping command:", commandItem.command);
+          continue;
+        }
+
+        await keyboardSendBLE(commandItem.command, writeCharacteristicRef.current);
+        lastCommandTime.current = Date.now();
+        console.log("BLE command sent successfully:", commandItem.command);
+        
+      } catch (error) {
+        console.error("Failed to send BLE command:", commandItem.command, error);
+        
+        // Retry logic
+        if (commandItem.retries > 0) {
+          commandItem.retries--;
+          bleCommandQueue.current.unshift(commandItem);
+          console.log(`Retrying command ${commandItem.command}, ${commandItem.retries} retries left`);
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } else {
+          console.error("Command failed after all retries:", commandItem.command);
+          // If command fails completely, check connection health
+          setConnectionStatus("disconnected");
+          setIsConnected(false);
+        }
+      }
+    }
+
+    isProcessingQueue.current = false;
+  }, [connectionStatus]);
+
   const clearWorkspace = () => {
     console.log("test");
     const workspace = Blockly.getMainWorkspace();
@@ -512,12 +604,11 @@ export default function Playground() {
       if (connectionType === "bluetooth") {
         if (!isConnected) await connectBluetooth();
         await bluetoothUpload(codeToUpload, writeCharacteristicRef.current);
-      } else {
-        await usbUpload(codeToUpload, portRef);
-        setIsConnected(true);
-      }
-      setIsRunning(true); // Set running state after successful upload
-    } catch (error) {
+             } else {
+         await usbUpload(codeToUpload, portRef);
+         setIsConnected(true);
+       }
+     } catch (error) {
       console.error("Upload failed:", error);
       alert(
         `Upload failed: ${
@@ -529,41 +620,9 @@ export default function Playground() {
     }
   };
 
-  // Check device status
-  const checkDeviceStatus = async () => {
-    try {
-      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
-        const statusCommand = JSON.stringify({ mode: "status" }) + "\n";
-        const encoder = new TextEncoder();
-        await writeCharacteristicRef.current.writeValue(encoder.encode(statusCommand));
-      }
-    } catch (error) {
-      console.error("Status check failed:", error);
-    }
-  };
 
-  // Stop code execution
-  const stopCode = async () => {
-    try {
-      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
-        const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
-        const encoder = new TextEncoder();
-        await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
-        
-        // Wait a bit for the device to process the stop command
-        // The actual stop confirmation will come via notification
-        setTimeout(() => {
-          // If we haven't received a stop acknowledgment, check status
-          if (isRunning) {
-            checkDeviceStatus();
-          }
-        }, 500);
-      }
-    } catch (error) {
-      console.error("Stop failed:", error);
-      setIsRunning(false); // Set to false anyway
-    }
-  };
+
+
 
   const onConnectToggle = async (connected: boolean) => {
     if (connected) {
@@ -664,6 +723,19 @@ export default function Playground() {
     connect();
   }, [connectBluetooth, tryingToConnect]);
 
+  // Check for keyboard blocks when workspace changes
+  useEffect(() => {
+    // Check for keyboard blocks initially and set up an interval to check until workspace is ready
+    const checkInterval = setInterval(() => {
+      if (blocklyRef.current?.workspaceRef?.current) {
+        checkForKeyboardBlocks();
+        clearInterval(checkInterval);
+      }
+    }, 100);
+    
+    return () => clearInterval(checkInterval);
+  }, [checkForKeyboardBlocks]);
+
   // // Listen for batch pin requests and forward to firmware (optional future multi-stream)
   useEffect(() => {
     const handler = (e: CustomEvent<{ pins: number[] }>) => {
@@ -686,63 +758,62 @@ export default function Playground() {
             dashboardActive={dashboardActive}
           />
           <div className="flex flex-col w-full h-full">
-            <Header
-              missionNumber={0}
-              title="Playground"
-              liveUsers={17}
-              isPlayground={true}
-              onRun={uploadCode}
-              onPause={stopCode}
-              timeAllocated="100"
-              isConnected={isConnected}
-              setIsConnected={setIsConnected}
-              onConnectToggle={onConnectToggle}
-              connectionStatus={connectionStatus}
-              setConnectionStatus={setConnectionStatus}
-              onErase={clearWorkspace}
-              onConnectionTypeChange={onConnectionTypeChange}
-              connectionType={connectionType}
-              isUploading={isUploading}
-              isRunning={isRunning}
-            />
+                         <Header
+               missionNumber={0}
+               title="Playground"
+               liveUsers={17}
+               isPlayground={true}
+               onRun={uploadCode}
+               timeAllocated="100"
+               isConnected={isConnected}
+               setIsConnected={setIsConnected}
+               onConnectToggle={onConnectToggle}
+               connectionStatus={connectionStatus}
+               setConnectionStatus={setConnectionStatus}
+               onErase={clearWorkspace}
+               onConnectionTypeChange={onConnectionTypeChange}
+               connectionType={connectionType}
+               isUploading={isUploading}
+             />
 
-            {dashboardActive ? (
-              <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]">
-                <div className="max-w-4xl mx-auto">
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-[#222E3A] mb-2">
-                      Sensor
-                    </label>
-                    <select
-                      value={selectedSensor}
-                      onChange={(e) =>
-                        setSelectedSensor(
-                          e.target.value as "ldr" | "ultrasound"
-                        )
-                      }
-                      className="w-56 px-3 py-2 border rounded-lg bg-white text-[#222E3A]"
-                    >
-                      <option value="ldr">LDR</option>
-                      <option value="ultrasound">Ultrasound</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="bg-white border rounded-xl shadow-sm p-5">
-                      <div className="text-sm text-gray-500 mb-1">
-                        Current value
-                      </div>
-                     
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <BlocklyComponent
-                ref={blocklyRef}
-                generatedCode={generatedCode}
-                setGeneratedCode={setGeneratedCode}
-              />
-            )}
+                         {dashboardActive ? (
+               <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]">
+                 <div className="max-w-4xl mx-auto">
+                   <div className="mb-4">
+                     <label className="block text-sm font-medium text-[#222E3A] mb-2">
+                       Sensor
+                     </label>
+                     <select
+                       value={selectedSensor}
+                       onChange={(e) =>
+                         setSelectedSensor(
+                           e.target.value as "ldr" | "ultrasound"
+                         )
+                       }
+                       className="w-56 px-3 py-2 border rounded-lg bg-white text-[#222E3A]"
+                     >
+                       <option value="ldr">LDR</option>
+                       <option value="ultrasound">Ultrasound</option>
+                     </select>
+                   </div>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                     <div className="bg-white border rounded-xl shadow-sm p-5">
+                       <div className="text-sm text-gray-500 mb-1">
+                         Current value
+                       </div>
+                      
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             ) : (
+                 <BlocklyComponent
+                   ref={blocklyRef}
+                   generatedCode={generatedCode}
+                   setGeneratedCode={setGeneratedCode}
+                   onWorkspaceChange={checkForKeyboardBlocks}
+                 />
+             )}
           </div>
         </div>
       </div>

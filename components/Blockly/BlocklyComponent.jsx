@@ -22,7 +22,7 @@ import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
-const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
+const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }, ref) => {
   // Sidebar context
   const { sidebarCollapsed } = useSidebar();
   
@@ -529,6 +529,14 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode }, ref) => {
           const xmlText = Blockly.Xml.domToText(xml);
           localStorage.setItem("blocklyWorkspace", xmlText);
           generateCode();
+
+          // Notify parent component about workspace changes
+          if (onWorkspaceChange) {
+            console.log("Workspace change detected, calling onWorkspaceChange");
+            onWorkspaceChange();
+          } else {
+            console.log("onWorkspaceChange not provided");
+          }
         }
       });
 
