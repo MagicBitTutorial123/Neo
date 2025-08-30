@@ -7,6 +7,7 @@ import FirmwareInstaller from "@/components/FirmwareInstaller";
 // import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useSidebar } from "@/context/SidebarContext";
+import { useSearchParams } from "next/navigation";
 
 const splitName = (full: string) => {
   const parts = (full || "").trim().split(/\s+/);
@@ -29,6 +30,19 @@ const avatars = [
 export default function SettingsPage() {
   // const { registrationData, userData, updateUserData } = useUser();
   const { sidebarCollapsed } = useSidebar();
+  const searchParams = useSearchParams();
+  
+  // Check if this is a first-time OAuth user
+  const isFirstTimeOAuth = searchParams.get('firstTime') === 'true';
+  const isOAuthSuccess = searchParams.get('oauth') === 'success';
+  
+  // Debug logging
+  console.log('🔍 Settings page URL params:', {
+    firstTime: searchParams.get('firstTime'),
+    oauth: searchParams.get('oauth'),
+    isFirstTimeOAuth,
+    isOAuthSuccess
+  });
 
   // Form fields
   const [firstName, setFirstName] = useState("");
@@ -71,7 +85,7 @@ export default function SettingsPage() {
       const profileData = {
         user_id: user.id, // Use 'user_id' column name as this is standard
         email: user.email,
-        full_name: userMetadata?.full_name || 'User',
+        full_name: userMetadata?.full_name || userMetadata?.name || userMetadata?.display_name || 'User',
         phone: userMetadata?.phone || '',
         age: userMetadata?.age ? parseInt(userMetadata.age) : null,
         avatar: userMetadata?.avatar || '/Avatar01.png',
@@ -81,6 +95,8 @@ export default function SettingsPage() {
       };
 
       console.log('📝 Profile data to insert:', profileData);
+      console.log('🔍 Google user metadata:', userMetadata);
+      console.log('🔍 Full name extracted:', profileData.full_name);
 
       // Insert profile into user_profiles table
       const { data: newProfile, error: insertError } = await supabase
@@ -93,7 +109,7 @@ export default function SettingsPage() {
         console.error('❌ Error creating profile manually:', insertError);
         // Even if profile creation fails, try to use metadata
         const fallbackProfile = {
-          full_name: userMetadata?.full_name || 'User',
+          full_name: userMetadata?.full_name || userMetadata?.name || userMetadata?.display_name || 'User',
           avatar: userMetadata?.avatar || '/Avatar01.png',
           email: user.email || '',
           phone: userMetadata?.phone || '',
@@ -114,7 +130,7 @@ export default function SettingsPage() {
       // Last resort: use whatever data we can get
       const userMetadata = user.user_metadata;
       const fallbackProfile = {
-        full_name: userMetadata?.full_name || 'User',
+        full_name: userMetadata?.full_name || userMetadata?.name || userMetadata?.display_name || 'User',
         avatar: userMetadata?.avatar || '/Avatar01.png',
         email: user.email || '',
         phone: userMetadata?.phone || '',
@@ -160,15 +176,17 @@ export default function SettingsPage() {
           console.log('🔄 Profile not found, trying to get user metadata from auth...');
 
           const userMetadata = user.user_metadata;
-          if (userMetadata && (userMetadata.full_name || userMetadata.avatar || userMetadata.phone || userMetadata.age)) {
+          if (userMetadata && (userMetadata.full_name || userMetadata.name || userMetadata.display_name || userMetadata.avatar || userMetadata.phone || userMetadata.age)) {
             const fallbackProfile = {
-              full_name: userMetadata.full_name || undefined,
+              full_name: userMetadata.full_name || userMetadata.name || userMetadata.display_name || undefined,
               avatar: userMetadata.avatar || undefined,
               email: user.email || undefined,
               phone: userMetadata.phone || undefined,
               bio: '',
               age: userMetadata.age ? parseInt(userMetadata.age) : null
             };
+            console.log('🔍 Google user metadata found:', userMetadata);
+            console.log('🔍 Fallback profile created:', fallbackProfile);
             populateFormFields(fallbackProfile);
             console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
             return;
@@ -201,32 +219,215 @@ export default function SettingsPage() {
   // Populate form fields with user data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const populateFormFields = (profile: any) => {
+    console.log('🔍 Populating form fields with profile:', profile);
+    console.log('🔍 Current form state before population:', { firstName, lastName, email, avatar });
+    
     // Set avatar
     if (profile.avatar) {
       const avatarPath = profile.avatar.startsWith("/")
         ? profile.avatar
         : `/${profile.avatar}`;
       setAvatar(avatarPath);
+      console.log('✅ Avatar set to:', avatarPath);
     }
 
-    // Set name fields
+    // Set name fields - prioritize Google account data
     if (profile.full_name) {
       const { first, last } = splitName(profile.full_name);
+      console.log('🔍 Splitting full_name:', profile.full_name, 'into first:', first, 'last:', last);
       setFirstName(first);
       setLastName(last);
+      console.log('✅ Name fields populated from profile:', { first, last, full: profile.full_name });
+    } else {
+      console.log('⚠️ No full_name found in profile');
     }
 
     // Set other fields
-    if (profile.email) setEmail(profile.email);
-    if (profile.phone) setPhone(profile.phone);
-    if (profile.bio !== undefined) setBio(profile.bio || '');
-    if (profile.age !== undefined) setAge(profile.age);
+    if (profile.email) {
+      setEmail(profile.email);
+      console.log('✅ Email set to:', profile.email);
+    }
+    if (profile.phone) {
+      setPhone(profile.phone);
+      console.log('✅ Phone set to:', profile.phone);
+    }
+    if (profile.bio !== undefined) {
+      setBio(profile.bio || '');
+      console.log('✅ Bio set to:', profile.bio || '');
+    }
+    if (profile.age !== undefined) {
+      setAge(profile.age);
+      console.log('✅ Age set to:', profile.age);
+    }
+    
+    console.log('🔍 Form state after population:', { 
+      firstName: profile.full_name ? splitName(profile.full_name).first : firstName,
+      lastName: profile.full_name ? splitName(profile.full_name).last : lastName,
+      email: profile.email || email,
+      avatar: profile.avatar ? (profile.avatar.startsWith("/") ? profile.avatar : `/${profile.avatar}`) : avatar
+    });
   };
+
+  // Manual refresh function for debugging
+  const refreshUserData = useCallback(async () => {
+    console.log('🔄 Manually refreshing user data...');
+    await fetchUserDataFromSupabase();
+  }, [fetchUserDataFromSupabase]);
+
+  // Force refresh from database for Google users
+  const forceRefreshFromDatabase = useCallback(async () => {
+    try {
+      console.log('🔄 Force refreshing user data from database...');
+      setLoading(true);
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.log('❌ No authenticated user found');
+        return;
+      }
+
+      // Force fetch from database
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('full_name, avatar, email, phone, bio, age')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('❌ Error fetching profile:', profileError);
+        return;
+      }
+
+      if (profile) {
+        console.log('✅ Force refreshed profile from database:', profile);
+        populateFormFields(profile);
+      }
+    } catch (error) {
+      console.error('❌ Error force refreshing:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Check database directly for a specific user
+  const checkDatabaseDirectly = useCallback(async () => {
+    try {
+      console.log('🔄 Checking database directly for user:', supabase.auth.getUser());
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('❌ No authenticated user found.');
+        return;
+      }
+
+      console.log('🔍 User ID:', user.id);
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('❌ Error fetching profile directly:', profileError);
+        console.error('❌ Error details:', profileError.details);
+        console.error('❌ Error hint:', profileError.hint);
+        return;
+      }
+
+      if (profile) {
+        console.log('✅ Profile found in database directly:', profile);
+        populateFormFields(profile);
+      } else {
+        console.log('❌ Profile not found in database directly.');
+      }
+    } catch (error) {
+      console.error('❌ Error checking database directly:', error);
+    }
+  }, []);
+
+  // Fix Google user profile by updating with Google metadata
+  const fixGoogleUserProfile = useCallback(async () => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return;
+      }
+
+      // Extract full name from Google metadata
+      const googleFullName = user.user_metadata?.full_name || 
+                            user.user_metadata?.name || 
+                            user.user_metadata?.display_name ||
+                            (user.user_metadata?.given_name && user.user_metadata?.family_name ? 
+                             `${user.user_metadata.given_name} ${user.user_metadata.family_name}` : null);
+
+      if (googleFullName && googleFullName !== 'undefined undefined') {
+        // Update the profile with the Google full name
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            full_name: googleFullName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (!updateError && updatedProfile) {
+          // Refresh the form fields
+          populateFormFields(updatedProfile);
+        }
+      }
+    } catch (error) {
+      // Silently handle errors for production
+    }
+  }, []);
 
   // Fetch user data when component mounts
   useEffect(() => {
     fetchUserDataFromSupabase();
-  }, [fetchUserDataFromSupabase]);
+    fixGoogleUserProfile(); // Fix Google user profile on mount
+  }, [fetchUserDataFromSupabase, fixGoogleUserProfile]);
+
+  // Auto-populate Google user data if this is their first time
+  useEffect(() => {
+    if (isFirstTimeOAuth && !loading) {
+      console.log('🆕 First-time OAuth user detected, auto-populating form fields...');
+      
+      const autoPopulateFromGoogle = async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && user.user_metadata) {
+            const userMetadata = user.user_metadata;
+            console.log('🔍 Google user metadata for auto-population:', userMetadata);
+            
+            // Auto-populate name fields if they're empty
+            if (!firstName && !lastName && (userMetadata.full_name || userMetadata.name || userMetadata.display_name)) {
+              const fullName = userMetadata.full_name || userMetadata.name || userMetadata.display_name;
+              const { first, last } = splitName(fullName);
+              setFirstName(first);
+              setLastName(last);
+              console.log('✅ Auto-populated name fields from Google:', { first, last, full: fullName });
+            }
+            
+            // Auto-populate email if empty
+            if (!email && user.email) {
+              setEmail(user.email);
+              console.log('✅ Auto-populated email from Google:', user.email);
+            }
+            
+            // Auto-populate avatar if it's the default
+            if (avatar === '/Avatar01.png' && userMetadata.avatar) {
+              setAvatar(userMetadata.avatar);
+              console.log('✅ Auto-populated avatar from Google:', userMetadata.avatar);
+            }
+          }
+        } catch (error) {
+          console.log('🔍 Error auto-populating from Google:', error);
+        }
+      };
+      
+      autoPopulateFromGoogle();
+    }
+  }, [isFirstTimeOAuth, loading, firstName, lastName, email, avatar]);
 
   // Load data from localStorage as fallback
   useEffect(() => {
@@ -560,7 +761,37 @@ export default function SettingsPage() {
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <>
-                {/* Header card */}
+                                 {/* Welcome message for first-time OAuth users */}
+                 {isFirstTimeOAuth && (
+                   <div className="rounded-[24px] bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6">
+                     <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                         <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                         </svg>
+                       </div>
+                       <div className="flex-1">
+                         <h3 className="text-lg font-bold text-blue-900 mb-1">
+                           Welcome! 🎉
+                         </h3>
+                         <p className="text-blue-700 text-sm mb-2">
+                           {isOAuthSuccess 
+                             ? "You've successfully signed in with Google! Your profile has been automatically populated with your Google account information."
+                             : "Please complete your profile below to get started."
+                           }
+                         </p>
+                         {isOAuthSuccess && (
+                           <p className="text-blue-600 text-xs">
+                             💡 You can review and edit the auto-populated information below, then click "Save" to complete your profile.
+                           </p>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               
+                 
+                 {/* Header card */}
                 <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] px-6 md:px-10 py-6 md:py-7">
                   <div className="flex items-center gap-4 md:gap-6">
                     <div className="w-[82px] h-[82px] relative">
@@ -571,7 +802,7 @@ export default function SettingsPage() {
                         className="rounded-full object-cover bg-[#FFF7E6] p-2"
                       />
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col flex-1">
                       <h1 className="text-[34px] md:text-[40px] leading-none font-extrabold text-[#0F172A]">
                         {fullName}
                       </h1>
@@ -579,6 +810,16 @@ export default function SettingsPage() {
                         {bio || "No bio set"}
                       </p>
                     </div>
+                    {/* Debug refresh button for Google users */}
+                    {isFirstTimeOAuth && (
+                      <button
+                        onClick={refreshUserData}
+                        className="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                        title="Refresh user data from Google"
+                      >
+                        🔄 Refresh
+                      </button>
+                    )}
                   </div>
                 </div>
          
@@ -605,7 +846,14 @@ export default function SettingsPage() {
 
               {/* Avatar Selection Section */}
               <div className="mb-8">
-                <label className="block text-sm text-[#6B7280] mb-3">Profile Avatar</label>
+                <label className="block text-sm text-[#6B7280] mb-3 flex items-center gap-2">
+                  Profile Avatar
+                  {isFirstTimeOAuth && avatar !== '/Avatar01.png' && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      From Google
+                    </span>
+                  )}
+                </label>
                 <div className="flex flex-wrap gap-4">
                   {avatars.map((avatarSrc, idx) => (
                     <button
@@ -670,7 +918,14 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">First Name</label>
+                  <label className="text-sm text-[#6B7280] flex items-center gap-2">
+                    First Name
+                    {isFirstTimeOAuth && firstName && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        From Google
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
@@ -679,7 +934,14 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Last Name</label>
+                  <label className="text-sm text-[#6B7280] flex items-center gap-2">
+                    Last Name
+                    {isFirstTimeOAuth && lastName && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        From Google
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
@@ -688,7 +950,14 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Email</label>
+                  <label className="text-sm text-[#6B7280] flex items-center gap-2">
+                    Email
+                    {isFirstTimeOAuth && email && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        From Google
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="email"
                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
@@ -716,14 +985,24 @@ export default function SettingsPage() {
                       Phone number must be exactly 10 digits and can contain +, -, and spaces
                     </p>
                   )}
-                  {phone && phoneValid && (
-                    <p className="text-xs text-green-500 mt-1">
-                      ✓ Valid phone number format (10 digits)
-                    </p>
-                  )}
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Bio</label>
+                                     {phone && phoneValid && (
+                     <p className="text-xs text-green-500 mt-1">
+                       ✓ Valid phone number format (10 digits)
+                     </p>
+                   )}
+                 </div>
+                 <div className="flex flex-col gap-1">
+                   <label className="text-sm text-[#6B7280]">Age</label>
+                   <input
+                     type="number"
+                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                     value={age || ''}
+                     onChange={(ev) => setAge(ev.target.value ? parseInt(ev.target.value) : null)}
+                     placeholder="Enter age"
+                   />
+                 </div>
+                 <div className="md:col-span-2 flex flex-col gap-1">
+                   <label className="text-sm text-[#6B7280]">Bio</label>
                   <textarea
                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
                     value={bio}

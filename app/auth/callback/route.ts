@@ -23,9 +23,28 @@ export async function GET(request: NextRequest) {
         console.log('🔍 User app metadata:', data.user.app_metadata);
         console.log('🔍 User ID:', data.user.id);
         
-        // Check if this is a first-time user by looking at app_metadata
-        const isFirstTimeUser = !data.user.app_metadata?.provider_refreshed_at;
+        // Check if this is a first-time user BEFORE creating the profile
+        let hasExistingProfile = false;
+        try {
+          const { error } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('user_id', data.user.id)
+            .single();
+          hasExistingProfile = !error;
+        } catch {
+          hasExistingProfile = false;
+        }
+        
+        // Also check if this is a completely new user (no previous sessions)
+        const isCompletelyNewUser = !data.user.app_metadata?.provider_refreshed_at;
+        
+        // User is first-time if they have no profile OR if they're completely new
+        const isFirstTimeUser = !hasExistingProfile || isCompletelyNewUser;
         console.log('🆕 Is first-time user:', isFirstTimeUser);
+        console.log('🔍 Has existing profile:', hasExistingProfile);
+        console.log('🔍 Is completely new user:', isCompletelyNewUser);
+        console.log('🔍 App metadata provider_refreshed_at:', data.user.app_metadata?.provider_refreshed_at);
         
         // ALWAYS create/update user profile for Google users
         try {
@@ -51,14 +70,29 @@ export async function GET(request: NextRequest) {
           const profileData = {
             user_id: data.user.id,
             email: data.user.email,
-            full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || 'User',
+            full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.user_metadata?.display_name || 'User',
             avatar: '/Avatar02.png', // ALWAYS set Avatar02.png for Google users
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
           
           console.log('📝 Profile data to insert/update:', profileData);
+          console.log('🔍 Google user metadata:', data.user.user_metadata);
+          console.log('🔍 Full name extracted:', profileData.full_name);
           console.log('🔍 Avatar field value:', profileData.avatar);
+          
+          // Ensure we have a valid full name
+          if (!profileData.full_name || profileData.full_name === 'User') {
+            console.log('⚠️ No valid full name found, trying alternative extraction...');
+            
+            // Try alternative extraction methods
+            const alternativeName = data.user.user_metadata?.email?.split('@')[0] || 
+                                  data.user.email?.split('@')[0] || 
+                                  'User';
+            
+            profileData.full_name = alternativeName;
+            console.log('🔍 Using alternative name:', profileData.full_name);
+          }
           
           // Try to insert first (in case trigger didn't work)
           console.log('🔄 Attempting to insert profile...');
@@ -201,11 +235,17 @@ export async function GET(request: NextRequest) {
         
         // Redirect based on whether this is a first-time user
         if (isFirstTimeUser) {
-          console.log('🆕 First-time Google user, redirecting to profile completion');
-          return NextResponse.redirect(`${requestUrl.origin}/profile-completion?oauth=success`);
+          console.log('🆕 First-time Google user, redirecting to settings for profile completion');
+          const redirectUrl = `${requestUrl.origin}/settings?oauth=success&firstTime=true`;
+          console.log('🔗 Redirecting to:', redirectUrl);
+          console.log('🔗 Full redirect URL:', redirectUrl);
+          console.log('🔗 Request origin:', requestUrl.origin);
+          return NextResponse.redirect(redirectUrl);
         } else {
           console.log('🔄 Returning Google user, redirecting to home');
-          return NextResponse.redirect(`${requestUrl.origin}/home?oauth=success`);
+          const redirectUrl = `${requestUrl.origin}/home?oauth=success`;
+          console.log('🔗 Redirecting to:', redirectUrl);
+          return NextResponse.redirect(redirectUrl);
         }
         
       } else {

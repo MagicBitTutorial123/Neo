@@ -13,7 +13,6 @@ const PROTECTED_ROUTES = [
   '/home',
   '/missions',
   '/profile',
-  '/profile-completion',
   '/settings',
   '/playground',
   '/playground-unlocked',
