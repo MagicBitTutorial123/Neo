@@ -52,6 +52,28 @@ export default function HomePage() {
       setIsNewUser(true);
     }
     
+    // Check if this is a successful OAuth login
+    const isOAuthSuccess = searchParams.get("oauth") === "success";
+    if (isOAuthSuccess) {
+      console.log("✅ OAuth login successful, cleaning up URL...");
+      router.replace("/home");
+    }
+    
+    // Check if user just completed their profile
+    const profileCompleted = searchParams.get("profileCompleted") === "true";
+    if (profileCompleted) {
+      console.log("✅ Profile completed, showing welcome message...");
+      router.replace("/home");
+      // You could show a toast notification here for profile completion
+    }
+    
+    // Check for OAuth errors
+    const oauthError = searchParams.get("error");
+    if (oauthError) {
+      console.error("❌ OAuth error detected:", oauthError);
+      // You could show a toast notification here
+    }
+    
     // Also check if user is new based on mission progress
     if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
       setIsNewUser(true);
