@@ -282,92 +282,7 @@ export default function Playground() {
         return;
       }
 
-      // Update the connection handling to detect cancellations
-      // const connectBluetooth = async () => {
-      //   try {
-      //     setConnectionStatus("connecting");
-      //     // Request device
-      //     if (!bluetoothDeviceRef.current) {
-      //       const navBle = (
-      //         navigator as unknown as {
-      //           bluetooth: {
-      //             requestDevice: (options: {
-      //               filters: Array<{ name: string }>;
-      //               optionalServices: string[];
-      //             }) => Promise<BluetoothDevice>;
-      //           };
-      //         }
-      //       ).bluetooth;
-
-      //       try {
-      //         bluetoothDeviceRef.current = await navBle.requestDevice({
-      //           filters: [{ name: "Neo" }],
-      //           optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
-      //         });
-      //       } catch (error) {
-      //         // Handle user cancellation
-      //         if (
-      //           error.name === "NotFoundError" ||
-      //           error.name === "NotAllowedError"
-      //         ) {
-      //           console.log("Bluetooth connection canceled by user");
-      //           setConnectionStatus("disconnected");
-      //           setIsConnected(false);
-      //           // Dispatch cancellation event
-      //           try {
-      //             window.dispatchEvent(new CustomEvent("connectionCanceled"));
-      //           } catch {}
-      //           return;
-      //         }
-      //         throw error;
-      //       }
-
-      //       // Handle disconnection
-      //       bluetoothDeviceRef.current.addEventListener(
-      //         "gattserverdisconnected",
-      //         async () => {
-      //           setIsConnected(false);
-      //           setConnectionStatus("disconnected");
-      //           try {
-      //             window.dispatchEvent(
-      //               new CustomEvent("bleConnection", {
-      //                 detail: { connected: false },
-      //               })
-      //             );
-      //           } catch {}
-      //         }
-      //       );
-      //     }
-
-      //     // ... rest of existing connection logic ...
-      //   } catch (error) {
-      //     console.error("Connection failed:", error);
-
-      //     // Handle specific cancellation errors
-      //     if (
-      //       error.name === "NotFoundError" ||
-      //       error.name === "NotAllowedError"
-      //     ) {
-      //       console.log("Bluetooth connection canceled by user");
-      //       setConnectionStatus("disconnected");
-      //       setIsConnected(false);
-      //       // Dispatch cancellation event
-      //       try {
-      //         window.dispatchEvent(new CustomEvent("connectionCanceled"));
-      //       } catch {}
-      //       return;
-      //     }
-
-      //     if (tryingToConnect) {
-      //       setTimeout(async () => {
-      //         setTryingToConnect(false);
-      //         await connectBluetooth();
-      //       }, 2000);
-      //     }
-      //   }
-      // };
-
-     
+    
              if (action) {
          // Queue the command instead of sending directly
          bleCommandQueue.current.push({ command: action, retries: 2 });
@@ -923,7 +838,7 @@ export default function Playground() {
                          const pin = (widget.props.pin as number) || 32;
                          const widgetInfo = widgetData[`pin_${pin}`];
                          const series = widgetInfo?.history || [];
-                         const currentValue = widgetInfo?.value;
+                         const currentValue = widgetInfo?.value as number;
 
                          return (
                            <div key={widget.id} className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:col-span-1 lg:col-span-2">
@@ -997,10 +912,9 @@ export default function Playground() {
                                  </div>
                                )}
                              </div>
-                             
                              <div className="mt-2 text-xs text-gray-500">
                                {isConnected
-                                 ? `Latest: ${currentValue !== undefined ? Math.round(currentValue) : "—"}`
+                                 ? `Latest: ${currentValue != null ? Math.round(currentValue) : "—"}`
                                  : "—"}
                              </div>
                            </div>

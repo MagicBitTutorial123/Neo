@@ -37,6 +37,7 @@ export default function SignIn() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const checkUserProfileAndRedirect = async (user: any) => {
     try {
       // Check if user profile exists
