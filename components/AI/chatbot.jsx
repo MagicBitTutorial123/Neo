@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaChevronRight, FaRegPaperPlane } from "react-icons/fa";
 import * as Blockly from "blockly";
-import downloadImg from '@/public/happy-robot-correct-3.png';
+import chatbotImg from '@/assets/chatbot.png';
 import ChatBubbleSVG from "@/assets/chat-bubble.svg";
 import Image from 'next/image';
 
-
-
-export default function AIChatbot({ position = "right", workspaceRef,onClose }) {
+export default function AIChatbot({ position = "right", workspaceRef, onClose }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     {
@@ -17,15 +15,35 @@ export default function AIChatbot({ position = "right", workspaceRef,onClose }) 
   ]);
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
-  const [collapseLevel, setCollapseLevel] = useState(0);
-  // draggable position
-  const chatbotRef = useRef(null);
-  const posRef = useRef({ x: 800, y: 430 }); 
- 
-
-
+  const [collapseLevel, setCollapseLevel] = useState(2); // Start in mini pill mode to show bubble
   
-  // block list for Gemini to know
+
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+
+
+
+
+  // Toggle between collapse states
+  const toggleCollapseLevel = () => {
+    setCollapseLevel(prev => (prev + 1) % 3);
+  };
+
+  // Get chatbot container classes based on collapse level
+  const getChatbotClasses = () => {
+    const baseClasses = "chatbot-container-modern";
+    switch (collapseLevel) {
+      case 0: return `${baseClasses} expanded`;
+      case 1: return `${baseClasses} header-only`;
+      case 2: return `${baseClasses} mini-pill`;
+      default: return baseClasses;
+    }
+  };
+
   const blockList = `
 Available Magicbit blocks with parameters:
 
@@ -77,158 +95,6 @@ Available Magicbit blocks with parameters:
 - FREQUENCY: Sound frequency in Hz (e.g., 440 for A4 note)
 - DURATION: Time in milliseconds
 `;
-useEffect(() => {
-  chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-}, [messages]);
-
-//drag
-
-/*useEffect(() => {
-  const el = chatbotRef.current;
-  if (!el) return;
-
-  let isDragging = false;
-  let startX, startY, initialLeft, initialTop;
-
-  const header = el.querySelector(".chatbot-header");
-
-  const onMouseDown = (e) => {
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-
-    // Use current style position or posRef for initial position
-    initialLeft = parseInt(el.style.left, 10) || posRef.current.x || 0;
-    initialTop = parseInt(el.style.top, 10) || posRef.current.y || 0;
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-
-    el.style.transition = "none";
-    el.style.opacity = "0.95";
-    el.style.cursor = "grabbing";
-  };
-
-  const onMouseMove = (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-
-    const newLeft = initialLeft + dx;
-    const newTop = initialTop + dy;
-
-    el.style.left = `${newLeft}px`;
-    el.style.top = `${newTop}px`;
-    el.style.right = "auto";
-    el.style.bottom = "auto";
-
-    posRef.current = { x: newLeft, y: newTop };
-  };
-
-  const onMouseUp = () => {
-    isDragging = false;
-    el.style.opacity = "1";
-    el.style.cursor = "default";
-
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
-  };
-
-  if (header) {
-    header.style.cursor = "grab";
-    header.addEventListener("mousedown", onMouseDown);
-  }
-
-  return () => {
-    if (header) header.removeEventListener("mousedown", onMouseDown);
-  };
-}, []);*/
-
-
-
-useEffect(() => {
-  const el = chatbotRef.current;
-  if (!el) return;
-
-  // 🟡 Delay just enough to ensure offsetHeight is correct
-  const timeout = setTimeout(() => {
-    if (!el.style.left && !el.style.top) {
-      const height = el.offsetHeight;
-
-      // 💡 Fallback to a default height if 0 (safety)
-      const defaultHeight = height > 0 ? height : 300;
-      const defaultX = 20;
-      const defaultY = window.innerHeight - defaultHeight - 20;
-
-      el.style.left = `${defaultX}px`;
-      el.style.top = `${defaultY}px`;
-
-      posRef.current = { x: defaultX, y: defaultY };
-    }
-  }, 50); // 1 frame delay (~16ms), just to be safe
-
-  let isDragging = false;
-  let startX, startY, initialLeft, initialTop;
-
-  const header = el.querySelector(".chatbot-header");
-
-  const onMouseDown = (e) => {
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-
-    initialLeft = parseInt(el.style.left, 10) || posRef.current?.x || 0;
-    initialTop = parseInt(el.style.top, 10) || posRef.current?.y || 0;
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-
-    el.style.transition = "none";
-    el.style.opacity = "0.95";
-    el.style.cursor = "grabbing";
-  };
-
-  const onMouseMove = (e) => {
-    if (!isDragging) return;
-
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-
-    const newLeft = initialLeft + dx;
-    const newTop = initialTop + dy;
-
-    el.style.left = `${newLeft}px`;
-    el.style.top = `${newTop}px`;
-    el.style.right = "auto";
-    el.style.bottom = "auto";
-
-    posRef.current = { x: newLeft, y: newTop };
-  };
-
-  const onMouseUp = () => {
-    isDragging = false;
-    el.style.opacity = "1";
-    el.style.cursor = "default";
-
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
-  };
-
-  if (header) {
-    header.style.cursor = "grab";
-    header.addEventListener("mousedown", onMouseDown);
-  }
-
-  return () => {
-    clearTimeout(timeout);
-    if (header) header.removeEventListener("mousedown", onMouseDown);
-  };
-}, []);
-
-
-
-
-
 
 // Get current workspace XML
 const getCurrentWorkspaceXML = () => {
@@ -557,7 +423,6 @@ rawXml = rawXml.replace(/^```xml/, "").replace(/```$/, "").trim();
 rawXml = rawXml.replace(/^```/, "").replace(/```$/, "").trim();
 }
 //xml
-console.log("AI Raw XML Response:\n", rawXml);
 
 if (rawXml.startsWith("<xml")) {
   try {
@@ -586,140 +451,129 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
 };
 
   return (
-    <div
-      className="chatbot-wrapper"
-       ref={chatbotRef}
-    style={{
-    position: "fixed",
-    top: posRef.current.y,
-    left: posRef.current.x,
-    zIndex: 9999,
-    transition: "opacity 0.2s ease",
+          <div
+        className={getChatbotClasses()}
+      >
 
-  }}
-      
-    >
-      {/* Bubble absolutely above the minimized widget */}
+
+      {/* Helper Bubble - Only visible in mini pill state */}
       {collapseLevel === 2 && (
-        <div style={{ position: "relative", width: "210px", height: "60px" }}>
-  <Image
-    src={ChatBubbleSVG}
-    alt="Bubble"
-    style={{ width: "100%", height: "100%" }}
-  />
-  <div
-    style={{
-      position: "absolute",
-      top: "12px",
-      left: "16px",
-      color: "#333",
-      fontSize: "12.5px",
-      fontFamily: 'Poppins, sans-serif',
-      lineHeight: "1.4",
-      fontWeight: 550,
-      
-    }}
-  >
-    Need a hand?Look likes I can? <br />
-    help you out!
-  </div>
-</div>
-
-      )}
-             <div 
-         className={`chatbot-container collapse-${collapseLevel}`}
-         style={{
-           minWidth: '200px',
-           minHeight: '200px',
-           maxWidth: '600px',
-           maxHeight: '800px'
-         }}
-       >
-        {/* Header */}
-        <div className="chatbot-header">
-          {/* Dots grid (always show) */}
-          <div className="chatbot-dots-grid">
-            {[...Array(6)].map((_, i) => (
-              <span key={i} className="dot" />
-            ))}
+        <div className="helper-bubble">
+          <div className="bubble-content">
+            Need a hand? Looks like I can help you out!
           </div>
-          {/* Avatar with active dot */}
-          <div className="chatbot-avatar-wrapper">
-            <Image
-              src={downloadImg}
-              alt="AI Assistant"
-              className="chatbot-avatar"
-            />
-            <span className="chatbot-avatar-active" />
-          </div>
-          {/* Name and role (only in expanded and mini header) */}
-          {collapseLevel < 2 && (
-            <div className="chatbot-header-info">
-              <div className="chatbot-name">Neo</div>
-              <div className="chatbot-role">AI Assistant</div>
-            </div>
-          )}
-          {/* Chevron button */}
-          <button
-            className="chatbot-header-btn"
-            title="Toggle"
-            onClick={() => setCollapseLevel((prev) => (prev + 1) % 3)}
-          >
-            <FaChevronRight className="text-white text-lg" />
-          </button>
         </div>
-        {/* Messages and input (only in expanded state) */}
+      )}
+
+      {/* Main chatbot container */}
+      <div className="chatbot-main">
+        {/* Header */}
+        <div className="chatbot-header-modern">
+          {/* Left side - dots grid */}
+          <div className="dots-menu">
+            <div className="dots-grid">
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+            </div>
+          </div>
+
+          {/* Center - Avatar and info */}
+          <div className="header-center">
+            <div className="avatar-container">
+              <Image
+                src={chatbotImg}
+                alt="Neo AI"
+                width={32}
+                height={32}
+                className="avatar-img"
+              />
+              <div className="avatar-status active"></div>
+            </div>
+            {collapseLevel < 2 && (
+              <div className="user-info">
+                <div className="user-name">Neo</div>
+                <div className="user-status">AI Assistant</div>
+              </div>
+            )}
+          </div>
+
+          {/* Right side - chevron */}
+          <div className="header-controls">
+            <button
+              className="collapse-btn"
+              onClick={toggleCollapseLevel}
+              title="Toggle chatbot size"
+            >
+              <FaChevronRight 
+                className={`chevron-icon ${collapseLevel === 0 ? 'rotated' : ''}`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Messages area - only show in expanded mode */}
         {collapseLevel === 0 && (
           <>
-            <div className="chatbot-messages">
-              {messages.map((msg, i) => (
+            <div className="messages-container">
+              {messages.map((msg, index) => (
                 <div
-                  key={i}
-                  className={`chatbot-message ${msg.role === "user" ? "user" : "ai"}`}
+                  key={index}
+                  className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
                 >
                   {msg.text}
                 </div>
               ))}
+              {loading && (
+                <div className="message ai-message typing">
+                  <div className="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
             </div>
-            <div
-               className="flex items-center bg-white border-2 border-gray-300 rounded-full px-4 py-2 shadow"
-               style={{ 
-                 marginTop: 8,
-                 maxWidth: 'calc(100% - 20px)',
-                 minWidth: '200px'
-               }}
-            >
-              <input
-                className="flex-1 bg-transparent outline-none text-gray-700 placeholder-gray-400 text-sm"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                 onKeyDown={e => {
-                   e.stopPropagation();
-                   if (e.key === 'Enter') {
-                     handleSend(e);
-                   }
-                 }}
-                 onKeyUp={e => e.stopPropagation()}
-                 onKeyPress={e => e.stopPropagation()}
-                placeholder="Hey! Can you help me with...."
-                style={{ border: "none" }}
-              />
-              <button
-                className="ml-2 p-1 rounded-full hover:bg-blue-50 transition"
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   handleSend(e);
-                 }}
-                style={{ border: "none", background: "none" }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <polygon points="3,21 21,12 3,3 7,12" stroke="#3B82F6" strokeWidth="2" fill="none" />
-                </svg>
-              </button>
+
+            {/* Input area */}
+            <div className="input-container">
+              <div className="input-wrapper">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                      handleSend(e);
+                    }
+                  }}
+                  placeholder="Hey! Can you help me with...."
+                  className="chatbot-input"
+                />
+                <button
+                  onClick={handleSend}
+                  className="send-btn"
+                  disabled={!input.trim()}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 21L21 12L3 3L7 12L3 21Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           </>
         )}
-        
       </div>
     </div>
   );
