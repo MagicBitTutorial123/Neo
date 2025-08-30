@@ -788,7 +788,7 @@ export default function Playground() {
                        if (widget.type === "analog") {
                          const pin = widget.props.pin as number;
                          const widgetInfo = widgetData[widget.id];
-                         const value = widgetInfo?.value ?? latestAnalogByPin[pin] ?? 0;
+                         const value = (widgetInfo?.value as number) ?? (latestAnalogByPin[pin] as number) ?? 0;
 
                          return (
                            <div
