@@ -9,7 +9,7 @@
   user-select: none;
   border: 1px solid rgba(0, 0, 0, 0.06);
   position: fixed;
-  bottom: 105px;
+  bottom: 150px;
   right: 50px;
   z-index: 1000;
   cursor: default;
@@ -87,13 +87,14 @@
 .helper-bubble::after {
   content: '';
   position: absolute;
-  bottom: -80px;
-  left: 50px;
+  bottom: -20px;
+  left: 150px;
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-top: 8px solid #E5E7EB;
+  border: 1px solid #D1D5DB;
 }
 
 .bubble-content {
