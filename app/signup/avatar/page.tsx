@@ -134,11 +134,13 @@ export default function SignupAvatar() {
     try {
       const oauthEmail = localStorage.getItem("oauthEmail");
       const oauthName = localStorage.getItem("oauthName");
-      const avatar = avatars[selected];
-      
       if (!oauthEmail || !oauthName) {
         throw new Error("OAuth user information not found. Please try signing in again.");
       }
+      if (selected === null || selected === undefined || !(selected in avatars)) {
+        throw new Error("Avatar selection is invalid. Please select an avatar.");
+      }
+      const avatar = avatars[selected as number];
 
       console.log('🆕 Processing OAuth user avatar selection:', { email: oauthEmail, name: oauthName, avatar });
 
@@ -190,7 +192,7 @@ export default function SignupAvatar() {
     const name = localStorage.getItem("name");
     const age = localStorage.getItem("age");
     const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
-    const avatar = avatars[selected];
+    const avatar = avatars[selected as number];
     
     // Ensure phone number has proper format (add + if missing)
     if (phone && !phone.startsWith('+')) {

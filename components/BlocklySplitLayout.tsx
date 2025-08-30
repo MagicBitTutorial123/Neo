@@ -31,6 +31,7 @@ export default function BlocklySplitLayout({
   onFinish,
   onUploadCode,
   // isUploading = false,
+  onWorkspaceChange,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mission: any;
@@ -53,6 +54,8 @@ export default function BlocklySplitLayout({
   onFinish?: () => void;
   onUploadCode?: (code: string) => void;
   isUploading?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onWorkspaceChange?: (workspace: any) => void;
 }) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
@@ -497,6 +500,7 @@ export default function BlocklySplitLayout({
             <BlocklyComponent
               generatedCode={generatedCode}
               setGeneratedCode={setGeneratedCode}
+              onWorkspaceChange={onWorkspaceChange}
             />
           </div>
           {/* <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
