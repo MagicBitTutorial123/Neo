@@ -91,7 +91,7 @@ export default function Playground() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [latestAnalogByPin, setLatestAnalogByPin] = useState<{ [key: number]: number }>({});
   const [latestDigitalByPin, setLatestDigitalByPin] = useState<{ [key: number]: number }>({});
-  const [widgetData, setWidgetData] = useState<{ [key: string]: Record<string, unknown> }>({});
+  const [widgetData, setWidgetData] = useState<{ [key: string]: { value?: number; history?: number[] } }>({});
   const [sensorHistory, setSensorHistory] = useState<{ [key: string]: number[] }>({});
 
   const portRef = useRef<unknown>(null);
@@ -787,7 +787,7 @@ export default function Playground() {
                        // Analog Widget
                        if (widget.type === "analog") {
                          const pin = widget.props.pin as number;
-                         const widgetInfo = widgetData[widget.id];
+                         const widgetInfo = widgetData[`pin_${pin}`];
                          const value = (widgetInfo?.value as number) ?? (latestAnalogByPin[pin] as number) ?? 0;
 
                          return (
@@ -837,7 +837,7 @@ export default function Playground() {
                        if (widget.type === "graph") {
                          const pin = (widget.props.pin as number) || 32;
                          const widgetInfo = widgetData[`pin_${pin}`];
-                         const series = widgetInfo?.history || [];
+                         const series = (widgetInfo?.history as number[]) || [];
                          const currentValue = widgetInfo?.value as number;
 
                          return (
@@ -895,7 +895,7 @@ export default function Playground() {
                                      ))}
                                      {/* Data line */}
                                      <path
-                                       d={series.map((value, index) => {
+                                       d={series.map((value: number, index: number) => {
                                          const x = (index / (series.length - 1)) * 400;
                                          const y = 200 - ((value / 4095) * 200);
                                          return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
