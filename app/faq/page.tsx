@@ -56,21 +56,21 @@ export default function FAQPage() {
             <div className="flex items-center gap-3">
               <Link href="/" className="flex items-center gap-3">
                 <Image 
-                  src="/logo-small.png" 
+                  src="/side-logo.png" 
                   alt="Neo Logo" 
-                  width={32} 
-                  height={32}
+                  width={200} 
+                  height={100}
                   className="rounded-lg"
                 />
                 <span className="text-xl font-bold text-[#222E3A]">Neo</span>
               </Link>
             </div>
-            <Link
-              href="/"
-              className="px-4 py-2 text-sm font-medium text-[#222E3A] hover:text-[#4A5568] transition-colors"
+            <button
+              onClick={() => window.location.href = '/home'}
+              className="px-4 py-2 text-sm font-medium text-[#222E3A] hover:text-[#4A5568] transition-colors cursor-pointer"
             >
               Back to Home
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -171,12 +171,12 @@ export default function FAQPage() {
             >
               Contact Support
             </Link>
-            <Link
-              href="/"
-              className="px-6 py-3 border border-gray-300 text-[#222E3A] font-medium rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Back to Home
-            </Link>
+                         <button
+               onClick={() => window.location.href = '/home'}
+               className="px-6 py-3 border border-gray-300 text-[#222E3A] font-medium rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+             >
+               Back to Home
+             </button>
           </div>
         </div>
       </div>
