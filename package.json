@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@blockly/continuous-toolbox": "^5.0.19",
+    "@emailjs/browser": "^4.4.1",
     "@monaco-editor/react": "^4.7.0",
     "@sendgrid/mail": "^8.1.5",
     "@supabase/auth-helpers-nextjs": "^0.10.0",

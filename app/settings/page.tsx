@@ -381,6 +381,110 @@ export default function SettingsPage() {
     }
   }, []);
 
+  // Delete account functionality
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleDeleteAccount = useCallback(async () => {
+    console.log('🔍 handleDeleteAccount called with deleteConfirmation:', deleteConfirmation);
+    
+    if (!deleteConfirmation || deleteConfirmation !== "DELETE") {
+      console.log('❌ Delete confirmation mismatch. Expected: DELETE, Got:', deleteConfirmation);
+      setError("Please type 'DELETE' to confirm account deletion.");
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+
+      console.log('🗑️ Starting account deletion...');
+
+      // First, verify the user is still authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('❌ User not authenticated:', authError);
+        setError("Your session has expired. Please log in again.");
+        return;
+      }
+
+      console.log('✅ User authenticated, proceeding with deletion for user:', user.id);
+      
+      // Also check the session to see if it's valid
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError);
+      } else if (session) {
+        console.log('✅ Valid session found, expires at:', session.expires_at);
+      } else {
+        console.log('⚠️ No active session found');
+      }
+
+      // Call the delete account API route with user ID
+      console.log('📡 Calling delete account API...');
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+        credentials: 'include', // Ensure cookies are sent
+      });
+
+      console.log('📡 API response status:', response.status);
+      const result = await response.json();
+      console.log('📡 API response:', result);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Authentication failed. Please log in again.");
+        }
+        throw new Error(result.error || 'Failed to delete account');
+      }
+
+      console.log('✅ Account deletion successful:', result);
+      
+      // Show success message
+      setOk("Profile deleted successfully. Signing out and redirecting...");
+      
+      // Sign out the user
+      try {
+        await supabase.auth.signOut();
+        console.log('✅ User signed out successfully');
+      } catch (signOutError) {
+        console.error('⚠️ Error signing out:', signOutError);
+        // Continue anyway
+      }
+      
+      // Redirect to home page after a short delay
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+
+    } catch (error) {
+      console.error('❌ Error deleting account:', error);
+      setError(error instanceof Error ? error.message : "Failed to delete account. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteConfirmation]);
+  // Removed duplicate declaration of openDeleteModal
+
+  const closeDeleteModal = () => {
+    console.log('🔍 closeDeleteModal called, isDeleting:', isDeleting, 'deleteConfirmation:', deleteConfirmation);
+    setShowDeleteModal(false);
+    // Don't clear deleteConfirmation when closing modal - let user keep their input
+    // Only clear it when explicitly requested (like clicking Clear button)
+    setError(null);
+  };
+
+  const openDeleteModal = () => {
+    setShowDeleteModal(true);
+    // Don't clear deleteConfirmation when opening modal - preserve user's input
+    setError(null);
+  };
+
   // Fetch user data when component mounts
   useEffect(() => {
     fetchUserDataFromSupabase();
@@ -428,6 +532,9 @@ export default function SettingsPage() {
       autoPopulateFromGoogle();
     }
   }, [isFirstTimeOAuth, loading, firstName, lastName, email, avatar]);
+
+  // Only reset delete confirmation when explicitly needed
+  // Removed the problematic useEffect that was clearing confirmation too aggressively
 
   // Load data from localStorage as fallback
   useEffect(() => {
@@ -1119,13 +1226,144 @@ export default function SettingsPage() {
         {/* Delete Account Tab */}
         {activeTab === 'delete' && (
           <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
-            <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Delete Account</h2>
-            <p className="text-[14px] text-[#6B7280]">Account deletion will be available soon.</p>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-[20px] font-extrabold text-[#0F172A]">Delete Account</h2>
+                <p className="text-[14px] text-[#6B7280]">Permanently remove your account and all associated data</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <h3 className="text-sm font-semibold text-red-800 mb-1">Warning: This action cannot be undone</h3>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    <li>• Your profile and all personal data will be permanently deleted</li>
+                    <li>• Your account will be completely removed from our system</li>
+                    <li>• You will lose access to all features and data</li>
+                    <li>• This action is irreversible</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-red-700 mb-2">
+                  Type "DELETE" to confirm
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-500 text-red-900 placeholder-red-400"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              {ok && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-700">{ok}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openDeleteModal}
+                  disabled={deleteConfirmation !== "DELETE" || isDeleting}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    deleteConfirmation === "DELETE" && !isDeleting
+                      ? "bg-red-600 hover:bg-red-700 text-white"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  {isDeleting ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting Account...
+                    </span>
+                  ) : (
+                    "Delete My Account"
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setDeleteConfirmation("")}
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
           </div>
         )}
         </section>
         </div>
       </main>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Final Confirmation</h3>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              Are you absolutely sure you want to delete your account? This action cannot be undone and will permanently remove all your data.
+            </p>
+            
+                         <div className="flex gap-3">
+               <button
+                onClick={async () => {
+                  console.log('🔍 Modal delete button clicked');
+                  // Set the confirmation to DELETE since user has already confirmed in the modal
+                  setDeleteConfirmation("DELETE");
+                  console.log('✅ Set deleteConfirmation to DELETE');
+                  // Hide the modal
+                  setShowDeleteModal(false);
+                  // Call handleDeleteAccount directly without timeout to avoid race condition
+                  console.log('🚀 Calling handleDeleteAccount immediately');
+                  handleDeleteAccount();
+                }}
+                 disabled={isDeleting}
+                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
+               >
+                 {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
+               </button>
+               <button
+                 onClick={closeDeleteModal}
+                 disabled={isDeleting}
+                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               >
+                 Cancel
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

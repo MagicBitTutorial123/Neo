@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { APP_BASE_URL } from "@/lib/env";
@@ -127,7 +127,6 @@ export default function SideNavbar({
   // Loading and error states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [profileCreationAttempted, setProfileCreationAttempted] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -136,13 +135,7 @@ export default function SideNavbar({
   const dropRef = useRef<HTMLLabelElement>(null);
 
   // Fetch user data from Supabase table
-  const fetchUserDataFromSupabase = async (forceRefresh = false) => {
-    // Don't fetch again if we already have data and it's not a force refresh
-    if (supabaseUserData && !forceRefresh) {
-      console.log('🔍 Skipping fetch - data already available');
-      return;
-    }
-
+  const fetchUserDataFromSupabase = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -238,30 +231,25 @@ export default function SideNavbar({
   useEffect(() => {
     const handleProfileUpdate = () => {
       console.log('🔄 Profile update event received, refreshing sidebar data...');
-      fetchUserDataFromSupabase(true); // Force refresh when profile is updated
+      fetchUserDataFromSupabase();
     };
 
-    const handleAvatarUpdate = (event: CustomEvent) => {
-      console.log('🔄 Avatar update event received:', event.detail);
-      // Immediately update localStorage and refresh from localStorage
-      if (event.detail?.avatar) {
-        localStorage.setItem('avatar', event.detail.avatar);
-        refreshFromLocalStorage();
-      }
-    };
-
-    // Listen for custom events when profile is updated
+    // Listen for custom event when profile is updated
     window.addEventListener('profileUpdated', handleProfileUpdate);
-    window.addEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
-      window.removeEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     };
   }, []);
 
-  // Only refresh data when needed, not periodically
-  // Removed the 30-second interval that was causing constant loading
+  // Refresh data periodically to catch changes - increased interval to reduce excessive calls
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUserDataFromSupabase();
+    }, 60000); // Refresh every 60 seconds instead of 30
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Try to create user profile if it doesn't exist
   const createUserProfileIfNeeded = async () => {
@@ -311,19 +299,19 @@ export default function SideNavbar({
     }
   };
 
-  // Only try to create profile if we don't have data, there's no error, and we haven't tried before
+  // Try to create profile after fetching data
   useEffect(() => {
-    if (supabaseUserData === null && !error && !profileCreationAttempted) {
-      // Wait a bit then try to create profile, but only once
-      const timer = setTimeout(() => {
-        if (supabaseUserData === null && !error && !profileCreationAttempted) {
-          setProfileCreationAttempted(true);
-          createUserProfileIfNeeded();
-        }
-      }, 2000);
+    if (supabaseUserData === null) {
+      // Wait a bit then try to create profile
+      const timer = setTimeout(createUserProfileIfNeeded, 1000);
       return () => clearTimeout(timer);
     }
-  }, [supabaseUserData, error, profileCreationAttempted]);
+  }, [supabaseUserData]);
+
+  // Debug contact modal state
+  useEffect(() => {
+    console.log('🔍 contactOpen state changed to:', contactOpen);
+  }, [contactOpen]);
 
   // We'll use the user data from Supabase table (what user selected during signup)
   console.log('🔍 Using user data from Supabase table:', {
@@ -430,7 +418,7 @@ export default function SideNavbar({
     if (registrationData?.avatar) {
       return registrationData.avatar;
     }
-    return "/Avatar02.png"; // Default avatar
+    return "/User.png";
   })();
 
   const userName = (() => {
@@ -463,17 +451,6 @@ export default function SideNavbar({
   })();
 
   const finalName = userName || "User";
-  
-  // Debug logging for avatar changes
-  console.log('🔍 Avatar source debug:', {
-    supabaseAvatar: supabaseUserData?.avatar,
-    lsAvatar,
-    propAvatar: avatar,
-    userDataAvatar: userData?.avatar,
-    registrationAvatar: registrationData?.avatar,
-    finalUserAvatar: userAvatar,
-    finalAvatar: finalAvatar
-  });
 
   // Debug logging
   console.log('🔍 SideNavbar data sources:', {
@@ -514,7 +491,6 @@ export default function SideNavbar({
           href: "#",
           disabled: true as const,
         },
-
     {
       icon: "/demo.svg",
       label: "Demo",
@@ -535,8 +511,28 @@ export default function SideNavbar({
     router.push(`${APP_BASE_URL}/`);
   };
 
+  // FAQ and Contact Us click handlers with useCallback
+  const handleFAQClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🔍 FAQ clicked!');
+    setHelpMenuOpen(false);
+    console.log('🔍 Navigating to /faq...');
+    router.push("/faq");
+  }, [router]);
+
+  const handleContactClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🔍 Contact Us clicked!');
+    setHelpMenuOpen(false);
+    console.log('🔍 Navigating to /contact...');
+    router.push("/contact");
+  }, [router]);
+
   // Open contact modal from Help menu
   const openContact = () => {
+    console.log('🔍 Contact Us clicked!');
     setHelpMenuOpen(false);
     setSendError(null);
     setSendOk(null);
@@ -551,7 +547,9 @@ export default function SideNavbar({
       console.log('❌ No email found in localStorage');
     }
     
+    console.log('🔍 Setting contactOpen to true');
     setContactOpen(true);
+    console.log('🔍 contactOpen state should now be true');
   };
 
   // File selection
@@ -740,7 +738,7 @@ export default function SideNavbar({
                  ? "/BuddyNeo-collapsed.svg"
                  : "/BuddyNeo-expanded.svg"
              }
-             alt="Your New App Logo"
+             alt="BuddyNeo Logo"
              width={sidebarCollapsed ? 40 : 120}
              height={sidebarCollapsed ? 40 : 40}
            />
@@ -810,98 +808,148 @@ export default function SideNavbar({
             )
           )}
 
-          {/* Help Button */}
-          <div
-            ref={helpMenuRef}
-            className={`relative flex flex-row items-center gap-3 ${
-              sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
-            } py-3 rounded-2xl hover:bg-[#F0F4F8] transition-colors cursor-pointer`}
-            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-          >
-            <Image src="/help.svg" alt="Help" width={24} height={24} />
-            {!sidebarCollapsed && (
-              <span className="text-base font-semibold text-[#222E3A]">
-                Help
-              </span>
-            )}
+                    {/* Help Menu Item */}
+                    <div
+                      className={`flex flex-col ${
+                        sidebarCollapsed ? "w-12 px-0" : "w-[80%] px-4"
+                      }`}
+                    >
+                      {/* Help Button */}
+                      <div
+                        ref={helpMenuRef}
+                        className={`flex flex-row items-center gap-3 py-3 rounded-2xl transition-colors cursor-pointer hover:bg-[#F0F4F8]`}
+                        onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+                      >
+                        {/* Help Icon */}
+                        <div className="w-6 h-6 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+                              stroke="#222E3A"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
+                              stroke="#222E3A"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        
+                        {!sidebarCollapsed && (
+                          <span className="text-base font-semibold text-[#222E3A]">
+                            Help
+                          </span>
+                        )}
 
-            {/* Help Dropdown Menu */}
-            {helpMenuOpen && (
-              <div
-                className={`absolute ${
-                  sidebarCollapsed
-                    ? "left-full ml-2 top-0"
-                    : "left-0 bottom-full mb-2"
-                } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50`}
-                role="menu"
-              >
-                {/* tiny arrow */}
-                <div
-                  className={`absolute ${
-                    sidebarCollapsed ? "left-0 -ml-1 top-4" : "left-4 -bottom-1"
-                  } w-3 h-3 bg-white rotate-45 border-r border-b border-gray-100`}
-                />
-                <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-black"
-                  onClick={() => {
-                    setHelpMenuOpen(false);
-                    router.push("/faq");
-                  }}
-                  role="menuitem"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                      stroke="#111827"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
-                      stroke="#111827"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  FAQ
-                </button>
-                <div className="h-px bg-gray-100" />
-                <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-black"
-                  onClick={openContact}
-                  role="menuitem"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-                      stroke="#111827"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M22 6l-10 7L2 6"
-                      stroke="#111827"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Contact Us
-                </button>
-              </div>
-            )}
-          </div>
+                        {/* Caret Icon */}
+                        {!sidebarCollapsed && (
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                            className={`ml-auto transition-transform ${helpMenuOpen ? 'rotate-180' : ''}`}
+                          >
+                            <path
+                              d="M6 9l6 6 6-6"
+                              stroke="#222E3A"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* FAQ and Contact Us - Inline below Help, not in popup */}
+                      {helpMenuOpen && !sidebarCollapsed && (
+                        <div className="ml-8 mt-1 space-y-1">
+                          {/* FAQ Item */}
+                          <div 
+                            className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('🔍 FAQ mousedown!');
+                              // Handle navigation on mousedown instead of click
+                              setHelpMenuOpen(false);
+                              router.push("/faq");
+                            }}
+                          >
+                            <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                              <svg
+                                width="8"
+                                height="8"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+                                  stroke="#222E3A"
+                                  strokeWidth="1.5"
+                                />
+                                <path
+                                  d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
+                                  stroke="#222E3A"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                            <span className="text-sm text-[#222E3A]">FAQ</span>
+                          </div>
+                          
+                          {/* Contact Us Item */}
+                          <div 
+                            className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('🔍 Contact Us mousedown!');
+                              // Handle navigation on mousedown instead of click
+                              setHelpMenuOpen(false);
+                              router.push("/contact");
+                            }}
+                          >
+                            <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                              <svg
+                                width="8"
+                                height="8"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0 1.1.9-2 2-2z"
+                                  stroke="#222E3A"
+                                  strokeWidth="1.5"
+                                />
+                                <path
+                                  d="M22 6l-10 7L2 6"
+                                  stroke="#222E3A"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                            <span className="text-sm text-[#222E3A]">Contact Us</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
         </nav>
       </div>
 
