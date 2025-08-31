@@ -134,30 +134,17 @@ export default function FAQPage() {
           ))}
         </div>
 
-        {/* Additional Help Section */}
-        <div className="mt-16 bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-          <div className="w-16 h-16 bg-[#F0F4F8] rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="text-[#4A90E2]"
-            >
-              <path
-                d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+                 {/* Additional Help Section */}
+         <div className="mt-16 bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+           <div className="w-16 h-16 bg-[#F0F4F8] rounded-full flex items-center justify-center mx-auto mb-4">
+             <Image
+               src="/help-icon.png"
+               alt="Help Icon"
+               width={32}
+               height={32}
+               className="object-contain"
+             />
+           </div>
           <h3 className="text-xl font-semibold text-[#222E3A] mb-2">
             Still need help?
           </h3>

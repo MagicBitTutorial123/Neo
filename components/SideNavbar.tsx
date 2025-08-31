@@ -822,26 +822,7 @@ export default function SideNavbar({
                       >
                         {/* Help Icon */}
                         <div className="w-6 h-6 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                              stroke="#222E3A"
-                              strokeWidth="1.5"
-                            />
-                            <path
-                              d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
-                              stroke="#222E3A"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+                        <Image src="/help.svg" alt="Help" width={25} height={25} />
                         </div>
                         
                         {!sidebarCollapsed && (
@@ -873,7 +854,7 @@ export default function SideNavbar({
 
                       {/* FAQ and Contact Us - Inline below Help, not in popup */}
                       {helpMenuOpen && !sidebarCollapsed && (
-                        <div className="ml-8 mt-1 space-y-1">
+                        <div className="ml-2 mt-1 space-y-1">
                           {/* FAQ Item */}
                           <div 
                             className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
@@ -887,26 +868,13 @@ export default function SideNavbar({
                             }}
                           >
                             <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
-                              <svg
-                                width="8"
-                                height="8"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                                  stroke="#222E3A"
-                                  strokeWidth="1.5"
-                                />
-                                <path
-                                  d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
-                                  stroke="#222E3A"
-                                  strokeWidth="1.8"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
+                              <Image
+                                src="/help-icon.png"
+                                alt="FAQ"
+                                width={8}
+                                height={8}
+                                className="object-contain"
+                              />
                             </div>
                             <span className="text-sm text-[#222E3A]">FAQ</span>
                           </div>
@@ -932,14 +900,9 @@ export default function SideNavbar({
                                 aria-hidden="true"
                               >
                                 <path
-                                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0 1.1.9-2 2-2z"
+                                  d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                                   stroke="#222E3A"
                                   strokeWidth="1.5"
-                                />
-                                <path
-                                  d="M22 6l-10 7L2 6"
-                                  stroke="#222E3A"
-                                  strokeWidth="1.8"
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                 />
