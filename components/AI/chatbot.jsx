@@ -5,12 +5,12 @@ import chatbotImg from '@/assets/chatbot.png';
 import ChatBubbleSVG from "@/assets/chat-bubble.svg";
 import Image from 'next/image';
 
-export default function AIChatbot({ position = "right", workspaceRef, onClose }) {
+export default function AIChatbot({ position = "right", workspaceRef, onClose, username = "there" }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     {
       role: "ai",
-      text: "Hi! I'm your AI assistant. How can I help you with Magicbit blocks today?",
+      text: `Hi ${username}! I'm your AI assistant. How can I help you with Magicbit blocks today?`,
     },
   ]);
   const [loading, setLoading] = useState(false);

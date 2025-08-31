@@ -18,6 +18,7 @@ type UserRegistrationData = {
 type UserData = {
   _id?: string;
   name?: string;
+  full_name?: string;
   email?: string;
   age?: number;
   avatar?: string;
@@ -38,6 +39,7 @@ type UserContextType = {
   clearRegistrationData: () => void;
   setUserData: (user: UserData | null) => void;
   updateUserData: (data: Partial<UserData>) => void;
+  refreshUserData: () => Promise<void>;
   loading: boolean;
   checkingAuth: boolean;
   logout: () => Promise<void>;
@@ -67,23 +69,72 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (user && !error) {
         console.log("✅ User authenticated");
-        // Set basic user data
-        const basicUserData: UserData = {
-          _id: user.id,
-          email: user.email || '',
-          name: user.user_metadata?.full_name || '',
-          phone: user.user_metadata?.phone || '',
-          age: user.user_metadata?.age || 0,
-          avatar: user.user_metadata?.avatar || '',
-          isNewUser: true,
-          missionProgress: 0,
-          xp: 0,
-          hasCompletedMission2: false,
-          hasCompletedMission3: false,
-          createdAt: new Date().toISOString()
-        };
         
-        setUserData(basicUserData);
+        // Fetch user data from the user table
+        try {
+          const { data: userTableData, error: userTableError } = await supabase
+            .from('user')
+            .select('*')
+            .eq('firebase_uid', user.id)
+            .single();
+          
+          if (userTableData && !userTableError) {
+            console.log("✅ User data fetched from table:", userTableData);
+            // Use data from the user table
+            const fullUserData: UserData = {
+              _id: user.id,
+              email: user.email || '',
+              name: userTableData.name || userTableData.full_name || user.user_metadata?.full_name || '',
+              phone: userTableData.phone || user.user_metadata?.phone || '',
+              age: userTableData.age || user.user_metadata?.age || 0,
+              avatar: userTableData.avatar || user.user_metadata?.avatar || '',
+              isNewUser: userTableData.is_new_user || true,
+              missionProgress: userTableData.mission_progress || 0,
+              xp: userTableData.xp || 0,
+              hasCompletedMission2: userTableData.has_completed_mission2 || false,
+              hasCompletedMission3: userTableData.has_completed_mission3 || false,
+              createdAt: userTableData.created_at || new Date().toISOString()
+            };
+            setUserData(fullUserData);
+          } else {
+            console.log("⚠️ No user table data found, using basic data");
+            // Fallback to basic user data
+            const basicUserData: UserData = {
+              _id: user.id,
+              email: user.email || '',
+              name: user.user_metadata?.full_name || '',
+              phone: user.user_metadata?.phone || '',
+              age: user.user_metadata?.age || 0,
+              avatar: user.user_metadata?.avatar || '',
+              isNewUser: true,
+              missionProgress: 0,
+              xp: 0,
+              hasCompletedMission2: false,
+              hasCompletedMission3: false,
+              createdAt: new Date().toISOString()
+            };
+            setUserData(basicUserData);
+          }
+        } catch (tableError) {
+          console.error("❌ Error fetching user table data:", tableError);
+          // Fallback to basic user data
+          const basicUserData: UserData = {
+            _id: user.id,
+            email: user.email || '',
+            name: user.user_metadata?.full_name || '',
+            phone: user.user_metadata?.phone || '',
+            age: user.user_metadata?.age || 0,
+            avatar: user.user_metadata?.avatar || '',
+            isNewUser: true,
+            missionProgress: 0,
+            xp: 0,
+            hasCompletedMission2: false,
+            hasCompletedMission3: false,
+            createdAt: new Date().toISOString()
+          };
+          setUserData(basicUserData);
+        }
+        
         setLoading(false);
       } else {
         console.log("❌ User not authenticated");
@@ -124,6 +175,42 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  const refreshUserData = useCallback(async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (user && !error) {
+        // Fetch fresh user data from the user table
+        const { data: userTableData, error: userTableError } = await supabase
+          .from('user')
+          .select('*')
+          .eq('firebase_uid', user.id)
+          .single();
+        
+        if (userTableData && !userTableError) {
+          console.log("✅ User data refreshed from table:", userTableData);
+          const fullUserData: UserData = {
+            _id: user.id,
+            email: user.email || '',
+            name: userTableData.name || userTableData.full_name || user.user_metadata?.full_name || '',
+            phone: userTableData.phone || user.user_metadata?.phone || '',
+            age: userTableData.age || user.user_metadata?.age || 0,
+            avatar: userTableData.avatar || user.user_metadata?.avatar || '',
+            isNewUser: userTableData.is_new_user || true,
+            missionProgress: userTableData.mission_progress || 0,
+            xp: userTableData.xp || 0,
+            hasCompletedMission2: userTableData.has_completed_mission2 || false,
+            hasCompletedMission3: userTableData.has_completed_mission3 || false,
+            createdAt: userTableData.created_at || new Date().toISOString()
+          };
+          setUserData(fullUserData);
+        }
+      }
+    } catch (err) {
+      console.error("❌ Error refreshing user data:", err);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
@@ -144,6 +231,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         clearRegistrationData,
         setUserData: handleSetUserData,
         updateUserData,
+        refreshUserData,
         loading,
         checkingAuth,
         logout,
