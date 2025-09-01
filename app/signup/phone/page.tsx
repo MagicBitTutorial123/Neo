@@ -434,7 +434,7 @@ export default function SignupPhone() {
               {/* Input */}
               <input
                 type="tel"
-                placeholder="e.g., 769848925"
+                placeholder=" 07x xxx xxxx"
                 className="flex-1 bg-transparent border-none outline-none text-black font-poppins text-lg placeholder:text-gray-400"
                 value={phone}
                 onChange={(e) => {
