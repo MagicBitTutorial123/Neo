@@ -36,6 +36,9 @@ export default function SignupAvatar() {
 
   // Add navigation guard to ensure user has completed previous steps
   useEffect(() => {
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+    
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     const phone = localStorage.getItem("fullPhone");
     const name = localStorage.getItem("name");
@@ -48,10 +51,13 @@ export default function SignupAvatar() {
       return;
     }
     
-    if (!phone || !phone.trim()) {
-      alert("Please complete the phone verification step first");
-      router.push("/signup/phone");
-      return;
+    // Google OAuth users skip phone verification, regular users need it
+    if (!isGoogleOAuth) {
+      if (!phone || !phone.trim()) {
+        alert("Please complete the phone verification step first");
+        router.push("/signup/phone");
+        return;
+      }
     }
     
     if (!name || !name.trim()) {
@@ -66,7 +72,8 @@ export default function SignupAvatar() {
       return;
     }
     
-    if (!password || !password.trim()) {
+    // Google OAuth users skip password step, regular users need it
+    if (!isGoogleOAuth && (!password || !password.trim())) {
       alert("Please complete the password step first");
       router.push("/signup/setpassword");
       return;
@@ -74,10 +81,18 @@ export default function SignupAvatar() {
   }, [router]);
 
   const handleBack = () => {
-    // Clear phone verification flag when going back
-    localStorage.removeItem("phoneVerified");
-    localStorage.removeItem("otpSkipped");
-    router.push("/signup/setpassword");
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+    
+    if (isGoogleOAuth) {
+      // For Google OAuth users, go back to age page (skip password)
+      router.push("/signup/age");
+    } else {
+      // For regular signup flow, go back to password page
+      localStorage.removeItem("phoneVerified");
+      localStorage.removeItem("otpSkipped");
+      router.push("/signup/setpassword");
+    }
   };
 
   const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -101,8 +116,14 @@ export default function SignupAvatar() {
         throw new Error("Email address is required. Please go back to the email step.");
       }
 
-      if (!phone || !phone.trim()) {
-        throw new Error("Phone number is required. Please go back to the phone step.");
+      // Check if this is a Google OAuth user
+      const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+      
+      // Google OAuth users don't need phone validation, regular users do
+      if (!isGoogleOAuth) {
+        if (!phone || !phone.trim()) {
+          throw new Error("Phone number is required. Please go back to the phone step.");
+        }
       }
 
       // Ensure phone number has proper format (add + if missing)
@@ -125,12 +146,15 @@ export default function SignupAvatar() {
         throw new Error("Age must be between 13 and 120 years. Please go back to the age step.");
       }
 
-      if (!password || !password.trim()) {
-        throw new Error("Password is required. Please go back to the password step.");
-      }
+      // Google OAuth users skip password validation, regular users need it
+      if (!isGoogleOAuth) {
+        if (!password || !password.trim()) {
+          throw new Error("Password is required. Please go back to the password step.");
+        }
 
-      if (password.length < 8) {
-        throw new Error("Password must be at least 8 characters long. Please go back to the password step.");
+        if (password.length < 8) {
+          throw new Error("Password must be at least 8 characters long. Please go back to the password step.");
+        }
       }
 
       // Validate email format
@@ -139,22 +163,24 @@ export default function SignupAvatar() {
         throw new Error("Please enter a valid email address. Please go back to the email step.");
       }
 
-      // Validate phone format (should be 10-15 digits including country code)
-      const cleanPhone = phone.replace(/[+\s-]/g, "");
-      const phoneValidationData = { 
-        originalPhone: phone, 
-        cleanPhone, 
-        cleanPhoneLength: cleanPhone.length,
-        isValid: /^\d{10,15}$/.test(cleanPhone)
-      };
-      console.log('📱 Phone validation check:', phoneValidationData);
-      
-      if (!/^\d{10,15}$/.test(cleanPhone)) {
-        console.error('❌ Phone validation failed:', phoneValidationData);
-        throw new Error("Please enter a valid phone number (10-15 digits including country code). Please go back to the phone step.");
+      // Validate phone format (should be 10-15 digits including country code) - skip for Google OAuth users
+      if (!isGoogleOAuth) {
+        const cleanPhone = phone ? phone.replace(/[+\s-]/g, "") : "";
+        const phoneValidationData = { 
+          originalPhone: phone, 
+          cleanPhone, 
+          cleanPhoneLength: cleanPhone.length,
+          isValid: /^\d{10,15}$/.test(cleanPhone)
+        };
+        console.log('📱 Phone validation check:', phoneValidationData);
+        
+        if (!/^\d{10,15}$/.test(cleanPhone)) {
+          console.error('❌ Phone validation failed:', phoneValidationData);
+          throw new Error("Please enter a valid phone number (10-15 digits including country code). Please go back to the phone step.");
+        }
+        
+        console.log('📱 Phone validation passed:', phoneValidationData);
       }
-      
-      console.log('📱 Phone validation passed:', phoneValidationData);
 
       // Validate name format (only letters and spaces, at least 2 characters)
       const nameRegex = /^[a-zA-Z ]{2,32}$/;
@@ -203,20 +229,55 @@ export default function SignupAvatar() {
           }
         }
       };
-      console.log('🚀 About to call supabase.auth.signUp with data:', signUpData);
+      // Handle Google OAuth users vs regular signup users
+      let authData, authError;
       
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
+      if (isGoogleOAuth) {
+        console.log('🔄 Google OAuth user - checking session first');
+        
+        // First check if we have a session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.log('❌ No session found for Google OAuth user:', sessionError);
+          throw new Error('No active session found. Please complete the Google OAuth flow first.');
+        }
+        
+        console.log('✅ Session found, updating user data');
+        
+        // For Google OAuth users with session, update their existing account
+        const { data: updateData, error: updateError } = await supabase.auth.updateUser({
           data: {
             full_name: name,
             phone: phone,
             avatar: avatar
-            // Note: age is not stored in auth metadata, only in profile table
           }
-        }
-      });
+        });
+        
+        authData = updateData;
+        authError = updateError;
+        
+        console.log('🔄 Google OAuth user result:', { authData, authError });
+      } else {
+        console.log('🚀 Regular signup - creating new account with data:', signUpData);
+        
+        // For regular signup users, create new account
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
+          email: email,
+          password: password || "",
+          options: {
+            data: {
+              full_name: name,
+              phone: phone,
+              avatar: avatar
+              // Note: age is not stored in auth metadata, only in profile table
+            }
+          }
+        });
+        
+        authData = signupData;
+        authError = signupError;
+      }
 
       if (authError) {
         console.error('❌ Auth signup error:', authError);
@@ -231,31 +292,14 @@ export default function SignupAvatar() {
       console.log('✅ Profile will be created automatically by database trigger');
       console.log('🔍 User metadata from Supabase:', authData.user.user_metadata);
       console.log('🔍 User data from Supabase:', authData.user);
-      console.log('🔍 User session status:', authData.session ? 'Active' : 'No session');
+      console.log('🔍 User session status:', (authData as any).session ? 'Active' : 'No session');
       console.log('🔍 User email confirmed:', authData.user.email_confirmed_at ? 'Yes' : 'No');
       
-      // Step 2: Check if profile already exists (from database trigger) and update it
-      console.log('🔄 Checking if profile already exists...');
-      
-      // Wait a moment for the database trigger to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if profile already exists
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', authData.user.id)
-        .single();
-      
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('❌ Error checking existing profile:', fetchError);
-      }
-      
-      if (existingProfile) {
-        console.log('✅ Profile already exists from database trigger, updating it...');
-        console.log('📋 Existing profile data:', existingProfile);
+            // Step 2: Handle profile creation/update based on user type
+      if (isGoogleOAuth) {
+        console.log('🔄 Google OAuth user - updating existing profile with complete data...');
         
-        // Update existing profile with complete data
+        // For Google OAuth users, always update the existing profile
         const { data: updatedProfile, error: updateError } = await supabase
           .from('user_profiles')
           .update({
@@ -269,65 +313,108 @@ export default function SignupAvatar() {
           .eq('user_id', authData.user.id)
           .select()
           .single();
-        
+
         if (updateError) {
-          console.error('❌ Profile update failed:', updateError);
+          console.error('❌ Google OAuth profile update failed:', updateError);
           throw new Error(`Profile update failed: ${updateError.message}`);
         } else {
-          console.log('✅ Profile updated successfully with complete data:', updatedProfile);
+          console.log('✅ Google OAuth profile updated successfully:', updatedProfile);
         }
       } else {
-        console.log('🔄 No existing profile found, creating new one...');
+        console.log('🔄 Regular signup - checking if profile already exists...');
         
-        // Create new profile
-        const profileDataToInsert = {
-          user_id: authData.user.id,
-          email: email,
-          full_name: name,
-          phone: phone,
-          age: parseInt(age),
-          avatar: avatar,
-          bio: '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
+        // Wait a moment for the database trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        console.log('🔄 Creating new user profile with data:', JSON.stringify(profileDataToInsert, null, 2));
-        
-        const { data: profileData, error: profileError } = await supabase
+        // Check if profile already exists
+        const { data: existingProfile, error: fetchError } = await supabase
           .from('user_profiles')
-          .insert([profileDataToInsert])
-          .select()
+          .select('*')
+          .eq('user_id', authData.user.id)
           .single();
         
-        if (profileError) {
-          console.error('❌ Profile creation failed:', profileError);
-          console.error('❌ Error details:', JSON.stringify({
-            code: profileError.code,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint
-          }, null, 2));
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('❌ Error checking existing profile:', fetchError);
+        }
+        
+        if (existingProfile) {
+          console.log('✅ Profile already exists from database trigger, updating it...');
+          console.log('📋 Existing profile data:', existingProfile);
           
-          // Try alternative approach - update the user metadata instead
-          console.log('🔄 Trying alternative approach: updating user metadata...');
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
+          // Update existing profile with complete data
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('user_profiles')
+            .update({
+              email: email,
               full_name: name,
               phone: phone,
               age: parseInt(age),
-              avatar: avatar
-            }
-          });
-          
+              avatar: avatar,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', authData.user.id)
+            .select()
+            .single();
+
           if (updateError) {
-            console.error('❌ User metadata update also failed:', updateError);
-            throw new Error(`Profile creation failed: ${profileError.message}`);
+            console.error('❌ Profile update failed:', updateError);
+            throw new Error(`Profile update failed: ${updateError.message}`);
           } else {
-            console.log('✅ User metadata updated successfully as fallback');
+            console.log('✅ Profile updated successfully with complete data:', updatedProfile);
           }
         } else {
-          console.log('✅ New profile created successfully:', profileData);
+          console.log('🔄 No existing profile found, creating new one...');
+
+          // Create new profile
+          const profileDataToInsert = {
+            user_id: authData.user.id,
+            email: email,
+            full_name: name,
+            phone: phone,
+            age: parseInt(age),
+            avatar: avatar,
+            bio: '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          console.log('🔄 Creating new user profile with data:', JSON.stringify(profileDataToInsert, null, 2));
+
+          const { data: profileData, error: profileError } = await supabase
+            .from('user_profiles')
+            .insert([profileDataToInsert])
+            .select()
+            .single();
+
+          if (profileError) {
+            console.error('❌ Profile creation failed:', profileError);
+            console.error('❌ Error details:', JSON.stringify({
+              code: profileError.code,
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint
+            }, null, 2));
+
+            // Try alternative approach - update the user metadata instead
+            console.log('🔄 Trying alternative approach: updating user metadata...');
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: {
+                full_name: name,
+                phone: phone,
+                age: parseInt(age),
+                avatar: avatar
+              }
+            });
+
+            if (updateError) {
+              console.error('❌ User metadata update also failed:', updateError);
+              throw new Error(`Profile creation failed: ${profileError.message}`);
+            } else {
+              console.log('✅ User metadata updated successfully as fallback');
+            }
+          } else {
+            console.log('✅ New profile created successfully:', profileData);
+          }
         }
       }
 
@@ -353,6 +440,10 @@ export default function SignupAvatar() {
       localStorage.removeItem("phoneVerified");
       localStorage.removeItem("otpSkipped");
       localStorage.removeItem("signupStarted");
+      
+      // Clear Google OAuth specific data
+      localStorage.removeItem("isGoogleOAuth");
+      localStorage.removeItem("googleOAuthName");
       
       // Show success popup instead of redirecting to email confirmation
       setShowSuccessPopup(true);

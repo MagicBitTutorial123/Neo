@@ -18,6 +18,27 @@ export default function SimpleRouteProtection({ children }: SimpleRouteProtectio
   const checkAuth = async () => {
     try {
       const currentPath = window.location.pathname;
+      
+      // Routes that should be excluded from auth checks (OAuth flow, signup, etc.)
+      const excludedRoutes = [
+        '/auth/callback',
+        '/signup',
+        '/signin',
+        '/',
+        '/Land'
+      ];
+      
+      // Check if current path should be excluded
+      const isExcludedRoute = excludedRoutes.some(route => 
+        currentPath.startsWith(route)
+      );
+      
+      if (isExcludedRoute) {
+        console.log("🔓 Excluded route, allowing access:", currentPath);
+        setIsReady(true);
+        return;
+      }
+      
       const protectedRoutes = [
         '/home', '/missions', '/profile', '/settings', 
         '/playground', '/playground-unlocked', '/projects', '/demo'

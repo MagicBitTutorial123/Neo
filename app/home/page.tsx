@@ -547,30 +547,9 @@ export default function HomePage() {
             {shouldShowOnboarding ? (
               // New user from signup process - show onboarding (clean layout)
               newUserContent
-           ) : isFromRegularLogin ? (
-             // Existing user from regular login - show welcome banner with dashboard
-             <div>
-               <div className="w-full max-w-4xl mx-auto mt-6 px-4">
-                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                   <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                       </svg>
-                     </div>
-                     <div className="flex-1">
-                       <h3 className="text-sm font-semibold text-blue-900">
-                         Welcome back! 👋
-                       </h3>
-                       <p className="text-xs text-blue-700">
-                         Great to see you again. Continue where you left off!
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-               {defaultHomeContent}
-             </div>
+                       ) : isFromRegularLogin ? (
+              // Existing user from regular login - show clean dashboard
+              defaultHomeContent
            ) : (
              // Default case - show appropriate content based on user state
              defaultHomeContent

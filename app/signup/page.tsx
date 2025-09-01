@@ -1,13 +1,16 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
 import LetsGoButton from "@/components/LetsGoButton";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function SignupMain() {
   const router = useRouter();
   const { clearRegistrationData } = useUser();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // useEffect(() => {
   //   clearRegistrationData();
@@ -17,6 +20,33 @@ export default function SignupMain() {
     // Navigate to email page instead of mobile
     setTimeout(() => router.push("/signup/email"), 300);
     console.log("Navigating to email page");
+  };
+
+  const handleGoogleSignup = async () => {
+    setError(null);
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      }
+      // Don't set loading to false here as user will be redirected
+    } catch (err) {
+      setError("An error occurred during Google signup");
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,8 +100,8 @@ export default function SignupMain() {
                 teach some bolts how to dance.
               </h1>
             </div>
-            {/* Navigation and button */}
-            <div className="flex items-center gap-8 mt-8">
+            {/* Navigation and buttons */}
+            <div className="flex flex-col items-start gap-4 mt-8">
               <LetsGoButton
                 style={{
                   width: 300,
@@ -82,6 +112,37 @@ export default function SignupMain() {
               >
                 Let s Go
               </LetsGoButton>
+              
+              {/* Google OAuth Button */}
+              <button
+                className="w-[300px] h-[65px] rounded-full cursor-pointer text-lg font-bold font-poppins bg-white hover:bg-gray-50 text-gray-700 transition-colors flex items-center justify-center gap-3 border border-gray-300 shadow-sm"
+                aria-label="Sign up with Google"
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={loading}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                  className="shrink-0"
+                >
+                  <g>
+                    <path d="M36.545 20.233c0-1.36-.122-2.36-.388-3.393H20.204v6.16h9.32c-.188 1.52-1.2 3.8-3.45 5.34l-.032.21 5.012 3.89.348.034c3.19-2.94 5.033-7.27 5.033-12.24z" fill="#4285F4" />
+                    <path d="M20.204 37c4.56 0 8.39-1.5 11.187-4.09l-5.33-4.14c-1.44 1.02-3.38 1.74-5.857 1.74-4.48 0-8.28-2.94-9.64-7.01l-.198.017-5.22 4.06-.068.19C7.66 33.36 13.48 37 20.204 37z" fill="#34A853" />
+                    <path d="M10.564 23.5c-.36-1.02-.57-2.12-.57-3.24 0-1.12 .21-2.22 .55-3.24l-.01-.217-5.29-4.13-.173 .08A16.77 16.77 0 003.204 20.26c0 2.7 .66 5.25 1.82 7.49l5.74-4.25z" fill="#FBBC05" />
+                    <path d="M20.204 11.96c3.17 0 5.31 1.36 6.53 2.5l4.77-4.65C28.58 6.97 24.76 5 20.204 5c-6.72 0-12.54 3.64-15.27 8.97l5.87 4.55c1.36-4.07 5.16-7.01 9.64-7.01z" fill="#EB4335" />
+                  </g>
+                </svg>
+                <span>{loading ? "Signing up..." : "Sign up with Google"}</span>
+              </button>
+              
+              {error && (
+                <p className="text-red-500 text-sm mt-2">{error}</p>
+              )}
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import NextButton from "@/components/NextButton";
@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export default function SignupPhone() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { updateRegistrationData } = useUser();
 
   const countryOptions = [
@@ -25,8 +26,42 @@ export default function SignupPhone() {
   const [phoneValid, setPhoneValid] = useState(false);
   const [phoneError, setPhoneError] = useState("");
 
-  // Ensure email is available from localStorage
+  // Handle Google OAuth users and ensure email is available from localStorage
   useEffect(() => {
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = searchParams.get("oauth") === "google";
+    const oauthEmail = searchParams.get("email");
+    const oauthName = searchParams.get("name");
+    
+    console.log("🔍 Phone page - URL parameters:", {
+      oauth: searchParams.get("oauth"),
+      email: searchParams.get("email"),
+      name: searchParams.get("name"),
+      isGoogleOAuth,
+      oauthEmail,
+      oauthName
+    });
+    
+    console.log("🧪 TESTING: Phone page loaded!");
+    console.log("🧪 TESTING: Current URL:", window.location.href);
+    
+    if (isGoogleOAuth && oauthEmail) {
+      console.log("🔍 Google OAuth user detected, redirecting to name page:", { oauthEmail, oauthName });
+      
+      // Store Google OAuth data
+      localStorage.setItem("signupEmail", oauthEmail);
+      localStorage.setItem("userEmail", oauthEmail);
+      localStorage.setItem("googleOAuthName", oauthName || "");
+      localStorage.setItem("isGoogleOAuth", "true");
+      
+      console.log("📧 Set email from Google OAuth:", oauthEmail);
+      console.log("👤 Set name from Google OAuth:", oauthName);
+      
+      // Redirect to name page for Google OAuth users (skip phone verification)
+      router.push("/signup/name");
+      return;
+    }
+    
     const signupEmail = localStorage.getItem("signupEmail");
     const userEmail = localStorage.getItem("userEmail");
     
@@ -70,18 +105,28 @@ export default function SignupPhone() {
         console.log("⚠️ No email found, showing manual email input");
       }
     }, 2000); // Wait 2 seconds for async operations to complete
-  }, []);
+  }, [searchParams]);
   
   // Add navigation guard to ensure user has completed email step
   useEffect(() => {
+    // Check if this is a Google OAuth user first
+    const isGoogleOAuth = searchParams.get("oauth") === "google";
+    const oauthEmail = searchParams.get("email");
+    
+    if (isGoogleOAuth && oauthEmail) {
+      console.log("🔍 Google OAuth user - skipping email validation");
+      return; // Skip email validation for Google OAuth users
+    }
+    
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     
     if (!email || !email.trim()) {
+      console.log("⚠️ No email found, redirecting to email step");
       alert("Please complete the email step first");
       router.push("/signup/email");
       return;
     }
-  }, [router]);
+  }, [router, searchParams]);
   
   const getEmailFromSupabase = async () => {
     try {

@@ -64,6 +64,27 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setCheckingAuth(true);
       
+      // Check if we're on a route that should be excluded from auth checks
+      const currentPath = window.location.pathname;
+      const excludedRoutes = [
+        '/auth/callback',
+        '/signup',
+        '/signin',
+        '/',
+        '/Land'
+      ];
+      
+      const isExcludedRoute = excludedRoutes.some(route => 
+        currentPath.startsWith(route)
+      );
+      
+      if (isExcludedRoute) {
+        console.log("🔓 UserContext: Excluded route, skipping auth check:", currentPath);
+        setLoading(false);
+        setCheckingAuth(false);
+        return;
+      }
+      
       // Basic auth check only
       const { data: { user }, error } = await supabase.auth.getUser();
       

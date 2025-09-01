@@ -17,10 +17,18 @@ export default function SignIn() {
     setError(null);
     setLoading(true);
     
+    console.log("🔍 Current origin:", window.location.origin);
+    console.log("🔍 Full redirect URL:", `${window.location.origin}/auth/callback`);
+    console.log("🔍 About to call Google OAuth...");
+    
+    // Force the correct redirect URL for port 3000
+    const redirectUrl = "http://localhost:3000/auth/callback";
+    console.log("🔍 Using forced redirect URL:", redirectUrl);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/home`,
+        redirectTo: redirectUrl,
         queryParams: {
           access_type: "offline",
           prompt: "consent",
