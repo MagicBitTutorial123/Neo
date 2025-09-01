@@ -43,29 +43,42 @@ export default function SignupName() {
 
   // Handle Google OAuth users and add navigation guard
   useEffect(() => {
-    // Check if this is a Google OAuth user from URL parameters
+    // Check if this is a Google OAuth user from URL parameters OR localStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const isGoogleOAuth = urlParams.get("oauth") === "google";
+    const isGoogleOAuthFromUrl = urlParams.get("oauth") === "google";
+    const isGoogleOAuthFromStorage = localStorage.getItem("isGoogleOAuth") === "true";
+    const isGoogleOAuth = isGoogleOAuthFromUrl || isGoogleOAuthFromStorage;
+    
     const googleEmail = urlParams.get("email");
     const googleName = urlParams.get("name");
     
-    if (isGoogleOAuth && googleName && !name) {
-      console.log("🔍 Pre-filling name for Google OAuth user:", googleName);
-      setName(googleName);
-      updateRegistrationData({ name: googleName });
+    // Handle Google OAuth users
+    if (isGoogleOAuth) {
+      console.log("🔍 Google OAuth user detected");
+      
+      // Pre-fill name if available from URL parameters
+      if (googleName && !name) {
+        console.log("🔍 Pre-filling name for Google OAuth user:", googleName);
+        setName(googleName);
+        updateRegistrationData({ name: googleName });
+      }
       
       // Store Google OAuth data in localStorage for the rest of the flow
       localStorage.setItem("isGoogleOAuth", "true");
-      localStorage.setItem("googleOAuthName", googleName);
-      localStorage.setItem("signupEmail", googleEmail || "");
-      localStorage.setItem("userEmail", googleEmail || "");
+      if (googleName) localStorage.setItem("googleOAuthName", googleName);
+      if (googleEmail) {
+        localStorage.setItem("signupEmail", googleEmail);
+        localStorage.setItem("userEmail", googleEmail);
+      }
       
       // Clean up URL parameters
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete("oauth");
-      newUrl.searchParams.delete("email");
-      newUrl.searchParams.delete("name");
-      window.history.replaceState({}, "", newUrl.toString());
+      if (isGoogleOAuthFromUrl) {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("oauth");
+        newUrl.searchParams.delete("email");
+        newUrl.searchParams.delete("name");
+        window.history.replaceState({}, "", newUrl.toString());
+      }
       
       return; // Skip the email/phone validation for Google OAuth users
     }

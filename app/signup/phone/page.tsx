@@ -318,10 +318,10 @@ export default function SignupPhone() {
 
       <div className="absolute ml-12 mt-8 top-8 left-8 z-30">
         <Image
-          src="/side-logo.png"
+          src="/BuddyNeo-expanded.svg"
           alt="BuddyNeo Logo"
-          width={400}
-          height={75}
+          width={320}
+          height={60}
           style={{ maxWidth: "100%", height: "auto" }}
         />
       </div>
@@ -346,14 +346,14 @@ export default function SignupPhone() {
             </div>
           </div>
 
-          <div className="mb-12 flex items-center w-full justify-center" style={{ minHeight: 100 }}>
+          <div className="mb-6 flex items-center w-full justify-center" style={{ minHeight: 60 }}>
             <h1 className="text-3xl md:text-4xl font-extrabold text-[#222E3A] text-center font-poppins leading-tight">
               What&apos;s your phone number?
             </h1>
           </div>
 
           <form
-            className="flex flex-col gap-6 w-full max-w-[400px] items-center"
+            className="flex flex-col gap-3 w-full max-w-[400px] items-center"
             onSubmit={(e) => {
               e.preventDefault();
               handleNext();
