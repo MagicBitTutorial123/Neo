@@ -112,7 +112,7 @@ export default function SignupSetPassword() {
       </button>
 
       <div className="absolute ml-12 mt-8 top-8 left-8 z-30">
-        <Image
+      <Image
           src="/BuddyNeo-expanded.svg"
           alt="BuddyNeo Logo"
           width={320}

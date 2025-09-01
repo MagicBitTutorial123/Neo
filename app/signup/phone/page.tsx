@@ -28,15 +28,17 @@ export default function SignupPhone() {
 
   // Handle Google OAuth users and ensure email is available from localStorage
   useEffect(() => {
-    // Check if this is a Google OAuth user
-    const isGoogleOAuth = searchParams.get("oauth") === "google";
-    const oauthEmail = searchParams.get("email");
-    const oauthName = searchParams.get("name");
+    // Check if this is a Google OAuth user from URL parameters OR localStorage
+    const isGoogleOAuthFromUrl = searchParams.get("oauth") === "google";
+    const isGoogleOAuthFromStorage = localStorage.getItem("isGoogleOAuth") === "true";
+    const isGoogleOAuth = isGoogleOAuthFromUrl || isGoogleOAuthFromStorage;
     
-    console.log("🔍 Phone page - URL parameters:", {
-      oauth: searchParams.get("oauth"),
-      email: searchParams.get("email"),
-      name: searchParams.get("name"),
+    const oauthEmail = searchParams.get("email") || localStorage.getItem("googleOAuthEmail");
+    const oauthName = searchParams.get("name") || localStorage.getItem("googleOAuthName");
+    
+    console.log("🔍 Phone page - OAuth detection:", {
+      isGoogleOAuthFromUrl,
+      isGoogleOAuthFromStorage,
       isGoogleOAuth,
       oauthEmail,
       oauthName
@@ -45,20 +47,24 @@ export default function SignupPhone() {
     console.log("🧪 TESTING: Phone page loaded!");
     console.log("🧪 TESTING: Current URL:", window.location.href);
     
-    if (isGoogleOAuth && oauthEmail) {
-      console.log("🔍 Google OAuth user detected, redirecting to name page:", { oauthEmail, oauthName });
+    if (isGoogleOAuth) {
+      console.log("🔍 Google OAuth user detected, staying on phone page:", { oauthEmail, oauthName });
       
-      // Store Google OAuth data
-      localStorage.setItem("signupEmail", oauthEmail);
-      localStorage.setItem("userEmail", oauthEmail);
-      localStorage.setItem("googleOAuthName", oauthName || "");
+      // Store Google OAuth data if not already stored
+      if (oauthEmail) {
+        localStorage.setItem("signupEmail", oauthEmail);
+        localStorage.setItem("userEmail", oauthEmail);
+        localStorage.setItem("googleOAuthEmail", oauthEmail);
+      }
+      if (oauthName) {
+        localStorage.setItem("googleOAuthName", oauthName);
+      }
       localStorage.setItem("isGoogleOAuth", "true");
       
       console.log("📧 Set email from Google OAuth:", oauthEmail);
       console.log("👤 Set name from Google OAuth:", oauthName);
       
-      // Redirect to name page for Google OAuth users (skip phone verification)
-      router.push("/signup/name");
+      // Don't redirect - let Google OAuth users go through phone page normally
       return;
     }
     
@@ -506,7 +512,19 @@ export default function SignupPhone() {
               <button
                 type="button"
                 onClick={() => {
-                  // Validate phone number before allowing skip
+                  // Check if this is a Google OAuth user
+                  const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+                  
+                  if (isGoogleOAuth) {
+                    // Google OAuth users can skip phone verification entirely
+                    console.log("🔍 Google OAuth user skipping phone verification");
+                    localStorage.setItem("otpSkipped", "true");
+                    localStorage.setItem("phoneVerified", "true");
+                    router.push("/signup/name");
+                    return;
+                  }
+                  
+                  // For regular users, validate phone number before allowing skip
                   if (!phone || !phone.trim()) {
                     alert("Please enter a phone number before continuing");
                     return;

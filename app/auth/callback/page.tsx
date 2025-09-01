@@ -79,7 +79,7 @@ export default function OAuthCallback() {
               localStorage.setItem('userEmail', googleEmail);
               
               setStatus('Redirecting to signup...');
-              router.push('/signup/name');
+              router.push('/signup/phone');
               return;
             } else {
               console.log('🔄 Returning Google user, redirecting to home');
