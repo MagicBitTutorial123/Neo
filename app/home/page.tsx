@@ -48,10 +48,18 @@ export default function HomePage() {
   useEffect(() => {
     setHydrated(true);
 
-    // Check if this is a new user from signup
+    // Check if this is a new user from signup process
     const isNewUserFromSignup = searchParams.get("newUser") === "true";
-    if (isNewUserFromSignup) {
-      router.replace("/home");
+    const isOnboarding = searchParams.get("onboarding") === "true";
+    
+    if (isNewUserFromSignup && isOnboarding) {
+      console.log('🆕 New user from signup process - showing onboarding');
+      router.replace("/home?newUser=true&onboarding=true");
+      setIsNewUser(true);
+    } else if (isNewUserFromSignup && !isOnboarding) {
+      // User came from signup but no onboarding flag - redirect to onboarding
+      console.log('🔄 New user from signup - redirecting to onboarding');
+      router.replace("/home?newUser=true&onboarding=true");
       setIsNewUser(true);
     }
     
@@ -64,9 +72,12 @@ export default function HomePage() {
       setTimeout(() => refreshProfileStatus(), 500); // Small delay to ensure settings page has saved
     }
     
-    // Also check if user is new based on mission progress
+    // Check if user is new based on mission progress (for existing users who haven't completed missions)
     if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
-      setIsNewUser(true);
+      // Only set as new user if they didn't come from signup (to avoid double onboarding)
+      if (!isNewUserFromSignup) {
+        setIsNewUser(true);
+      }
     }
     
     // Check if this is a first-time Google OAuth user
@@ -464,10 +475,14 @@ export default function HomePage() {
   
   // Check if user came from signup flow (newUser=true in URL)
   const isFromSignup = searchParams.get("newUser") === "true";
+  const isOnboarding = searchParams.get("onboarding") === "true";
   
   // Show onboarding ONLY for new users who came from signup flow
   // Existing users (from signin) should see dashboard directly
-  const shouldShowOnboarding = isNewUser && isFromSignup;
+  const shouldShowOnboarding = isNewUser && isFromSignup && isOnboarding;
+  
+  // Check if user is coming from regular login (not signup)
+  const isFromRegularLogin = !isFromSignup && !isOnboarding;
 
   console.log("🔍 User data:", userData);
   console.log("🔍 Is new user:", isNewUser);
@@ -477,7 +492,9 @@ export default function HomePage() {
   console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
   console.log("🔍 Final isNewUser calculation:", isNewUser);
   console.log("🔍 isFromSignup:", isFromSignup);
+  console.log("🔍 isOnboarding:", isOnboarding);
   console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
+  console.log("🔍 isFromRegularLogin:", isFromRegularLogin);
   console.log("🔍 Google OAuth Status:", {
     isFirstTimeOAuth,
     showProfileUpdateNotification
@@ -526,7 +543,38 @@ export default function HomePage() {
              </div>
            )}
            
-           {shouldShowOnboarding ? newUserContent : defaultHomeContent}
+                       {/* Smart Content Routing */}
+            {shouldShowOnboarding ? (
+              // New user from signup process - show onboarding (clean layout)
+              newUserContent
+           ) : isFromRegularLogin ? (
+             // Existing user from regular login - show welcome banner with dashboard
+             <div>
+               <div className="w-full max-w-4xl mx-auto mt-6 px-4">
+                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                   <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                       </svg>
+                     </div>
+                     <div className="flex-1">
+                       <h3 className="text-sm font-semibold text-blue-900">
+                         Welcome back! 👋
+                       </h3>
+                       <p className="text-xs text-blue-700">
+                         Great to see you again. Continue where you left off!
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               {defaultHomeContent}
+             </div>
+           ) : (
+             // Default case - show appropriate content based on user state
+             defaultHomeContent
+           )}
         </main>
       </div>
     </BasicAuthGuard>

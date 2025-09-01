@@ -478,6 +478,12 @@ export default function SideNavbar({
       href: "/missions",
       active: pathname === "/missions",
     },
+    {
+      icon: "/progress.svg",
+      label: "Progress",
+      href: "/progress",
+      active: pathname === "/progress",
+    },
     hasCompletedMission2
       ? {
           icon: "/playground.svg",
@@ -822,7 +828,7 @@ export default function SideNavbar({
                       >
                         {/* Help Icon */}
                         <div className="w-6 h-6 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
-                        <Image src="/help.svg" alt="Help" width={25} height={25} />
+                        <Image src="/Help.svg" alt="Help" width={25} height={25} />
                         </div>
                         
                         {!sidebarCollapsed && (

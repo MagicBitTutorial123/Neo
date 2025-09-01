@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import emailjs from '@emailjs/browser';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -58,27 +57,24 @@ export default function ContactPage() {
     setIsSubmitting(true);
     
     try {
-      // Initialize EmailJS with your public key
-      emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || "");
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('message', `Name: ${formData.name}\nSubject: ${formData.subject}\n\nMessage:\n${formData.message}`);
       
-      // Prepare template parameters for EmailJS
-      const templateParams = {
-        from_name: formData.name,
-        from_email: formData.email,
-        subject: formData.subject,
-        message: formData.message,
-        to_name: "Neo Support Team",
-        attachment_info: attachment ? `${attachment.name} (${(attachment.size / 1024).toFixed(1)} KB)` : "No attachment"
-      };
+      if (attachment) {
+        formDataToSend.append('file', attachment);
+      }
 
-      // Send email using EmailJS
-      const result = await emailjs.send(
-        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "",
-        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "",
-        templateParams
-      );
+      // Send to our improved API route
+      const response = await fetch('/api/support/contact', {
+        method: 'POST',
+        body: formDataToSend,
+      });
 
-      if (result.status === 200) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         setSubmitStatus("success");
         // Reset form after success
         setTimeout(() => {
@@ -88,7 +84,7 @@ export default function ContactPage() {
           setSubmitStatus("idle");
         }, 3000);
       } else {
-        throw new Error('Failed to send email');
+        throw new Error(result.message || 'Failed to send email');
       }
     } catch (error) {
       console.error('Error sending email:', error);

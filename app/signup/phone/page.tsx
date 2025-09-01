@@ -108,7 +108,7 @@ export default function SignupPhone() {
   };
 
   const handleBack = () => {
-    router.push("/signup/email/confirm");
+    router.push("/signup/email");
   };
   
   // Clear phone verification flag when user returns to phone step
@@ -122,9 +122,9 @@ export default function SignupPhone() {
     if (phone.length === 0) {
       setPhoneValid(false);
       setPhoneError("");
-    } else if (phone.length !== 10) {
+    } else if (phone.length < 10 || phone.length > 10) {
       setPhoneValid(false);
-      setPhoneError("Phone number must be exactly 10 digits");
+      setPhoneError("Phone number must be exactly 10 digits (without country code)");
     } else {
       setPhoneValid(true);
       setPhoneError("");
@@ -254,7 +254,7 @@ export default function SignupPhone() {
       <button
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
-        aria-label="Back to email confirmation"
+        aria-label="Back to email step"
       >
         <svg
           width="48"
@@ -383,7 +383,7 @@ export default function SignupPhone() {
               {/* Input */}
               <input
                 type="tel"
-                placeholder="Type here"
+                placeholder="e.g., 769848925"
                 className="flex-1 bg-transparent border-none outline-none text-black font-poppins text-lg placeholder:text-gray-400"
                 value={phone}
                 onChange={(e) => {
@@ -419,11 +419,12 @@ export default function SignupPhone() {
                <p className="text-red-500 text-xs mt-2 text-center">{phoneError}</p>
              )}
              {phone && phoneValid && (
-               <p className="text-green-500 text-xs mt-2 text-center">✓ Valid phone number format (10 digits)</p>
+               <p className="text-green-500 text-xs mt-2 text-center">✓ Valid phone number format (10 digits without country code)</p>
              )}
 
              <div className="text-center text-sm text-gray-600 mb-4">
-              <p>We&apos;ll send you a verification code via WhatsApp and email</p>
+              <p>Enter your phone number without country code (e.g., 769848925)</p>
+              <p className="text-xs mt-1">We&apos;ll send you a verification code via WhatsApp and email</p>
               <p className="text-xs mt-1">You can verify OTP or skip to continue</p>
             </div>
 
@@ -463,18 +464,16 @@ export default function SignupPhone() {
                   // Store phone number and skip OTP
                   const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
                   const fullPhone = selectedCountry.code + cleanPhone;
-                  const normalizedPhone = fullPhone.replace(/[+\s-]/g, "");
                   
                   console.log("📱 Skip OTP - Phone details:", {
                     originalPhone: phone,
                     cleanPhone,
                     countryCode: selectedCountry.code,
-                    fullPhone,
-                    normalizedPhone
+                    fullPhone
                   });
                   
-                  localStorage.setItem("fullPhone", normalizedPhone);
-                  updateRegistrationData({ fullPhone: normalizedPhone });
+                  localStorage.setItem("fullPhone", fullPhone);
+                  updateRegistrationData({ fullPhone });
                   
                   // Mark OTP as skipped and set phone verification flag
                   localStorage.setItem("otpSkipped", "true");

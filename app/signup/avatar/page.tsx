@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
+import AccountSuccessPopup from "@/components/AccountSuccessPopup";
 
 const avatars = [
   "/Avatar01.png",
@@ -21,6 +22,8 @@ export default function SignupAvatar() {
   const [hovered, setHovered] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [userNameForPopup, setUserNameForPopup] = useState<string>("");
 
   //DISPLAY NAME
   const [displayName, setDisplayName] = useState(registrationData.name || "");
@@ -93,12 +96,6 @@ export default function SignupAvatar() {
       const password = localStorage.getItem("password") || localStorage.getItem("userPassword");
       const avatar = avatars[selected];
       
-      // Ensure phone number has proper format (add + if missing)
-      if (phone && !phone.startsWith('+')) {
-        phone = '+' + phone;
-        console.log('📱 Phone number format corrected:', phone);
-      }
-
       // Comprehensive validation of all required fields
       if (!email || !email.trim()) {
         throw new Error("Email address is required. Please go back to the email step.");
@@ -106,6 +103,12 @@ export default function SignupAvatar() {
 
       if (!phone || !phone.trim()) {
         throw new Error("Phone number is required. Please go back to the phone step.");
+      }
+
+      // Ensure phone number has proper format (add + if missing)
+      if (phone && !phone.startsWith('+')) {
+        phone = '+' + phone;
+        console.log('📱 Phone number format corrected:', phone);
       }
 
       if (!name || !name.trim()) {
@@ -136,14 +139,22 @@ export default function SignupAvatar() {
         throw new Error("Please enter a valid email address. Please go back to the email step.");
       }
 
-      // Validate phone format (exactly 10 digits)
+      // Validate phone format (should be 10-15 digits including country code)
       const cleanPhone = phone.replace(/[+\s-]/g, "");
-      if (!/^\d{10}$/.test(cleanPhone)) {
-        console.error('❌ Phone validation failed:', { phone, cleanPhone });
-        throw new Error("Please enter a valid phone number (exactly 10 digits). Please go back to the phone step.");
+      const phoneValidationData = { 
+        originalPhone: phone, 
+        cleanPhone, 
+        cleanPhoneLength: cleanPhone.length,
+        isValid: /^\d{10,15}$/.test(cleanPhone)
+      };
+      console.log('📱 Phone validation check:', phoneValidationData);
+      
+      if (!/^\d{10,15}$/.test(cleanPhone)) {
+        console.error('❌ Phone validation failed:', phoneValidationData);
+        throw new Error("Please enter a valid phone number (10-15 digits including country code). Please go back to the phone step.");
       }
       
-      console.log('📱 Phone validation passed:', { phone, cleanPhone });
+      console.log('📱 Phone validation passed:', phoneValidationData);
 
       // Validate name format (only letters and spaces, at least 2 characters)
       const nameRegex = /^[a-zA-Z ]{2,32}$/;
@@ -151,7 +162,7 @@ export default function SignupAvatar() {
         throw new Error("Name should only contain letters and spaces, 2-32 characters. Please go back to the name step.");
       }
 
-      console.log('📋 Collected signup data:', { 
+      const collectedData = { 
         email, 
         phone, 
         name, 
@@ -166,42 +177,43 @@ export default function SignupAvatar() {
           password: localStorage.getItem("password"),
           userPassword: localStorage.getItem("userPassword")
         }
-      });
+      };
+      console.log('📋 Collected signup data:', collectedData);
       
       // Final data format check before Supabase
-      console.log('📋 Final data for Supabase:', {
+      const finalData = {
         email: email,
         full_name: name,
         phone: phone,
         age: age,
         avatar: avatar
-      });
+      };
+      console.log('📋 Final data for Supabase:', finalData);
 
       // Step 1: Create user in Supabase Auth (basic only - no custom metadata)
-      console.log('🚀 About to call supabase.auth.signUp with data:', {
+      const signUpData = {
         email,
         password: password ? '***' : 'MISSING',
         options: {
-          emailRedirectTo: `${window.location.origin}/home?newUser=true`,
           data: {
             full_name: name,
             phone: phone,
-            age: age,
             avatar: avatar
+            // Note: age is not stored in auth metadata, only in profile table
           }
         }
-      });
+      };
+      console.log('🚀 About to call supabase.auth.signUp with data:', signUpData);
       
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
         options: {
-          emailRedirectTo: `${window.location.origin}/signup/email/confirmed?newUser=true`,
           data: {
             full_name: name,
             phone: phone,
-            age: age,
             avatar: avatar
+            // Note: age is not stored in auth metadata, only in profile table
           }
         }
       });
@@ -216,41 +228,117 @@ export default function SignupAvatar() {
       }
 
       console.log('✅ User created successfully:', authData.user.id);
-      console.log('📧 Confirmation email sent to:', email);
       console.log('✅ Profile will be created automatically by database trigger');
       console.log('🔍 User metadata from Supabase:', authData.user.user_metadata);
       console.log('🔍 User data from Supabase:', authData.user);
+      console.log('🔍 User session status:', authData.session ? 'Active' : 'No session');
+      console.log('🔍 User email confirmed:', authData.user.email_confirmed_at ? 'Yes' : 'No');
       
-      // Step 2: Manually create user profile if trigger fails
-      try {
-        console.log('🔄 Creating user profile manually as backup...');
-        const { data: profileData, error: profileError } = await supabase
+      // Step 2: Check if profile already exists (from database trigger) and update it
+      console.log('🔄 Checking if profile already exists...');
+      
+      // Wait a moment for the database trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Check if profile already exists
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', authData.user.id)
+        .single();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('❌ Error checking existing profile:', fetchError);
+      }
+      
+      if (existingProfile) {
+        console.log('✅ Profile already exists from database trigger, updating it...');
+        console.log('📋 Existing profile data:', existingProfile);
+        
+        // Update existing profile with complete data
+        const { data: updatedProfile, error: updateError } = await supabase
           .from('user_profiles')
-          .insert([{
-            user_id: authData.user.id, // Use 'user_id' column name as this is standard
+          .update({
             email: email,
             full_name: name,
             phone: phone,
             age: parseInt(age),
             avatar: avatar,
-            bio: '',
-            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          }])
+          })
+          .eq('user_id', authData.user.id)
           .select()
           .single();
-
-        if (profileError) {
-          console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
+        
+        if (updateError) {
+          console.error('❌ Profile update failed:', updateError);
+          throw new Error(`Profile update failed: ${updateError.message}`);
         } else {
-          console.log('✅ User profile created manually as backup:', profileData);
+          console.log('✅ Profile updated successfully with complete data:', updatedProfile);
         }
-      } catch (profileError) {
-        console.log('⚠️ Manual profile creation failed (this is okay if trigger worked):', profileError);
+      } else {
+        console.log('🔄 No existing profile found, creating new one...');
+        
+        // Create new profile
+        const profileDataToInsert = {
+          user_id: authData.user.id,
+          email: email,
+          full_name: name,
+          phone: phone,
+          age: parseInt(age),
+          avatar: avatar,
+          bio: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('🔄 Creating new user profile with data:', JSON.stringify(profileDataToInsert, null, 2));
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .insert([profileDataToInsert])
+          .select()
+          .single();
+        
+        if (profileError) {
+          console.error('❌ Profile creation failed:', profileError);
+          console.error('❌ Error details:', JSON.stringify({
+            code: profileError.code,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint
+          }, null, 2));
+          
+          // Try alternative approach - update the user metadata instead
+          console.log('🔄 Trying alternative approach: updating user metadata...');
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: {
+              full_name: name,
+              phone: phone,
+              age: parseInt(age),
+              avatar: avatar
+            }
+          });
+          
+          if (updateError) {
+            console.error('❌ User metadata update also failed:', updateError);
+            throw new Error(`Profile creation failed: ${profileError.message}`);
+          } else {
+            console.log('✅ User metadata updated successfully as fallback');
+          }
+        } else {
+          console.log('✅ New profile created successfully:', profileData);
+        }
       }
+
+      // Profile creation/update completed successfully
+      console.log('✅ Profile data processing completed successfully');
       
       // Save avatar selection to context
       updateRegistrationData({ avatar: avatar });
+      
+      // Store user's name for the success popup before clearing localStorage
+      setUserNameForPopup(name);
       
       // Clear registration data from context and localStorage
       clearRegistrationData();
@@ -266,8 +354,8 @@ export default function SignupAvatar() {
       localStorage.removeItem("otpSkipped");
       localStorage.removeItem("signupStarted");
       
-      // Navigate to email confirmation page
-      router.push("/signup/email/confirm");
+      // Show success popup instead of redirecting to email confirmation
+      setShowSuccessPopup(true);
 
     } catch (error) {
       console.error('❌ Registration failed:', error);
@@ -395,10 +483,17 @@ export default function SignupAvatar() {
             disabled={selected === null || loading} 
             onClick={handleNext}
           >
-            {loading ? "Creating Account..." : "Complete Signup & Send Confirmation"}
+            {loading ? "Creating Account..." : "Complete Signup"}
           </NextButton>
         </div>
       </div>
+
+      {/* Success Popup */}
+      <AccountSuccessPopup
+        isOpen={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+        userName={userNameForPopup || "User"}
+      />
     </div>
   );
 }
