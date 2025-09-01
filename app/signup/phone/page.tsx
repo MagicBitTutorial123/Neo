@@ -506,13 +506,26 @@ export default function SignupPhone() {
               <button
                 type="button"
                 onClick={() => {
+                  // Validate phone number before allowing skip
+                  if (!phone || !phone.trim()) {
+                    alert("Please enter a phone number before continuing");
+                    return;
+                  }
+                  
+                  // Validate phone number format
+                  const cleanPhone = phone.replace(/[^\d]/g, '');
+                  if (cleanPhone.length < 9) {
+                    alert("Please enter a valid phone number");
+                    return;
+                  }
+                  
                   // Store phone number and skip OTP
-                  const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
-                  const fullPhone = selectedCountry.code + cleanPhone;
+                  const finalCleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
+                  const fullPhone = selectedCountry.code + finalCleanPhone;
                   
                   console.log("📱 Skip OTP - Phone details:", {
                     originalPhone: phone,
-                    cleanPhone,
+                    cleanPhone: finalCleanPhone,
                     countryCode: selectedCountry.code,
                     fullPhone
                   });
