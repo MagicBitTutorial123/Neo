@@ -577,11 +577,11 @@ export default function SettingsPage() {
   const canSave = !!firstName.trim() && phoneValid && ageValid && !saving;
 
   // Handle immediate avatar update
-  const handleAvatarChange = (newAvatar: string) => {
-    setAvatar(newAvatar);
-    setAvatarChanged(true);
-    setOk(null); // Clear any previous success message
-  };
+  // const handleAvatarChange = (newAvatar: string) => {
+  //   setAvatar(newAvatar);
+  //   setAvatarChanged(true);
+  //   setOk(null); // Clear any previous success message
+  // };
 
   // Handle immediate avatar save
   const handleAvatarSave = async () => {
