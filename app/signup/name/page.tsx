@@ -24,17 +24,66 @@ export default function SignupName() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   /**
-   * Navigate back to the phone step
+   * Navigate back to the previous step
    */
   const handleBack = () => {
-    // Clear phone verification flag when going back
-    localStorage.removeItem("phoneVerified");
-    localStorage.removeItem("otpSkipped");
-    router.push("/signup/phone");
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+    
+    if (isGoogleOAuth) {
+      // For Google OAuth users, go back to signup main page
+      router.push("/signup");
+    } else {
+      // For regular signup flow, go back to phone step
+      localStorage.removeItem("phoneVerified");
+      localStorage.removeItem("otpSkipped");
+      router.push("/signup/phone");
+    }
   };
 
-  // Add navigation guard to ensure user has completed previous steps
+  // Handle Google OAuth users and add navigation guard
   useEffect(() => {
+    // Check if this is a Google OAuth user from URL parameters OR localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGoogleOAuthFromUrl = urlParams.get("oauth") === "google";
+    const isGoogleOAuthFromStorage = localStorage.getItem("isGoogleOAuth") === "true";
+    const isGoogleOAuth = isGoogleOAuthFromUrl || isGoogleOAuthFromStorage;
+    
+    const googleEmail = urlParams.get("email");
+    const googleName = urlParams.get("name");
+    
+    // Handle Google OAuth users
+    if (isGoogleOAuth) {
+      console.log("🔍 Google OAuth user detected");
+      
+      // Pre-fill name if available from URL parameters
+      if (googleName && !name) {
+        console.log("🔍 Pre-filling name for Google OAuth user:", googleName);
+        setName(googleName);
+        updateRegistrationData({ name: googleName });
+      }
+      
+      // Store Google OAuth data in localStorage for the rest of the flow
+      localStorage.setItem("isGoogleOAuth", "true");
+      if (googleName) localStorage.setItem("googleOAuthName", googleName);
+      if (googleEmail) {
+        localStorage.setItem("signupEmail", googleEmail);
+        localStorage.setItem("userEmail", googleEmail);
+      }
+      
+      // Clean up URL parameters
+      if (isGoogleOAuthFromUrl) {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("oauth");
+        newUrl.searchParams.delete("email");
+        newUrl.searchParams.delete("name");
+        window.history.replaceState({}, "", newUrl.toString());
+      }
+      
+      return; // Skip the email/phone validation for Google OAuth users
+    }
+    
+    // For regular signup flow, check email and phone requirements
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     const phone = localStorage.getItem("fullPhone");
     
@@ -58,7 +107,7 @@ export default function SignupName() {
       router.push("/signup/phone");
       return;
     }
-  }, [router]);
+  }, [router, name, updateRegistrationData]);
 
   /**
    * Handle name input changes with validation

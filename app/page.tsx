@@ -1,18 +1,27 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import NotificationWrapper from "@/components/NotificationWrapper";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Handle OAuth errors from URL parameters
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
 
 
   const handleGoogleLogin = async () => {
@@ -21,7 +30,7 @@ export default function Home() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/home`,
+      redirectTo: `${window.location.origin}/auth/callback`,
       queryParams: {
         access_type: "offline",
         prompt: "consent",
@@ -31,6 +40,9 @@ export default function Home() {
   if (error) setError(error.message);
   setLoading(false);
 };
+
+
+
 
 
 // Removed Google OAuth button from this page per requirements
@@ -63,6 +75,7 @@ async function handleLogin(e: React.FormEvent) {
           src="/login-bg-new.png"
           alt="Login background"
           fill
+          sizes="50vw"
           style={{ objectFit: "cover" }}
           priority
         />
@@ -155,7 +168,6 @@ async function handleLogin(e: React.FormEvent) {
               </svg>
               <span>Sign in with Google</span>
             </button>
-
 
           <div className="text-center mt-6">
             <span className="text-gray-400 text-sm">

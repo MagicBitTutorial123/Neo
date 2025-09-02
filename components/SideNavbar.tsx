@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { APP_BASE_URL } from "@/lib/env";
@@ -455,6 +455,12 @@ export default function SideNavbar({
       href: "/missions",
       active: pathname === "/missions",
     },
+    {
+      icon: "/progress.svg",
+      label: "Progress",
+      href: "/progress",
+      active: pathname === "/progress",
+    },
     hasCompletedMission2
       ? {
           icon: "/playground.svg",
@@ -488,8 +494,28 @@ export default function SideNavbar({
     router.push(`${APP_BASE_URL}/`);
   };
 
+  // FAQ and Contact Us click handlers with useCallback
+  const handleFAQClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🔍 FAQ clicked!');
+    setHelpMenuOpen(false);
+    console.log('🔍 Navigating to /faq...');
+    router.push("/faq");
+  }, [router]);
+
+  const handleContactClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🔍 Contact Us clicked!');
+    setHelpMenuOpen(false);
+    console.log('🔍 Navigating to /contact...');
+    router.push("/contact");
+  }, [router]);
+
   // Open contact modal from Help menu
   const openContact = () => {
+    console.log('🔍 Contact Us clicked!');
     setHelpMenuOpen(false);
     setSendError(null);
     setSendOk(null);
@@ -504,7 +530,9 @@ export default function SideNavbar({
       console.log('❌ No email found in localStorage');
     }
     
+    console.log('🔍 Setting contactOpen to true');
     setContactOpen(true);
+    console.log('🔍 contactOpen state should now be true');
   };
 
   // File selection
@@ -763,98 +791,111 @@ export default function SideNavbar({
             )
           )}
 
-          {/* Help Button */}
-          <div
-            ref={helpMenuRef}
-            className={`relative flex flex-row items-center gap-3 ${
-              sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
-            } py-3 rounded-2xl hover:bg-[#F0F4F8] transition-colors cursor-pointer`}
-            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-          >
-            <Image src="/help.svg" alt="Help" width={24} height={24} />
-            {!sidebarCollapsed && (
-              <span className="text-base font-semibold text-[#222E3A]">
-                Help
-              </span>
-            )}
+                    {/* Help Menu Item */}
+                    <div
+                      className={`flex flex-col ${
+                        sidebarCollapsed ? "w-12 px-0" : "w-[80%] px-4"
+                      }`}
+                    >
+                      {/* Help Button */}
+                      <div
+                        ref={helpMenuRef}
+                        className={`flex flex-row items-center gap-3 py-3 rounded-2xl transition-colors cursor-pointer hover:bg-[#F0F4F8]`}
+                        onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+                      >
+                        {/* Help Icon */}
+                        <div className="w-6 h-6 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                        <Image src="/Help.svg" alt="Help" width={25} height={25} />
+                        </div>
+                        
+                        {!sidebarCollapsed && (
+                          <span className="text-base font-semibold text-[#222E3A]">
+                            Help
+                          </span>
+                        )}
 
-            {/* Help Dropdown Menu */}
-            {helpMenuOpen && (
-              <div
-                className={`absolute ${
-                  sidebarCollapsed
-                    ? "left-full ml-2 top-0"
-                    : "left-0 bottom-full mb-2"
-                } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50`}
-                role="menu"
-              >
-                {/* tiny arrow */}
-                <div
-                  className={`absolute ${
-                    sidebarCollapsed ? "left-0 -ml-1 top-4" : "left-4 -bottom-1"
-                  } w-3 h-3 bg-white rotate-45 border-r border-b border-gray-100`}
-                />
-                <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-black"
-                  onClick={() => {
-                    setHelpMenuOpen(false);
-                    router.push("/faq");
-                  }}
-                  role="menuitem"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                      stroke="#111827"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
-                      stroke="#111827"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  FAQ
-                </button>
-                <div className="h-px bg-gray-100" />
-                <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-black"
-                  onClick={openContact}
-                  role="menuitem"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-                      stroke="#111827"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M22 6l-10 7L2 6"
-                      stroke="#111827"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Contact Us
-                </button>
-              </div>
-            )}
-          </div>
+                        {/* Caret Icon */}
+                        {!sidebarCollapsed && (
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                            className={`ml-auto transition-transform ${helpMenuOpen ? 'rotate-180' : ''}`}
+                          >
+                            <path
+                              d="M6 9l6 6 6-6"
+                              stroke="#222E3A"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* FAQ and Contact Us - Inline below Help, not in popup */}
+                      {helpMenuOpen && !sidebarCollapsed && (
+                        <div className="ml-2 mt-1 space-y-1">
+                          {/* FAQ Item */}
+                          <div 
+                            className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('🔍 FAQ mousedown!');
+                              // Handle navigation on mousedown instead of click
+                              setHelpMenuOpen(false);
+                              router.push("/faq");
+                            }}
+                          >
+                            <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                              <Image
+                                src="/help-icon.png"
+                                alt="FAQ"
+                                width={8}
+                                height={8}
+                                className="object-contain"
+                              />
+                            </div>
+                            <span className="text-sm text-[#222E3A]">FAQ</span>
+                          </div>
+                          
+                          {/* Contact Us Item */}
+                          <div 
+                            className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('🔍 Contact Us mousedown!');
+                              // Handle navigation on mousedown instead of click
+                              setHelpMenuOpen(false);
+                              router.push("/contact");
+                            }}
+                          >
+                            <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                              <svg
+                                width="8"
+                                height="8"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                  stroke="#222E3A"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                            <span className="text-sm text-[#222E3A]">Contact Us</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
         </nav>
       </div>
 

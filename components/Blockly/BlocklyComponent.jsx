@@ -19,12 +19,15 @@ import "@/components/Blockly/customblocks/keyboardBlocks";
 import AIChatbot from "@/components/AI/chatbot";
 import Image from "next/image";
 import { useSidebar } from "@/context/SidebarContext";
+import { useUser } from "@/context/UserContext";
 
 Blockly.setLocale(En);
 
 const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }, ref) => {
   // Sidebar context
   const { sidebarCollapsed } = useSidebar();
+  // User context for personalization
+  const { userData } = useUser();
   
   // State management
   const [activeTab, setActiveTab] = useState("Blocks");
@@ -37,6 +40,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   const [latestDigitalByPin, setLatestDigitalByPin] = useState({});
   const [widgetData, setWidgetData] = useState({});
   const [sensorHistory, setSensorHistory] = useState({});
+  const [isPaletteLocked, setIsPaletteLocked] = useState(false);
   
   // Python code editing state
   const [editableCode, setEditableCode] = useState("");
@@ -346,6 +350,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
         position: absolute !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
+        ${isPaletteLocked ? 'pointer-events: none !important; opacity: 0.5 !important;' : ''}
       }
     
     .blocklyToolboxCategory {
@@ -924,6 +929,35 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       >
         {/* Tab Navigation */}
         <div className="absolute top-0 right-4 m-2 flex items-center gap-0 z-20">
+          {/* Palette Lock Button */}
+          <button
+            onClick={() => setIsPaletteLocked(!isPaletteLocked)}
+            className={`flex items-center gap-2 px-3 py-2 font-semibold text-sm border transition-colors duration-150 ${
+              isPaletteLocked
+                ? "bg-red-100 border-red-400 text-red-800"
+                : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
+            } rounded-full mr-2`}
+            title={isPaletteLocked ? "Unlock Palette" : "Lock Palette"}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {isPaletteLocked ? (
+                <path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" />
+              ) : (
+                <path d="M13.73 21a2 2 0 0 1-3.46 0M21 2v6h-6M3 10a7 7 0 0 1 10.5-6M3 10a7 7 0 0 0 6 6M3 10a7 7 0 0 1 7-7" />
+              )}
+            </svg>
+            <span className="text-xs">{isPaletteLocked ? "Locked" : "Lock"}</span>
+          </button>
+
           <button
             onClick={() => handleTabSwitch("Blocks")}
             className={`flex items-center gap-2 px-5 py-2 font-semibold text-sm border transition-colors duration-150 ${
@@ -1319,12 +1353,49 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
                             Graph
                           </button>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                                      </div>
               </div>
             </div>
+          )}
+
+          {/* AI Chatbot - Always visible */}
+          <div className="absolute bottom-4 right-4 z-30">
+            <AIChatbot 
+              position="right" 
+              workspaceRef={workspaceRef}
+              onClose={() => {}}
+              username={userData?.name || "there"}
+            />
+          </div>
+
+          {/* Palette Lock Overlay */}
+          {isPaletteLocked && (
+            <div className="absolute inset-0 bg-black bg-opacity-20 z-40 pointer-events-none">
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-4 shadow-lg border border-gray-200 pointer-events-auto">
+                <div className="flex items-center gap-3">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-red-500"
+                  >
+                    <path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <div>
+                    <p className="font-semibold text-gray-900">Palette Locked</p>
+                    <p className="text-sm text-gray-600">Click the lock button to unlock</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
           )}
         </div>
       </div>

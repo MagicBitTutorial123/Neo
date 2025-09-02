@@ -5,9 +5,11 @@ import { useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import LetsGoButton from "@/components/LetsGoButton";
 
+
 export default function SignupMain() {
   const router = useRouter();
   const { clearRegistrationData } = useUser();
+
 
   // useEffect(() => {
   //   clearRegistrationData();
@@ -18,6 +20,8 @@ export default function SignupMain() {
     setTimeout(() => router.push("/signup/email"), 300);
     console.log("Navigating to email page");
   };
+
+
 
   return (
     <div className="w-screen h-screen bg-[#F8F9FC] flex items-center justify-center overflow-hidden">
@@ -70,8 +74,8 @@ export default function SignupMain() {
                 teach some bolts how to dance.
               </h1>
             </div>
-            {/* Navigation and button */}
-            <div className="flex items-center gap-8 mt-8">
+            {/* Navigation and buttons */}
+            <div className="flex flex-col items-start gap-4 mt-8">
               <LetsGoButton
                 style={{
                   width: 300,
@@ -82,6 +86,8 @@ export default function SignupMain() {
               >
                 Let s Go
               </LetsGoButton>
+
+
             </div>
           </div>
         </div>

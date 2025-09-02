@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import NextButton from "@/components/NextButton";
 import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
+import AccountSuccessPopup from "@/components/AccountSuccessPopup";
 
 const avatars = [
   "/Avatar02.png",
@@ -22,6 +23,8 @@ export default function SignupAvatar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [userNameForPopup, setUserNameForPopup] = useState<string>("");
 
   //DISPLAY NAME
   const [displayName, setDisplayName] = useState(registrationData.name || "");
@@ -52,10 +55,8 @@ export default function SignupAvatar() {
 
   // Add navigation guard to ensure user has completed previous steps (only for non-OAuth users)
   useEffect(() => {
-    if (isOAuthUser) {
-      // OAuth users skip the previous steps validation
-      return;
-    }
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
     
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     const phone = localStorage.getItem("fullPhone");
@@ -69,10 +70,13 @@ export default function SignupAvatar() {
       return;
     }
     
-    if (!phone || !phone.trim()) {
-      alert("Please complete the phone verification step first");
-      router.push("/signup/phone");
-      return;
+    // Google OAuth users skip phone verification, regular users need it
+    if (!isGoogleOAuth) {
+      if (!phone || !phone.trim()) {
+        alert("Please complete the phone verification step first");
+        router.push("/signup/phone");
+        return;
+      }
     }
     
     if (!name || !name.trim()) {
@@ -87,7 +91,8 @@ export default function SignupAvatar() {
       return;
     }
     
-    if (!password || !password.trim()) {
+    // Google OAuth users skip password step, regular users need it
+    if (!isGoogleOAuth && (!password || !password.trim())) {
       alert("Please complete the password step first");
       router.push("/signup/setpassword");
       return;
@@ -95,16 +100,18 @@ export default function SignupAvatar() {
   }, [router, isOAuthUser]);
 
   const handleBack = () => {
-    if (isOAuthUser) {
-      // OAuth users go back to signin page
-      router.push("/signin");
-      return;
-    }
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
     
-    // Clear phone verification flag when going back
-    localStorage.removeItem("phoneVerified");
-    localStorage.removeItem("otpSkipped");
-    router.push("/signup/setpassword");
+    if (isGoogleOAuth) {
+      // For Google OAuth users, go back to age page (skip password)
+      router.push("/signup/age");
+    } else {
+      // For regular signup flow, go back to password page
+      localStorage.removeItem("phoneVerified");
+      localStorage.removeItem("otpSkipped");
+      router.push("/signup/setpassword");
+    }
   };
 
   const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -239,7 +246,7 @@ export default function SignupAvatar() {
 
     // Validate phone format (exactly 10 digits)
     const cleanPhone = phone.replace(/[+\s-]/g, "");
-    if (!/^\d{10}$/.test(cleanPhone)) {
+    if (!/^\d{12}$/.test(cleanPhone)) {
       console.error('❌ Phone validation failed:', { phone, cleanPhone });
       throw new Error("Please enter a valid phone number (exactly 10 digits). Please go back to the phone step.");
     }
@@ -502,6 +509,13 @@ export default function SignupAvatar() {
           </NextButton>
         </div>
       </div>
+
+      {/* Success Popup */}
+      <AccountSuccessPopup
+        isOpen={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+        userName={userNameForPopup || "User"}
+      />
     </div>
   );
 }

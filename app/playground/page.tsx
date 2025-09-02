@@ -19,6 +19,7 @@ import { checkIfMicroPythonNeeded, checkIfFilesMissing } from "@/utils/firmwareI
 import { createBLEConnection } from "@/utils/bleConnection";
 import AIChatbot from "@/components/AI/chatbot";
 import "@/components/AI/chatbot.css";
+import { useUser } from "@/context/UserContext";
 
 
 // Simple type declarations
@@ -69,6 +70,19 @@ interface BluetoothDevice {
 Blockly.setLocale(En);
 
 export default function Playground() {
+  // User context for personalization
+  const { userData, refreshUserData } = useUser();
+  
+  // Debug: Log user data
+  useEffect(() => {
+    console.log("🔍 Playground - Current user data:", userData);
+    if (userData?.name) {
+      console.log("✅ User name found:", userData.name);
+    } else {
+      console.log("⚠️ No user name found, attempting to refresh...");
+      refreshUserData();
+    }
+  }, [userData, refreshUserData]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blocklyRef = useRef<{ getCurrentCode: () => string; workspaceRef: React.RefObject<any> } | null>(null);
   const [generatedCode, setGeneratedCode] = useState("");

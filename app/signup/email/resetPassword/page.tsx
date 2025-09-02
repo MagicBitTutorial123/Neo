@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
       </button>
 
       <div className="absolute ml-12 mt-8 top-8 left-8 z-30">
-        <Image src="/side-logo.png" alt="BuddyNeo Logo" width={400} height={75}
+        <Image src="/BuddyNeo-expanded.svg" alt="BuddyNeo Logo" width={400} height={75}
                style={{ maxWidth: "100%", height: "auto" }} />
       </div>
 
