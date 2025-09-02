@@ -612,15 +612,22 @@ export default function Playground() {
             setConnectionStatus("connected");
             
             // Check for MicroPython and prompt installer if missing
+            console.log("🔍 [PLAYGROUND] Checking for MicroPython...");
             const needs = await checkIfMicroPythonNeeded(port, undefined);
+            console.log("🔍 [PLAYGROUND] MicroPython needed:", needs);
             if (needs) {
+              console.log("🔍 [PLAYGROUND] MicroPython missing, showing firmware modal");
               setShowFirmwareModal(true);
             } else {
               // MicroPython is present, check if all required files exist
+              console.log("🔍 [PLAYGROUND] MicroPython present, checking files...");
               const filesMissing = await checkIfFilesMissing(port, undefined);
-              console.log("filesMissing: ", filesMissing);
+              console.log("🔍 [PLAYGROUND] Files missing:", filesMissing);
               if (filesMissing) {
+                console.log("🔍 [PLAYGROUND] Files missing, showing firmware modal");
                 setShowFirmwareModal(true);
+              } else {
+                console.log("🔍 [PLAYGROUND] All files present, connection complete");
               }
             }
             

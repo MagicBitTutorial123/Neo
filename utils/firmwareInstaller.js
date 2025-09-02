@@ -226,6 +226,7 @@ export const checkIfMicroPythonNeeded = async (port, onProgress) => {
   let reader = null;
   
   try {
+    console.log("🔍 [checkIfMicroPythonNeeded] Starting MicroPython check...");
     if (onProgress) onProgress(7, `Checking for existing MicroPython...`);
     
     // Check if port is locked
@@ -303,9 +304,11 @@ export const checkIfMicroPythonNeeded = async (port, onProgress) => {
                           response.includes('MicroPython');
     
     if (hasMicroPython) {
+      console.log("🔍 [checkIfMicroPythonNeeded] MicroPython detected, returning false");
       if (onProgress) onProgress(9, `MicroPython detected on device`);
       return false; // Don't need to flash
     } else {
+      console.log("🔍 [checkIfMicroPythonNeeded] MicroPython not detected, returning true");
       if (onProgress) onProgress(9, `MicroPython not detected or not responding`);
       return true; // Need to flash
     }
@@ -489,6 +492,7 @@ export const checkIfFilesMissing = async (port, onProgress) => {
   let reader = null;
   
   try {
+    console.log("🔍 [checkIfFilesMissing] Starting file check...");
     if (onProgress) onProgress(7, `Checking for required Python files...`);
     
     // Check if port is locked
@@ -593,12 +597,12 @@ export const checkIfFilesMissing = async (port, onProgress) => {
     });
     
     if (missingFiles.length > 0) {
-      console.log('Missing files:', missingFiles);
-      console.log('Full response:', response);
+      console.log('🔍 [checkIfFilesMissing] Missing files:', missingFiles);
+      console.log('🔍 [checkIfFilesMissing] Full response:', response);
       if (onProgress) onProgress(9, `Verifying file installation...`);
       return true; // Files are missing
     } else {
-      console.log('All required files are present');
+      console.log('🔍 [checkIfFilesMissing] All required files are present');
       if (onProgress) onProgress(9, `All files verified successfully`);
       return false; // All files are present
     }

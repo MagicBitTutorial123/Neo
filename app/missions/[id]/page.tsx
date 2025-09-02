@@ -20,7 +20,8 @@ import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
-import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
+import BLETroubleshootingModal from "@/components/BLETroubleshootingModal";
+import { checkIfMicroPythonNeeded, checkIfFilesMissing } from "@/utils/firmwareInstaller";
 
 // Simple type declarations
 interface BluetoothRemoteGATTCharacteristic {
@@ -113,6 +114,7 @@ export default function MissionPage() {
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
+  const [showBLETroubleshootingModal, setShowBLETroubleshootingModal] = useState(false);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -387,12 +389,18 @@ export default function MissionPage() {
     } catch (e) {
       console.error("BLE connection failed:", e);
       const error = e as { name?: string };
-      // Check if user cancelled the device selection
+      // Check if user cancelled the device selection or no device found
       if (error?.name === "NotFoundError" || error?.name === "NotAllowedError") {
-        console.log("Bluetooth connection canceled by user");
+        console.log("Bluetooth connection canceled by user or no device found");
         setConnectionStatus("disconnected");
         setIsConnected(false);
-        setTryingToConnect(false); // Stop trying to connect
+        setTryingToConnect(false);
+        
+        // Show troubleshooting modal after a short delay
+        setTimeout(() => {
+          setShowBLETroubleshootingModal(true);
+        }, 500);
+        
         return; // Don't retry on user cancellation
       }
       
@@ -481,8 +489,26 @@ export default function MissionPage() {
             setConnectionStatus("connected");
             
             // Check for MicroPython and prompt installer if missing
+            console.log("🔍 Checking for MicroPython...");
             const needs = await checkIfMicroPythonNeeded(port, undefined);
-            if (needs) setShowFirmwareModal(true);
+            console.log("🔍 MicroPython needed:", needs);
+            if (needs) {
+              console.log("🔍 MicroPython missing, showing firmware modal");
+              setShowFirmwareModal(true);
+              console.log("🔍 showFirmwareModal state set to:", true);
+            } else {
+              // MicroPython is present, check if all required files exist
+              console.log("🔍 MicroPython present, checking files...");
+              const filesMissing = await checkIfFilesMissing(port, undefined);
+              console.log("🔍 Files missing:", filesMissing);
+              if (filesMissing) {
+                console.log("🔍 Files missing, showing firmware modal");
+                setShowFirmwareModal(true);
+                console.log("🔍 showFirmwareModal state set to:", true);
+              } else {
+                console.log("🔍 All files present, connection complete");
+              }
+            }
             
           } catch (e) {
             const err = e as unknown;
@@ -1109,6 +1135,17 @@ export default function MissionPage() {
             onClose={() => setShowFirmwareModal(false)} 
             portRef={portRef}
           />
+          
+          {/* BLE Troubleshooting Modal */}
+          <BLETroubleshootingModal
+            open={showBLETroubleshootingModal}
+            onClose={() => setShowBLETroubleshootingModal(false)}
+            onSwitchToSerial={() => {
+              setShowBLETroubleshootingModal(false);
+              setConnectionType("serial");
+              setShowFirmwareModal(true);
+            }}
+          />
         </div>
       );
     case "blocklySplitLayout":
@@ -1399,6 +1436,24 @@ export default function MissionPage() {
               </div>
             </div>
           )}
+          
+          {/* Firmware Install Modal for USB only */}
+          <FirmwareInstallModal 
+            open={showFirmwareModal} 
+            onClose={() => setShowFirmwareModal(false)} 
+            portRef={portRef}
+          />
+          
+          {/* BLE Troubleshooting Modal */}
+          <BLETroubleshootingModal
+            open={showBLETroubleshootingModal}
+            onClose={() => setShowBLETroubleshootingModal(false)}
+            onSwitchToSerial={() => {
+              setShowBLETroubleshootingModal(false);
+              setConnectionType("serial");
+              setShowFirmwareModal(true);
+            }}
+          />
         </div>
       );
     default:
