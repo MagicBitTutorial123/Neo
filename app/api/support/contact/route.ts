@@ -297,6 +297,7 @@ User Agent: ${request.headers.get('user-agent')}
     // Send email to Neo support team
     let supportEmailResult;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const emailOptions: any = {
         from: smtpFrom,
         to: 'neo@magicbit.cc',
@@ -503,6 +504,7 @@ The Neo Support Team
 
     let confirmationEmailResult;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const confirmationEmailOptions: any = {
         from: smtpFrom,
         to: email,
