@@ -983,7 +983,7 @@ export default function SettingsPage() {
                         width: 80,
                         height: 80,
                       }}
-                      onClick={() => handleAvatarChange(avatarSrc)}
+                      onClick={() => handleAvatarChange(idx)}
                       tabIndex={0}
                       aria-label={`Select avatar ${idx + 1}`}
                     >
