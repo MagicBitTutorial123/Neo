@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import NextButton from "@/components/NextButton";
@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export default function SignupPhone() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { updateRegistrationData } = useUser();
 
   const countryOptions = [
@@ -25,8 +26,48 @@ export default function SignupPhone() {
   const [phoneValid, setPhoneValid] = useState(false);
   const [phoneError, setPhoneError] = useState("");
 
-  // Ensure email is available from localStorage
+  // Handle Google OAuth users and ensure email is available from localStorage
   useEffect(() => {
+    // Check if this is a Google OAuth user from URL parameters OR localStorage
+    const isGoogleOAuthFromUrl = searchParams.get("oauth") === "google";
+    const isGoogleOAuthFromStorage = localStorage.getItem("isGoogleOAuth") === "true";
+    const isGoogleOAuth = isGoogleOAuthFromUrl || isGoogleOAuthFromStorage;
+    
+    const oauthEmail = searchParams.get("email") || localStorage.getItem("googleOAuthEmail");
+    const oauthName = searchParams.get("name") || localStorage.getItem("googleOAuthName");
+    
+    console.log("🔍 Phone page - OAuth detection:", {
+      isGoogleOAuthFromUrl,
+      isGoogleOAuthFromStorage,
+      isGoogleOAuth,
+      oauthEmail,
+      oauthName
+    });
+    
+    console.log("🧪 TESTING: Phone page loaded!");
+    console.log("🧪 TESTING: Current URL:", window.location.href);
+    
+    if (isGoogleOAuth) {
+      console.log("🔍 Google OAuth user detected, staying on phone page:", { oauthEmail, oauthName });
+      
+      // Store Google OAuth data if not already stored
+      if (oauthEmail) {
+        localStorage.setItem("signupEmail", oauthEmail);
+        localStorage.setItem("userEmail", oauthEmail);
+        localStorage.setItem("googleOAuthEmail", oauthEmail);
+      }
+      if (oauthName) {
+        localStorage.setItem("googleOAuthName", oauthName);
+      }
+      localStorage.setItem("isGoogleOAuth", "true");
+      
+      console.log("📧 Set email from Google OAuth:", oauthEmail);
+      console.log("👤 Set name from Google OAuth:", oauthName);
+      
+      // Don't redirect - let Google OAuth users go through phone page normally
+      return;
+    }
+    
     const signupEmail = localStorage.getItem("signupEmail");
     const userEmail = localStorage.getItem("userEmail");
     
@@ -70,18 +111,28 @@ export default function SignupPhone() {
         console.log("⚠️ No email found, showing manual email input");
       }
     }, 2000); // Wait 2 seconds for async operations to complete
-  }, []);
+  }, [searchParams]);
   
   // Add navigation guard to ensure user has completed email step
   useEffect(() => {
+    // Check if this is a Google OAuth user first
+    const isGoogleOAuth = searchParams.get("oauth") === "google";
+    const oauthEmail = searchParams.get("email");
+    
+    if (isGoogleOAuth && oauthEmail) {
+      console.log("🔍 Google OAuth user - skipping email validation");
+      return; // Skip email validation for Google OAuth users
+    }
+    
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     
     if (!email || !email.trim()) {
+      console.log("⚠️ No email found, redirecting to email step");
       alert("Please complete the email step first");
       router.push("/signup/email");
       return;
     }
-  }, [router]);
+  }, [router, searchParams]);
   
   const getEmailFromSupabase = async () => {
     try {
@@ -108,7 +159,7 @@ export default function SignupPhone() {
   };
 
   const handleBack = () => {
-    router.push("/signup/email/confirm");
+    router.push("/signup/email");
   };
   
   // Clear phone verification flag when user returns to phone step
@@ -122,9 +173,9 @@ export default function SignupPhone() {
     if (phone.length === 0) {
       setPhoneValid(false);
       setPhoneError("");
-    } else if (phone.length !== 10) {
+    } else if (phone.length < 10 || phone.length > 10) {
       setPhoneValid(false);
-      setPhoneError("Phone number must be exactly 10 digits");
+      setPhoneError("Phone number must be exactly 10 digits (without country code)");
     } else {
       setPhoneValid(true);
       setPhoneError("");
@@ -254,7 +305,7 @@ export default function SignupPhone() {
       <button
         onClick={handleBack}
         className="w-[96px] h-[96px] flex items-center justify-center rounded-full group focus:outline-none absolute left-0 top-1/2 -translate-y-1/2 z-20"
-        aria-label="Back to email confirmation"
+        aria-label="Back to email step"
       >
         <svg
           width="48"
@@ -273,10 +324,10 @@ export default function SignupPhone() {
 
       <div className="absolute ml-12 mt-8 top-8 left-8 z-30">
         <Image
-          src="/side-logo.png"
+          src="/BuddyNeo-expanded.svg"
           alt="BuddyNeo Logo"
-          width={400}
-          height={75}
+          width={320}
+          height={60}
           style={{ maxWidth: "100%", height: "auto" }}
         />
       </div>
@@ -301,14 +352,14 @@ export default function SignupPhone() {
             </div>
           </div>
 
-          <div className="mb-12 flex items-center w-full justify-center" style={{ minHeight: 100 }}>
+          <div className="mb-6 flex items-center w-full justify-center" style={{ minHeight: 60 }}>
             <h1 className="text-3xl md:text-4xl font-extrabold text-[#222E3A] text-center font-poppins leading-tight">
               What&apos;s your phone number?
             </h1>
           </div>
 
           <form
-            className="flex flex-col gap-6 w-full max-w-[400px] items-center"
+            className="flex flex-col gap-3 w-full max-w-[400px] items-center"
             onSubmit={(e) => {
               e.preventDefault();
               handleNext();
@@ -383,7 +434,7 @@ export default function SignupPhone() {
               {/* Input */}
               <input
                 type="tel"
-                placeholder="Type here"
+                placeholder=" 07x xxx xxxx"
                 className="flex-1 bg-transparent border-none outline-none text-black font-poppins text-lg placeholder:text-gray-400"
                 value={phone}
                 onChange={(e) => {
@@ -419,11 +470,12 @@ export default function SignupPhone() {
                <p className="text-red-500 text-xs mt-2 text-center">{phoneError}</p>
              )}
              {phone && phoneValid && (
-               <p className="text-green-500 text-xs mt-2 text-center">✓ Valid phone number format (10 digits)</p>
+               <p className="text-green-500 text-xs mt-2 text-center">✓ Valid phone number format (10 digits without country code)</p>
              )}
 
              <div className="text-center text-sm text-gray-600 mb-4">
-              <p>We&apos;ll send you a verification code via WhatsApp and email</p>
+              <p>Enter your phone number without country code (e.g., 769848925)</p>
+              <p className="text-xs mt-1">We&apos;ll send you a verification code via WhatsApp and email</p>
               <p className="text-xs mt-1">You can verify OTP or skip to continue</p>
             </div>
 
@@ -460,21 +512,44 @@ export default function SignupPhone() {
               <button
                 type="button"
                 onClick={() => {
+                  // Check if this is a Google OAuth user
+                  const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+                  
+                  if (isGoogleOAuth) {
+                    // Google OAuth users can skip phone verification entirely
+                    console.log("🔍 Google OAuth user skipping phone verification");
+                    localStorage.setItem("otpSkipped", "true");
+                    localStorage.setItem("phoneVerified", "true");
+                    router.push("/signup/name");
+                    return;
+                  }
+                  
+                  // For regular users, validate phone number before allowing skip
+                  if (!phone || !phone.trim()) {
+                    alert("Please enter a phone number before continuing");
+                    return;
+                  }
+                  
+                  // Validate phone number format
+                  const cleanPhone = phone.replace(/[^\d]/g, '');
+                  if (cleanPhone.length < 9) {
+                    alert("Please enter a valid phone number");
+                    return;
+                  }
+                  
                   // Store phone number and skip OTP
-                  const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
-                  const fullPhone = selectedCountry.code + cleanPhone;
-                  const normalizedPhone = fullPhone.replace(/[+\s-]/g, "");
+                  const finalCleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
+                  const fullPhone = selectedCountry.code + finalCleanPhone;
                   
                   console.log("📱 Skip OTP - Phone details:", {
                     originalPhone: phone,
-                    cleanPhone,
+                    cleanPhone: finalCleanPhone,
                     countryCode: selectedCountry.code,
-                    fullPhone,
-                    normalizedPhone
+                    fullPhone
                   });
                   
-                  localStorage.setItem("fullPhone", normalizedPhone);
-                  updateRegistrationData({ fullPhone: normalizedPhone });
+                  localStorage.setItem("fullPhone", fullPhone);
+                  updateRegistrationData({ fullPhone });
                   
                   // Mark OTP as skipped and set phone verification flag
                   localStorage.setItem("otpSkipped", "true");

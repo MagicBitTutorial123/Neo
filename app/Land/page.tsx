@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { APP_BASE_URL } from "@/lib/env";
 import NotificationWrapper from "@/components/NotificationWrapper";
 import { supabase } from "@/lib/supabaseClient";
@@ -9,8 +10,17 @@ import { supabase } from "@/lib/supabaseClient";
 // Using centralized Supabase client configured via env vars
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Handle OAuth errors from URL parameters
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
 
 
 const handleGoogleLogin = async () => {
@@ -19,7 +29,7 @@ const handleGoogleLogin = async () => {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/home`,
+              redirectTo: "http://localhost:3000/auth/callback",
       queryParams: {
         access_type: "offline",
         prompt: "consent",
@@ -37,6 +47,7 @@ const handleGoogleLogin = async () => {
           src="/login-bg-new.png"
           alt="Login background"
           fill
+          sizes="50vw"
           style={{ objectFit: "cover" }}
           priority
         />

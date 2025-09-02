@@ -7,7 +7,7 @@ import { useUser } from "@/context/UserContext";
 
 function validateAge(age: string) {
   const n = Number(age);
-  return /^\d{1,3}$/.test(age) && n >= 13 && n <= 120;
+  return /^\d{1,3}$/.test(age) && n >= 5 && n <= 120;
 }
 
 export default function SignupAge() {

@@ -8,6 +8,7 @@ import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
 import { useUser } from "@/context/UserContext";
 import BasicAuthGuard from "@/components/BasicAuthGuard";
+import { supabase } from "@/lib/supabaseClient";
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -36,6 +37,8 @@ export default function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userData } = useUser();
+  const [isFirstTimeOAuth, setIsFirstTimeOAuth] = useState(false);
+  const [showProfileUpdateNotification, setShowProfileUpdateNotification] = useState(false);
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
@@ -45,18 +48,127 @@ export default function HomePage() {
   useEffect(() => {
     setHydrated(true);
 
-    // Check if this is a new user from signup
+    // Check if this is a new user from signup process
     const isNewUserFromSignup = searchParams.get("newUser") === "true";
-    if (isNewUserFromSignup) {
-      router.replace("/home");
+    const isOnboarding = searchParams.get("onboarding") === "true";
+    
+    if (isNewUserFromSignup && isOnboarding) {
+      console.log('🆕 New user from signup process - showing onboarding');
+      router.replace("/home?newUser=true&onboarding=true");
+      setIsNewUser(true);
+    } else if (isNewUserFromSignup && !isOnboarding) {
+      // User came from signup but no onboarding flag - redirect to onboarding
+      console.log('🔄 New user from signup - redirecting to onboarding');
+      router.replace("/home?newUser=true&onboarding=true");
       setIsNewUser(true);
     }
     
-    // Also check if user is new based on mission progress
-    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
-      setIsNewUser(true);
+    // Check if user returned from settings with profile update
+    const profileUpdated = searchParams.get("profileUpdated") === "true";
+    if (profileUpdated) {
+      console.log('🔄 User returned from settings, checking profile status...');
+      router.replace("/home"); // Clean up URL
+      // Refresh profile status to check if notification should be hidden
+      setTimeout(() => refreshProfileStatus(), 500); // Small delay to ensure settings page has saved
     }
+    
+    // Check if user is new based on mission progress (for existing users who haven't completed missions)
+    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
+      // Only set as new user if they didn't come from signup (to avoid double onboarding)
+      if (!isNewUserFromSignup) {
+        setIsNewUser(true);
+      }
+    }
+    
+    // Check if this is a first-time Google OAuth user
+    const checkFirstTimeOAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Check if user has a profile and get all profile details
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id, created_at, full_name, phone, age, avatar')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (profile) {
+            // Check if this is a first-time OAuth user by looking at:
+            // 1. No mission progress (missionProgress === 0 or undefined)
+            // 2. Profile was created recently (within last 24 hours)
+            const isNewProfile = new Date(profile.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const hasNoMissionProgress = !userData?.missionProgress || userData.missionProgress === 0;
+            
+            // Check if profile is complete (has name, phone, age, and avatar)
+            const isProfileComplete = profile.full_name && profile.phone && profile.age && profile.avatar;
+            
+            if (isNewProfile && hasNoMissionProgress && !isProfileComplete) {
+              // Show notification only if profile is incomplete
+              setIsFirstTimeOAuth(true);
+              setShowProfileUpdateNotification(true);
+              console.log('🆕 First-time OAuth user detected - new profile and incomplete profile');
+            } else if (isProfileComplete) {
+              // Profile is complete, hide notification
+              setShowProfileUpdateNotification(false);
+              setIsFirstTimeOAuth(false);
+              console.log('✅ Profile is complete, hiding notification');
+            } else {
+              // Returning user but profile incomplete
+              setShowProfileUpdateNotification(true);
+              console.log('⚠️ Returning OAuth user with incomplete profile');
+            }
+          }
+        }
+      } catch (error) {
+        console.log('🔍 Error checking first-time OAuth status:', error);
+      }
+    };
+    
+    checkFirstTimeOAuth();
   }, [searchParams, router, userData]);
+
+  // Function to refresh profile status (can be called when returning from settings)
+  const refreshProfileStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('full_name, phone, age, avatar')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (profile) {
+          const isProfileComplete = profile.full_name && profile.phone && profile.age && profile.avatar;
+          
+          if (isProfileComplete) {
+            setShowProfileUpdateNotification(false);
+            setIsFirstTimeOAuth(false);
+            console.log('✅ Profile completed, notification hidden');
+          } else {
+            setShowProfileUpdateNotification(true);
+            console.log('⚠️ Profile still incomplete, notification shown');
+          }
+        }
+      }
+    } catch (error) {
+      console.log('🔍 Error refreshing profile status:', error);
+    }
+  };
+
+  // Listen for navigation back to home (when user returns from settings)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Check profile status when user returns to the page
+      refreshProfileStatus();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -363,10 +475,14 @@ export default function HomePage() {
   
   // Check if user came from signup flow (newUser=true in URL)
   const isFromSignup = searchParams.get("newUser") === "true";
+  const isOnboarding = searchParams.get("onboarding") === "true";
   
   // Show onboarding ONLY for new users who came from signup flow
   // Existing users (from signin) should see dashboard directly
-  const shouldShowOnboarding = isNewUser && isFromSignup;
+  const shouldShowOnboarding = isNewUser && isFromSignup && isOnboarding;
+  
+  // Check if user is coming from regular login (not signup)
+  const isFromRegularLogin = !isFromSignup && !isOnboarding;
 
   console.log("🔍 User data:", userData);
   console.log("🔍 Is new user:", isNewUser);
@@ -376,7 +492,13 @@ export default function HomePage() {
   console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
   console.log("🔍 Final isNewUser calculation:", isNewUser);
   console.log("🔍 isFromSignup:", isFromSignup);
+  console.log("🔍 isOnboarding:", isOnboarding);
   console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
+  console.log("🔍 isFromRegularLogin:", isFromRegularLogin);
+  console.log("🔍 Google OAuth Status:", {
+    isFirstTimeOAuth,
+    showProfileUpdateNotification
+  });
 
   return (
     <BasicAuthGuard>
@@ -389,10 +511,49 @@ export default function HomePage() {
           style={{
             marginLeft: sidebarCollapsed ? "80px" : "260px",
           }}
-        >
-          
-          
-          {shouldShowOnboarding ? newUserContent : defaultHomeContent}
+                 >
+           
+           
+           {/* Profile Update Notification for Google Users */}
+           {showProfileUpdateNotification && (
+             <div className="w-full max-w-4xl mx-auto mt-6 px-4">
+               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                 <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                     </svg>
+                   </div>
+                   <div className="flex-1">
+                     <h3 className="text-sm font-semibold text-blue-900">
+                       Complete Your Profile
+                     </h3>
+                     <p className="text-xs text-blue-700">
+                       Please visit settings to add your details and choose an avatar
+                     </p>
+                   </div>
+                   <button
+                     onClick={() => router.push('/settings')}
+                     className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                   >
+                     Go to Settings
+                   </button>
+                 </div>
+               </div>
+             </div>
+           )}
+           
+                       {/* Smart Content Routing */}
+            {shouldShowOnboarding ? (
+              // New user from signup process - show onboarding (clean layout)
+              newUserContent
+                       ) : isFromRegularLogin ? (
+              // Existing user from regular login - show clean dashboard
+              defaultHomeContent
+           ) : (
+             // Default case - show appropriate content based on user state
+             defaultHomeContent
+           )}
         </main>
       </div>
     </BasicAuthGuard>
