@@ -114,6 +114,17 @@ export default function MissionPage() {
   const server = useRef<BluetoothRemoteGATTServer | null>(null);
   const keyStateRef = useRef<{ [key: string]: boolean }>({});
   const blocklyRef = useRef<any>(null);
+  
+  // BLE connection stability improvements
+  const bleCommandQueue = useRef<Array<{ command: string; retries: number }>>([]);
+  const isProcessingQueue = useRef(false);
+  const lastCommandTime = useRef(0);
+  const connectionHealthCheck = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 3;
+  const commandRateLimit = 50; // Minimum ms between commands
+  const healthCheckInterval = 5000; // Check connection health every 5 seconds
+  
   const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
@@ -136,6 +147,69 @@ export default function MissionPage() {
       console.log("Workspace not ready yet");
     }
   }, []);
+
+  // BLE command queue processing - MUST be defined before use
+  const processBleCommandQueue = useCallback(async () => {
+    if (isProcessingQueue.current || bleCommandQueue.current.length === 0) {
+      return;
+    }
+
+    isProcessingQueue.current = true;
+
+    while (bleCommandQueue.current.length > 0) {
+      const now = Date.now();
+      const timeSinceLastCommand = now - lastCommandTime.current;
+
+      // Rate limiting: ensure minimum time between commands
+      if (timeSinceLastCommand < commandRateLimit) {
+        await new Promise(resolve => setTimeout(resolve, commandRateLimit - timeSinceLastCommand));
+      }
+
+      const commandItem = bleCommandQueue.current.shift();
+      if (!commandItem) continue;
+
+      try {
+        // Check connection health before sending
+        if (connectionStatus !== "connected" || !writeCharacteristicRef.current) {
+          console.log("BLE not connected, skipping command:", commandItem.command);
+          continue;
+        }
+
+        await keyboardSendBLE(commandItem.command, writeCharacteristicRef.current);
+        lastCommandTime.current = Date.now();
+        console.log("BLE command sent successfully:", commandItem.command);
+        
+      } catch (error) {
+        console.error("Failed to send BLE command:", commandItem.command, error);
+        
+        // Retry logic
+        if (commandItem.retries > 0) {
+          commandItem.retries--;
+          bleCommandQueue.current.unshift(commandItem);
+          console.log(`Retrying command ${commandItem.command}, ${commandItem.retries} retries left`);
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } else {
+          console.error("Command failed after all retries:", commandItem.command);
+          // If command fails completely, check connection health
+          setConnectionStatus("disconnected");
+          setIsConnected(false);
+        }
+      }
+    }
+
+    isProcessingQueue.current = false;
+  }, [connectionStatus]);
+
+  // BLE command queuing and rate limiting system
+  const queueBleCommand = useCallback(async (command: string, maxRetries: number = 2) => {
+    bleCommandQueue.current.push({ command, retries: maxRetries });
+    
+    if (!isProcessingQueue.current) {
+      processBleCommandQueue();
+    }
+  }, [processBleCommandQueue]);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -208,11 +282,12 @@ export default function MissionPage() {
       }
 
       if (action) {
-        try {
-          await keyboardSendBLE(action, writeCharacteristicRef.current);
-        } catch (error) {
-          console.error("Failed to send key:", error);
-          setConnectionStatus("disconnected");
+        // Queue the command instead of sending directly
+        bleCommandQueue.current.push({ command: action, retries: 2 });
+        
+        // Process queue if not already processing
+        if (!isProcessingQueue.current) {
+          processBleCommandQueue();
         }
       }
     };
@@ -259,13 +334,12 @@ export default function MissionPage() {
         // Mark key as released
         keyStateRef.current[action] = false;
         
-        try {
-          // Send stop_all command twice for reassurance when any arrow key is released
-          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
-         
-        } catch (error) {
-          console.error("Failed to send stop command:", error);
-          setConnectionStatus("disconnected");
+        // Queue stop_all command instead of sending directly
+        bleCommandQueue.current.push({ command: "stop_all", retries: 2 });
+        
+        // Process queue if not already processing
+        if (!isProcessingQueue.current) {
+          processBleCommandQueue();
         }
       }
     };
