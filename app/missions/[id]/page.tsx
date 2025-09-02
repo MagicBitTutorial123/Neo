@@ -19,9 +19,11 @@ import { TimerPersistence } from "@/utils/timerPersistence";
 import { usbUpload } from "@/utils/usbUpload";
 import { bluetoothUpload } from "@/utils/bluetoothUpload";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
+import { hasKeyboardBlocks } from "@/utils/keyboardBlockDetector";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
 import BLETroubleshootingModal from "@/components/BLETroubleshootingModal";
 import { checkIfMicroPythonNeeded, checkIfFilesMissing } from "@/utils/firmwareInstaller";
+import { createBLEConnection } from "@/utils/bleConnection";
 
 // Simple type declarations
 interface BluetoothRemoteGATTCharacteristic {
@@ -33,10 +35,10 @@ interface BluetoothRemoteGATTService {
 }
 
 interface BluetoothRemoteGATTServer {
-  connected: boolean;
+    connected: boolean;
   connect: () => Promise<BluetoothRemoteGATTServer>;
   getPrimaryService: (uuid: string) => Promise<BluetoothRemoteGATTService>;
-  disconnect: () => void;
+    disconnect: () => void;
 }
 
 interface BluetoothDevice {
@@ -108,13 +110,32 @@ export default function MissionPage() {
   const portRef = useRef<SerialPort | null>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
   const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const notifyCharacteristicRef = useRef<any>(null);
   const server = useRef<BluetoothRemoteGATTServer | null>(null);
   const keyStateRef = useRef<{ [key: string]: boolean }>({});
+  const blocklyRef = useRef<any>(null);
   const [isRunning, setIsRunning] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [showHeader, setShowHeader] = useState(false);
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
   const [showBLETroubleshootingModal, setShowBLETroubleshootingModal] = useState(false);
+  const [hasKeyboardBlocksPresent, setHasKeyboardBlocksPresent] = useState(false);
+  const [bleConnectionTimeout, setBleConnectionTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Function to check for keyboard blocks and update state
+  const checkForKeyboardBlocks = useCallback(() => {
+    console.log("checkForKeyboardBlocks called");
+    console.log("blocklyRef.current:", blocklyRef.current);
+    console.log("workspaceRef.current:", blocklyRef.current?.workspaceRef?.current);
+    
+    if (blocklyRef.current?.workspaceRef?.current) {
+      const hasBlocks = hasKeyboardBlocks(blocklyRef.current.workspaceRef.current);
+      setHasKeyboardBlocksPresent(hasBlocks);
+      console.log("Keyboard blocks detected:", hasBlocks);
+    } else {
+      console.log("Workspace not ready yet");
+    }
+  }, []);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -131,6 +152,12 @@ export default function MissionPage() {
 
   // Keyboard event handlers for mission control
   useEffect(() => {
+    // Only add event listeners if keyboard blocks are present
+    if (!hasKeyboardBlocksPresent) {
+      console.log("No keyboard blocks present, skipping event listeners");
+      return;
+    }
+
     const handleKeyDown = async (e: KeyboardEvent) => {
       const keyMap: Record<string, string> = {
         ArrowUp: "up",
@@ -249,7 +276,21 @@ export default function MissionPage() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [connectionStatus]);
+  }, [connectionStatus, hasKeyboardBlocksPresent]);
+
+  // Check for keyboard blocks when workspace changes
+  useEffect(() => {
+    // Check for keyboard blocks initially and set up an interval to check until workspace is ready
+    const checkInterval = setInterval(() => {
+      if (blocklyRef.current?.workspaceRef?.current) {
+        checkForKeyboardBlocks();
+        clearInterval(checkInterval);
+      }
+    }, 100);
+    
+    return () => clearInterval(checkInterval);
+  }, [checkForKeyboardBlocks]);
+
   const [showCountdown, setShowCountdown] = useState(false);
   const [forceHideIntro, setForceHideIntro] = useState(false);
 
@@ -336,85 +377,28 @@ export default function MissionPage() {
           console.log("Error closing serial port on cleanup:", error);
         }
       }
+      
+      // Cleanup BLE connection timeout
+      if (bleConnectionTimeout) {
+        clearTimeout(bleConnectionTimeout);
+      }
     };
-  }, []);
+  }, [bleConnectionTimeout]);
 
-  // Simple Bluetooth connection
-  const connectBluetooth = useCallback(async () => {
-    try {
-      console.log("Starting BLE connection...");
-      setConnectionStatus("connecting");
-      
-      // Request device
-      if (!bluetoothDeviceRef.current) {
-        console.log("Requesting BLE device...");
-        bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
-          filters: [{ name: "Neo" }],
-          optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
-        });
-        console.log("BLE device selected:", bluetoothDeviceRef.current.name);
-
-        // Handle disconnection
-        bluetoothDeviceRef.current.addEventListener(
-          "gattserverdisconnected",
-          async () => {
-            console.log("BLE device disconnected");
-            setIsConnected(false);
-            setConnectionStatus("disconnected");
-          }
-        );
-      }
-
-      if (!server.current?.connected) {
-        console.log("Connecting to GATT server...");
-        server.current = await bluetoothDeviceRef.current.gatt!.connect();
-        console.log(server.current);
-        const service = await server.current?.getPrimaryService(
-          "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-        );
-        console.log("service: ", service);
-        const characteristic = await service.getCharacteristic(
-          "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-        );
-        console.log("Write characteristic obtained:", characteristic);
-
-        writeCharacteristicRef.current = characteristic;
-        setConnectionStatus("connected");
-        setIsConnected(true);
-        setTryingToConnect(false);
-        console.log("BLE connection established successfully");
-      } else {
-        console.log("GATT server already connected");
-      }
-    } catch (e) {
-      console.error("BLE connection failed:", e);
-      const error = e as { name?: string };
-      // Check if user cancelled the device selection or no device found
-      if (error?.name === "NotFoundError" || error?.name === "NotAllowedError") {
-        console.log("Bluetooth connection canceled by user or no device found");
-        setConnectionStatus("disconnected");
-        setIsConnected(false);
-        setTryingToConnect(false);
-        
-        // Show troubleshooting modal after a short delay
-        setTimeout(() => {
-          setShowBLETroubleshootingModal(true);
-        }, 500);
-        
-        return; // Don't retry on user cancellation
-      }
-      
-      // Only retry for other types of errors if still trying to connect
-      setConnectionStatus("disconnected");
-      setIsConnected(false);
-      if (tryingToConnect) {
-        setTimeout(async () => {
-          setTryingToConnect(false);
-          await connectBluetooth();
-        }, 1000);
-      }
-    }
-  }, [tryingToConnect]);
+  // Simple Bluetooth connection using common utility
+  const connectBluetooth = useCallback(createBLEConnection({
+    bluetoothDeviceRef,
+    writeCharacteristicRef,
+    notifyCharacteristicRef,
+    server,
+    setIsConnected,
+    setConnectionStatus,
+    setTryingToConnect,
+    setShowBLETroubleshootingModal,
+    tryingToConnect,
+    bleConnectionTimeout,
+    setBleConnectionTimeout
+  }), [tryingToConnect, bleConnectionTimeout]);
 
   // Simple upload code
   const uploadCode = async (generatedCode: string) => {
@@ -485,8 +469,8 @@ export default function MissionPage() {
             }
             
             // Only set connected after successful port opening
-            setIsConnected(true);
-            setConnectionStatus("connected");
+          setIsConnected(true);
+          setConnectionStatus("connected");
             
             // Check for MicroPython and prompt installer if missing
             console.log("🔍 Checking for MicroPython...");
@@ -587,10 +571,10 @@ export default function MissionPage() {
     const savedState = MissionStatePersistence.getMissionState(id);
     if (savedState) {
       console.log("🔄 Loading saved mission state:", savedState);
-      setShowHeader(savedState.showHeader);
-      setForceHideIntro(savedState.forceHideIntro);
-      setShowCountdown(savedState.showCountdown);
-      setFromNo(savedState.fromNo);
+             setShowHeader(savedState.showHeader);
+       setForceHideIntro(savedState.forceHideIntro);
+       setShowCountdown(savedState.showCountdown);
+       setFromNo(savedState.fromNo);
       setCompletedMCQSteps(new Set(savedState.completedMCQSteps));
 
       // If we're resuming a mission that was already started, resume the timer
@@ -650,23 +634,23 @@ export default function MissionPage() {
     }
   }, [id]);
 
-  // Save mission state when it changes
-  useEffect(() => {
-    MissionStatePersistence.updateMissionState(id, {
-      showHeader,
-      forceHideIntro,
-      showCountdown,
-      fromNo,
-      completedMCQSteps: Array.from(completedMCQSteps),
-    });
-  }, [
-    id,
-    showHeader,
-    forceHideIntro,
-    showCountdown,
-    fromNo,
-    completedMCQSteps,
-  ]);
+     // Save mission state when it changes
+   useEffect(() => {
+     MissionStatePersistence.updateMissionState(id, {
+       showHeader,
+       forceHideIntro,
+       showCountdown,
+       fromNo,
+       completedMCQSteps: Array.from(completedMCQSteps),
+     });
+   }, [
+     id,
+     showHeader,
+     forceHideIntro,
+     showCountdown,
+     fromNo,
+     completedMCQSteps,
+   ]);
 
   // Stop timer when congratulations card is shown
   useEffect(() => {
@@ -696,7 +680,7 @@ export default function MissionPage() {
       window.dispatchEvent(new CustomEvent("generateCode"));
       // Small delay to ensure code is generated before upload
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("triggerCodeUpload"));
+      window.dispatchEvent(new CustomEvent("triggerCodeUpload"));
       }, 100);
     }
   };
@@ -1018,18 +1002,18 @@ export default function MissionPage() {
                 {/* Right Side - Message and Button */}
                 <div className="flex flex-col flex-1 ">
                   <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
-                    Nice!
-                  </div>
+                  Nice!
+                </div>
                   <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
                     Let&apos;s see if you are correct or wrong.
-                  </div>
+                </div>
                   <div className="flex justify-start">
-                    <button
-                      onClick={handleNiceContinue}
+                <button
+                  onClick={handleNiceContinue}
                       className="px-6 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800"
-                    >
-                      Continue
-                    </button>
+                >
+                  Continue
+                </button>
                   </div>
                 </div>
               </div>
@@ -1197,6 +1181,7 @@ export default function MissionPage() {
           <SideNavbar />
           <div className="flex-1 overflow-hidden relative z-30">
             <BlocklySplitLayout
+              ref={blocklyRef}
               mission={mission}
               sidebarCollapsed={sidebarCollapsed}
               onStateChange={handleStateChange}
@@ -1214,6 +1199,7 @@ export default function MissionPage() {
               onFinish={stopTimerAndCalculateTime}
               onUploadCode={uploadCode}
               isUploading={isUploading}
+              onWorkspaceChange={checkForKeyboardBlocks}
             />
           </div>
 
@@ -1325,18 +1311,18 @@ export default function MissionPage() {
                 {/* Right Side - Message and Button */}
                 <div className="flex flex-col flex-1">
                   <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
-                    Nice!
-                  </div>
+                  Nice!
+                </div>
                   <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
                     Let&apos;s see if you are correct or wrong.
-                  </div>
+                </div>
                   <div className="flex justify-start">
-                    <button
-                      onClick={handleNiceContinue}
+                <button
+                  onClick={handleNiceContinue}
                       className="px-6 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800"
-                    >
-                      Continue
-                    </button>
+                >
+                  Continue
+                </button>
                   </div>
                 </div>
               </div>

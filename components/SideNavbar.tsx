@@ -242,14 +242,14 @@ export default function SideNavbar({
     };
   }, []);
 
-  // Refresh data periodically to catch changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchUserDataFromSupabase();
-    }, 30000); // Refresh every 30 seconds
+  // // Refresh data periodically to catch changes
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     fetchUserDataFromSupabase();
+  //   }, 30000); // Refresh every 30 seconds
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // Try to create user profile if it doesn't exist
   const createUserProfileIfNeeded = async () => {
@@ -307,13 +307,6 @@ export default function SideNavbar({
       return () => clearTimeout(timer);
     }
   }, [supabaseUserData]);
-
-  // We'll use the user data from Supabase table (what user selected during signup)
-  console.log('🔍 Using user data from Supabase table:', {
-    supabaseUserData,
-    userData,
-    registrationData
-  });
 
   // ---- load from localStorage
   const refreshFromLocalStorage = () => {
@@ -446,17 +439,6 @@ export default function SideNavbar({
   })();
 
   const finalName = userName || "User";
-
-  // Debug logging
-  console.log('🔍 SideNavbar data sources:', {
-    supabaseUserData,
-    lsAvatar,
-    lsName,
-    userData: { avatar: userData?.avatar, name: userData?.name },
-    registrationData: { avatar: registrationData.avatar, name: registrationData.name },
-    finalAvatar: finalAvatar,
-    finalName: finalName
-  });
 
   const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
 
