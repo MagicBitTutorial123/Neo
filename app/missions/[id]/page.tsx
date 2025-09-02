@@ -83,6 +83,15 @@ import Image from "next/image";
 type MissionsType = typeof missions;
 type MissionKey = keyof MissionsType;
 
+interface NotifiableCharacteristic extends BluetoothRemoteGATTCharacteristic {
+  startNotifications: () => Promise<NotifiableCharacteristic | void>;
+  addEventListener: (
+    type: "characteristicvaluechanged",
+    listener: (ev: Event) => void
+  ) => void;
+  value?: DataView;
+}
+
 export default function MissionPage() {
   const params = useParams();
   const router = useRouter();
@@ -110,10 +119,11 @@ export default function MissionPage() {
   const portRef = useRef<SerialPort | null>(null);
   const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
   const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
-  const notifyCharacteristicRef = useRef<any>(null);
+  const notifyCharacteristicRef = useRef<NotifiableCharacteristic | null>(null);
   const server = useRef<BluetoothRemoteGATTServer | null>(null);
   const keyStateRef = useRef<{ [key: string]: boolean }>({});
-  const blocklyRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blocklyRef = useRef<{ getCurrentCode: () => string; workspaceRef: React.RefObject<any> } | null>(null);
   
   // BLE connection stability improvements
   const bleCommandQueue = useRef<Array<{ command: string; retries: number }>>([]);

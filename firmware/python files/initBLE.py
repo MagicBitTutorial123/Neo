@@ -244,9 +244,6 @@ async def start_ble_service():
                                 
                         # Send data 5 times per second
                         await asyncio.sleep(0.2)
-                    else:
-                        # No connections, sleep longer
-                        await asyncio.sleep(0.5)
                         
                 except Exception as e:
                     print(f"Analog sensor loop error: {e}")
@@ -283,16 +280,9 @@ async def start_ble_service():
                 except Exception as e:
                     print(f"BLE processing error: {e}")
             
-            # Show status every 10 seconds
-            current_time = time.ticks_ms() if hasattr(time, 'ticks_ms') else int(time.time() * 1000)
-            if current_time - last_status_time > 10000:  # 10 seconds
-                if len(uart._connections) > 0:
-                    print("Status: Connected - streaming analog data")
-                else:
-                    print("Status: No connections - waiting for connection")
-                last_status_time = current_time
-            
-            await asyncio.sleep(0.01)
+       
+              
+            await asyncio.sleep(0.1)
             
     except Exception as e:
         print(f"BLE service error: {e}")
