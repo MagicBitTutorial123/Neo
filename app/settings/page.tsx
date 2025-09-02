@@ -893,7 +893,7 @@ export default function SettingsPage() {
                          </p>
                          {isOAuthSuccess && (
                            <p className="text-blue-600 text-xs">
-                             💡 You can review and edit the auto-populated information below, then click "Save" to complete your profile.
+                             💡 You can review and edit the auto-populated information below, then click &quot;Save&quot; to complete your profile.
                            </p>
                          )}
                        </div>
@@ -1262,7 +1262,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-red-700 mb-2">
-                  Type "DELETE" to confirm
+                  Type &quot;DELETE&quot; to confirm
                 </label>
                 <input
                   type="text"

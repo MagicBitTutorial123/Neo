@@ -82,7 +82,7 @@ export default function FAQPage() {
             Frequently Asked Questions
           </h1>
           <p className="text-lg text-[#4A5568] max-w-2xl mx-auto">
-            Find answers to common questions about Neo. Can't find what you're looking for? 
+            Find answers to common questions about Neo. Can&apos;t find what you&apos;re looking for? 
             <Link href="/contact" className="text-[#4A90E2] hover:text-[#357ABD] font-medium ml-1">
               Contact us
             </Link>

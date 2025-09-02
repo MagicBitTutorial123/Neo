@@ -137,7 +137,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="text-lg text-[#4A5568] max-w-2xl mx-auto">
-            Have a question or need help? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            Have a question or need help? We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export default function ContactPage() {
                    <span className="font-medium">Message sent successfully!</span>
                  </div>
                  <p className="text-green-700 text-sm mt-1">
-                   We'll get back to you as soon as possible. Check your email for confirmation.
+                   We&apos;ll get back to you as soon as possible. Check your email for confirmation.
                  </p>
                </div>
              )}

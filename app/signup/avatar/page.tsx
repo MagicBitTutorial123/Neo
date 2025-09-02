@@ -310,6 +310,7 @@ export default function SignupAvatar() {
       console.log('✅ Profile will be created automatically by database trigger');
       console.log('🔍 User metadata from Supabase:', authData.user.user_metadata);
       console.log('🔍 User data from Supabase:', authData.user);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       console.log('🔍 User session status:', (authData as any).session ? 'Active' : 'No session');
       console.log('🔍 User email confirmed:', authData.user.email_confirmed_at ? 'Yes' : 'No');
       
