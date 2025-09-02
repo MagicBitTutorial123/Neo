@@ -14,6 +14,9 @@ export default function SignupSetPassword() {
 
   // Add navigation guard to ensure user has completed previous steps
   useEffect(() => {
+    // Check if this is a Google OAuth user
+    const isGoogleOAuth = localStorage.getItem("isGoogleOAuth") === "true";
+    
     const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
     const phone = localStorage.getItem("fullPhone");
     const name = localStorage.getItem("name");
@@ -25,10 +28,13 @@ export default function SignupSetPassword() {
       return;
     }
     
-    if (!phone || !phone.trim()) {
-      alert("Please complete the phone verification step first");
-      router.push("/signup/phone");
-      return;
+    // Google OAuth users skip phone verification, regular users need it
+    if (!isGoogleOAuth) {
+      if (!phone || !phone.trim()) {
+        alert("Please complete the phone verification step first");
+        router.push("/signup/phone");
+        return;
+      }
     }
     
     if (!name || !name.trim()) {
