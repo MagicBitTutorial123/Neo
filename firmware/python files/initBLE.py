@@ -10,13 +10,13 @@ import time
 import bluetooth
 
 # GPIO pins that can be reset
-GPIO_PINS = [0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
+GPIO_PINS = [2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
 
 # Global task reference
 main_task = None
 
 # Pin definitions - only analog input pins
-ANALOG_PINS = [0, 2, 4,  12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 39]
+ANALOG_PINS = [2, 4,12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 39]
 writing_code = False
 code = ""
 ULTRASOUND_PIN = Pin(26, Pin.OUT)  # single pin
@@ -246,7 +246,7 @@ async def start_ble_service():
                         await asyncio.sleep(0.2)
                     else:
                         # No connections, sleep longer
-                        await asyncio.sleep(1.0)
+                        await asyncio.sleep(0.5)
                         
                 except Exception as e:
                     print(f"Analog sensor loop error: {e}")

@@ -553,6 +553,23 @@ export default function MissionPage() {
 
   const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
     if (isConnected) onConnectToggle(false);
+    
+    // If switching from serial to BLE, ensure serial port is closed
+    if (connectionType === "serial" && type === "bluetooth") {
+      if (portRef.current) {
+        try {
+          const port = portRef.current;
+          if (port && (port.readable || port.writable)) {
+            console.log("🔌 Closing serial port before switching to BLE");
+            port.close();
+          }
+        } catch (error) {
+          console.log("Error closing serial port during switch:", error);
+        }
+        portRef.current = null;
+      }
+    }
+    
     setConnectionType(type);
   };
 
