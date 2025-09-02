@@ -10,6 +10,7 @@ import { useUser } from "@/context/UserContext";
 import BasicAuthGuard from "@/components/BasicAuthGuard";
 import { supabase } from "@/lib/supabaseClient";
 
+
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
 
@@ -39,10 +40,57 @@ export default function HomePage() {
   const { userData } = useUser();
   const [isFirstTimeOAuth, setIsFirstTimeOAuth] = useState(false);
   const [showProfileUpdateNotification, setShowProfileUpdateNotification] = useState(false);
+  const [userName, setUserName] = useState<string>("");
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
   const [isNewUser,setIsNewUser] = useState(false)
+
+  // Get user name from localStorage
+  useEffect(() => {
+    const getUserName = () => {
+      try {
+        // Check all possible localStorage keys for name
+        const possibleKeys = [
+          "userData",
+          "registrationData", 
+          "name",
+          "googleOAuthName"
+        ];
+        
+        for (const key of possibleKeys) {
+          const value = localStorage.getItem(key);
+          
+          if (value) {
+            try {
+              const parsed = JSON.parse(value);
+              if (parsed.name) {
+                return parsed.name;
+              }
+            } catch {
+              // If it's not JSON, it might be a direct string value
+              if (key === "name" || key === "googleOAuthName") {
+                return value;
+              }
+            }
+          }
+        }
+
+        // Also check userData from context
+        if (userData?.name) {
+          return userData.name;
+        }
+
+        return "";
+      } catch (error) {
+        console.error("Error reading user name from localStorage:", error);
+        return "";
+      }
+    };
+
+    const name = getUserName();
+    setUserName(name);
+  }, [userData]);
 
   // On mount, set hydrated state and check for new user query param
   useEffect(() => {
@@ -82,6 +130,7 @@ export default function HomePage() {
     
     // Check if this is a first-time Google OAuth user
     const checkFirstTimeOAuth = async () => {
+      
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -207,7 +256,7 @@ export default function HomePage() {
     { src: "/badge5.png", alt: "Badge5", earned: false },
     { src: "/badge6.png", alt: "Badge6", earned: false },
     { src: "/badge6.png", alt: "Badge7", earned: false },
-    { src: "/badge8.png", alt: "Badge8", earned: false },
+    { src: "/badge5.png", alt: "Badge8", earned: false },
   ];
 
   // Dummy battery level (0-100)
@@ -219,6 +268,8 @@ export default function HomePage() {
   const newUserContent = useMemo(() => {
       return (
         <div className="flex flex-1 w-full h-full relative animate-fade-in">
+
+          
           <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
             <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
               {mainTextStep}
@@ -252,11 +303,13 @@ export default function HomePage() {
       );
     }
   
-  , [router, mainTextStep, subTextStep, nextMission]);
+  , [router, mainTextStep, subTextStep, nextMission, userName]);
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
     <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
+
+
       {/* Mobile Mission Progress Bar - Top of page */}
       <div className="lg:hidden w-full flex flex-col items-center mb-4">
         <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -283,10 +336,7 @@ export default function HomePage() {
               Welcome back!
             </span>
             <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
-              {userData?.name}{" "}
-              {/* <span className="inline-block">
-                <Image src="/User.png" alt="User" width={32} height={32} />
-              </span> */}
+              {userName || userData?.name || "there"}{" "}
             </div>
           </div>
           {/* Mission Card */}
@@ -515,33 +565,8 @@ export default function HomePage() {
            
            
            {/* Profile Update Notification for Google Users */}
-           {showProfileUpdateNotification && (
-             <div className="w-full max-w-4xl mx-auto mt-6 px-4">
-               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                 <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                     </svg>
-                   </div>
-                   <div className="flex-1">
-                     <h3 className="text-sm font-semibold text-blue-900">
-                       Complete Your Profile
-                     </h3>
-                     <p className="text-xs text-blue-700">
-                       Please visit settings to add your details and choose an avatar
-                     </p>
-                   </div>
-                   <button
-                     onClick={() => router.push('/settings')}
-                     className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
-                   >
-                     Go to Settings
-                   </button>
-                 </div>
-               </div>
-             </div>
-           )}
+          
+           
            
                        {/* Smart Content Routing */}
             {shouldShowOnboarding ? (
