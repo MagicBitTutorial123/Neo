@@ -14,7 +14,8 @@ import Header from "@/components/StatusHeaderBar";
 import { keyboardSendBLE } from "@/utils/keyboardPress";
 import { hasKeyboardBlocks } from "@/utils/keyboardBlockDetector";
 import FirmwareInstallModal from "@/components/FirmwareInstallModal";
-import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
+import BLETroubleshootingModal from "@/components/BLETroubleshootingModal";
+import { checkIfMicroPythonNeeded, checkIfFilesMissing } from "@/utils/firmwareInstaller";
 import AIChatbot from "@/components/AI/chatbot";
 import "@/components/AI/chatbot.css";
 
@@ -84,7 +85,9 @@ export default function Playground() {
   
 
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
+  const [showBLETroubleshootingModal, setShowBLETroubleshootingModal] = useState(false);
   const [hasKeyboardBlocksPresent, setHasKeyboardBlocksPresent] = useState(false);
+  const [bleConnectionTimeout, setBleConnectionTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Dashboard widget state
   const [widgets, setWidgets] = useState<Array<{ id: string; type: string; props: Record<string, unknown> }>>([]);
@@ -359,11 +362,21 @@ export default function Playground() {
     };
   }, [connectionStatus, hasKeyboardBlocksPresent]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (bleConnectionTimeout) {
+        clearTimeout(bleConnectionTimeout);
+      }
+    };
+  }, [bleConnectionTimeout]);
+
   // Simple Bluetooth connection
   const connectBluetooth = useCallback(async () => {
     try {
       setConnectionStatus("connecting");
-      // Request device
+      
+      // Request device with timeout handling
       if (!bluetoothDeviceRef.current) {
         const navBle = (
           navigator as unknown as {
@@ -375,6 +388,7 @@ export default function Playground() {
             };
           }
         ).bluetooth;
+        
         bluetoothDeviceRef.current = await navBle.requestDevice({
           filters: [{ name: "Neo" }],
           optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
@@ -477,6 +491,13 @@ export default function Playground() {
         setConnectionStatus("connected");
         setIsConnected(true);
         setTryingToConnect(false);
+        
+        // Clear the timeout since connection was successful
+        if (bleConnectionTimeout) {
+          clearTimeout(bleConnectionTimeout);
+          setBleConnectionTimeout(null);
+        }
+        
         try {
           window.dispatchEvent(
             new CustomEvent("bleConnection", { detail: { connected: true } })
@@ -486,12 +507,24 @@ export default function Playground() {
     } catch (error) {
       console.error("Connection failed:", error);
       
-      // Check if user cancelled the device selection
+      // Clear the timeout since connection failed
+      if (bleConnectionTimeout) {
+        clearTimeout(bleConnectionTimeout);
+        setBleConnectionTimeout(null);
+      }
+      
+      // Check if user cancelled the device selection or no device found
       if (error instanceof Error && (error.name === "NotFoundError" || error.name === "NotAllowedError")) {
-        console.log("Bluetooth connection canceled by user");
+        console.log("Bluetooth connection canceled by user or no device found");
         setConnectionStatus("disconnected");
         setIsConnected(false);
-        setTryingToConnect(false); // Stop trying to connect
+        setTryingToConnect(false);
+        
+        // Show troubleshooting modal after a short delay
+        setTimeout(() => {
+          setShowBLETroubleshootingModal(true);
+        }, 500);
+        
         return; // Don't retry on user cancellation
       }
       
@@ -505,7 +538,7 @@ export default function Playground() {
         }, 2000);
       }
     }
-  }, [tryingToConnect]);
+  }, [tryingToConnect, bleConnectionTimeout]);
 
 
 
@@ -580,7 +613,16 @@ export default function Playground() {
             
             // Check for MicroPython and prompt installer if missing
             const needs = await checkIfMicroPythonNeeded(port, undefined);
-            if (needs) setShowFirmwareModal(true);
+            if (needs) {
+              setShowFirmwareModal(true);
+            } else {
+              // MicroPython is present, check if all required files exist
+              const filesMissing = await checkIfFilesMissing(port, undefined);
+              console.log("filesMissing: ", filesMissing);
+              if (filesMissing) {
+                setShowFirmwareModal(true);
+              }
+            }
             
           } catch (error) {
             console.error("Serial connection failed:", error);
@@ -991,11 +1033,21 @@ export default function Playground() {
           </div>
         </div>
       </div>
-      <FirmwareInstallModal 
-        open={showFirmwareModal} 
-        onClose={() => setShowFirmwareModal(false)} 
-        portRef={portRef}
-      />
+              <FirmwareInstallModal
+          open={showFirmwareModal}
+          onClose={() => setShowFirmwareModal(false)}
+          portRef={portRef}
+        />
+        
+        <BLETroubleshootingModal
+          open={showBLETroubleshootingModal}
+          onClose={() => setShowBLETroubleshootingModal(false)}
+          onSwitchToSerial={() => {
+            setShowBLETroubleshootingModal(false);
+            setConnectionType("serial");
+            setShowFirmwareModal(true);
+          }}
+        />
       <AIChatbot workspaceRef={blocklyRef.current?.workspaceRef} onClose={() => {}} />
     </div>
   );

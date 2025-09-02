@@ -111,12 +111,12 @@ const firmwareInstaller = async (portRef, onProgress, abortSignal) => {
       // Short delay to allow device reboot and port settle
       await new Promise(r => setTimeout(r, 1000));
     } else {
-      if (onProgress) onProgress(12, `MicroPython found. Loading Python files...`);
+      if (onProgress) onProgress(12, `MicroPython found. Preparing installation...`);
     }
 
     // Load firmware files dynamically from the API
     checkCancelled();
-    if (onProgress) onProgress(15, `Loading Python files...`);
+    if (onProgress) onProgress(15, `Preparing firmware files...`);
     
     let firmwareFiles;
     try {
@@ -139,12 +139,69 @@ const firmwareInstaller = async (portRef, onProgress, abortSignal) => {
     const installedCount = await installPythonFiles(port, firmwareFiles, onProgress, abortSignal);
     checkCancelled();
 
+    // Wait a moment for the REPL to settle after file installation
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Verify all files were successfully installed
+    if (onProgress) onProgress(95, `Verifying installation...`);
+    checkCancelled();
+    
+    const filesStillMissing = await checkIfFilesMissing(port, onProgress);
+    
+    if (filesStillMissing) {
+      console.log("Some files are still missing after installation, attempting to install again...");
+      if (onProgress) onProgress(96, `Ensuring all files are properly installed...`);
+      
+      // Try to install files again
+      const retryInstalledCount = await installPythonFiles(port, firmwareFiles, onProgress, abortSignal);
+      checkCancelled();
+      
+      // Final verification
+      const finalCheck = await checkIfFilesMissing(port, onProgress);
+      if (finalCheck) {
+        console.warn("Some files are still missing after retry attempt");
+        if (onProgress) onProgress(98, `Finalizing installation...`);
+      } else {
+        console.log("All files successfully installed after retry");
+        if (onProgress) onProgress(99, `Installation verified successfully`);
+      }
+    } else {
+      console.log("All files successfully installed on first attempt");
+      if (onProgress) onProgress(99, `Installation verified successfully`);
+    }
+
+    // Reset the device to ensure proper startup
+    if (onProgress) onProgress(99, `Resetting device...`);
+    checkCancelled();
+    
+    try {
+      // Send reset command to the device
+      const encoder = new TextEncoderStream();
+      const outputDone = encoder.readable.pipeTo(port.writable);
+      const writer = encoder.writable.getWriter();
+      
+      // Send Ctrl+D to soft reset the device
+      await writer.write('\x04');
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await writer.write('\x04');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Close the writer
+      await writer.close();
+      await outputDone;
+      
+      console.log("Device reset command sent successfully");
+    } catch (resetError) {
+      console.warn("Error sending reset command:", resetError);
+      // Don't fail the installation if reset fails
+    }
+
     // Installation complete
-    if (onProgress) onProgress(100, `Firmware installation complete!`);
+    if (onProgress) onProgress(100, `Firmware installation complete! Device reset.`);
     
     return {
       success: true,
-      message: `Successfully installed ${installedCount} firmware files with MicroPython`,
+      message: `Successfully installed ${installedCount} firmware files with MicroPython. Device has been reset.`,
       filesInstalled: installedCount
     };
 
@@ -239,11 +296,10 @@ export const checkIfMicroPythonNeeded = async (port, onProgress) => {
     } finally {
       // If a read is pending, cancel it to avoid hanging
       try { await reader.cancel(); } catch (cancelError) { console.log('Reader cancel error:', cancelError); }
-    }
-    
+          }
+      
     // Check if response contains MicroPython indicators
-    const hasMicroPython = response.includes('micropython_check') || 
-                          response.includes('>>>') || 
+    const hasMicroPython = response.includes('>>>') || 
                           response.includes('MicroPython');
     
     if (hasMicroPython) {
@@ -388,7 +444,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
       checkCancelled();
       if (onProgress) onProgress(
         20 + (installedCount / totalFiles) * 75, 
-        `Installing ${file.name}...`
+        `Installing firmware files... (${installedCount + 1}/${totalFiles})`
       );
 
       console.log(`Writing ${file.name}...`);
@@ -410,7 +466,7 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
       installedCount++;
       if (onProgress) onProgress(
         20 + (installedCount / totalFiles) * 75, 
-        `Installed ${file.name} (${installedCount}/${totalFiles})`
+        `Installing firmware files... (${installedCount}/${totalFiles})`
       );
     }
 
@@ -424,6 +480,149 @@ const installPythonFiles = async (port, firmwareFiles, onProgress, abortSignal) 
   } catch (error) {
     console.error("Error installing Python files:", error);
     throw error;
+  }
+};
+
+// Function to check if required Python files are missing
+export const checkIfFilesMissing = async (port, onProgress) => {
+  let writer = null;
+  let reader = null;
+  
+  try {
+    if (onProgress) onProgress(7, `Checking for required Python files...`);
+    
+    // Check if port is locked
+    if (port.writable.locked || port.readable.locked) {
+      console.log('Port is locked, assuming files are missing');
+      return true; // Assume files are missing if port is locked
+    }
+    
+    // Open port if not already open
+    if (!port.readable || !port.writable) {
+      await port.open({ baudRate: 115200 });
+    }
+    
+    // Set up writer and reader
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+
+    const textEncoder = new TextEncoder();
+    const textDecoder = new TextDecoder();
+
+    // Try to communicate with MicroPython REPL
+    // Send Ctrl+C a couple of times to break out of any running program
+    await writer.write(new Uint8Array([0x03]));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await writer.write(new Uint8Array([0x03]));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    
+    // Ensure we're in normal REPL mode (not raw mode)
+    await writer.write(new Uint8Array([0x02])); // Ctrl+B to exit raw mode
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await writer.write(new Uint8Array([0x02])); // Ctrl+B again to be sure
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Send a test command first to ensure we're in normal REPL mode
+    await writer.write(textEncoder.encode('\r\n'));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await writer.write(textEncoder.encode('print("repl_test")\r\n'));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    
+    // Now send command to list files
+    await writer.write(textEncoder.encode('import os; files = os.listdir(); print("FILES:", files)\r\n'));
+
+    // Read response with a real timeout loop (max ~3000ms)
+    let response = '';
+    const startMs = Date.now();
+    const readWithTimeout = async (ms) =>
+      Promise.race([
+        reader.read(),
+        new Promise((resolve) => setTimeout(() => resolve({ timeout: true }), ms)),
+      ]);
+
+    try {
+      while (Date.now() - startMs < 3000) {
+        const result = await readWithTimeout(200);
+        if (result && result.timeout) {
+          continue;
+        }
+        const { value, done } = result;
+        if (done) {
+          break;
+        }
+        if (value && value.length) {
+          const chunk = textDecoder.decode(value);
+          response += chunk;
+          // Look for the FILES: output or the test command response
+          if (response.includes('FILES:') || response.includes('repl_test')) {
+            break;
+          }
+        }
+      }
+      if (response) {
+        console.log('File check response:', response);
+      }
+    } catch (readError) {
+      console.log('Error reading file list response:', readError);
+    } finally {
+      // If a read is pending, cancel it to avoid hanging
+      try { await reader.cancel(); } catch (cancelError) { console.log('Reader cancel error:', cancelError); }
+    }
+    
+    // Required files that should be present (matching the actual files in the directory)
+    const requiredFiles = [
+      'boot.py',
+      'main.py', 
+      'initBLE.py',
+      'ble_advertising.py',
+      'ble_uart_peripheral.py',
+      'keyboardhandler.py'
+    ];
+    
+    // Check if all required files are present in the response
+    // Look for the files in the FILES: list specifically
+    const missingFiles = requiredFiles.filter(file => {
+      // Look for the file in the response, accounting for different quote styles
+      const hasFile = response.includes(`'${file}'`) || 
+                     response.includes(`"${file}"`) || 
+                     response.includes(` ${file} `) ||
+                     response.includes(`[${file}]`) ||
+                     response.includes(file);
+      console.log(`Checking for ${file}: ${hasFile ? 'FOUND' : 'MISSING'}`);
+      return !hasFile;
+    });
+    
+    if (missingFiles.length > 0) {
+      console.log('Missing files:', missingFiles);
+      console.log('Full response:', response);
+      if (onProgress) onProgress(9, `Verifying file installation...`);
+      return true; // Files are missing
+    } else {
+      console.log('All required files are present');
+      if (onProgress) onProgress(9, `All files verified successfully`);
+      return false; // All files are present
+    }
+    
+  } catch (error) {
+    console.log("Error checking for files:", error);
+    if (onProgress) onProgress(9, `Could not check files - will reinstall`);
+    return true; // Assume files are missing if we can't check
+  } finally {
+    // Clean up resources
+    try {
+      if (writer) {
+        await writer.releaseLock();
+      }
+    } catch (e) {
+      console.log('Error releasing writer:', e);
+    }
+    try {
+      if (reader) {
+        await reader.releaseLock();
+      }
+    } catch (e) {
+      console.log('Error releasing reader:', e);
+    }
   }
 };
 
