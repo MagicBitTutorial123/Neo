@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   email TEXT NOT NULL,
   phone TEXT,
   full_name TEXT,
-  age INTEGER CHECK (age >= 13 AND age <= 120),
+  age INTEGER CHECK (age >= 5 AND age <= 120),
   avatar TEXT,
   bio TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
