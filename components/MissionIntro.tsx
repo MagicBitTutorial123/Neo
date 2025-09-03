@@ -32,8 +32,13 @@ export default function MissionIntro({
   const { sidebarCollapsed } = useSidebar();
 
   const handleStart = () => {
+    console.log(
+      "🎯 MissionIntro: handleStart called for mission",
+      missionNumber
+    );
     setShowCountdown(true);
     onStart?.();
+    console.log("🎯 MissionIntro: onStart callback executed");
     // Only call handleGo if onMissionStart is not provided (standalone usage)
     if (!onMissionStart) {
       handleGo();

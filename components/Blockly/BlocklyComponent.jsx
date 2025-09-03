@@ -1,5 +1,12 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import blocksTabIcon from "@/assets/blocksTabIcon.svg";
 import codingIcon from "@/assets/codingIcon.svg";
 import dashboardIcon from "@/assets/dashboardIcon.svg";
@@ -22,10 +29,13 @@ import { useSidebar } from "@/context/SidebarContext";
 
 Blockly.setLocale(En);
 
-const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }, ref) => {
+const BlocklyComponent = (
+  { generatedCode, setGeneratedCode, onWorkspaceChange },
+  ref
+) => {
   // Sidebar context
   const { sidebarCollapsed } = useSidebar();
-  
+
   // State management
   const [activeTab, setActiveTab] = useState("Blocks");
   const [expandMenu, setExpandMenu] = useState(false);
@@ -37,7 +47,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   const [latestDigitalByPin, setLatestDigitalByPin] = useState({});
   const [widgetData, setWidgetData] = useState({});
   const [sensorHistory, setSensorHistory] = useState({});
-  
+
   // Python code editing state
   const [editableCode, setEditableCode] = useState("");
   const [codeHasBeenEdited, setCodeHasBeenEdited] = useState(false);
@@ -46,11 +56,11 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   const workspaceRef = useRef(null);
   const isLoadingWorkspace = useRef(false);
 
-     // Constants
-   const ANALOG_PINS = [
-     0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
-     34, 35, 36, 39,
-   ];
+  // Constants
+  const ANALOG_PINS = [
+    0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33,
+    34, 35, 36, 39,
+  ];
 
   // Utility functions
   const removeWidget = (id) =>
@@ -95,7 +105,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
           colour: "#FF33CC",
           contents: [
             { kind: "block", type: "keyboard_when_key_pressed" },
-            { kind: "block", type: "keyboard_when_custom_key_pressed" }
+            { kind: "block", type: "keyboard_when_custom_key_pressed" },
           ],
         },
         {
@@ -312,7 +322,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
 
     // Calculate sidebar width and toolbox position
     const sidebarWidth = 120;
-    const toolboxLeftMargin = sidebarWidth -100;
+    const toolboxLeftMargin = sidebarWidth - 100;
 
     const style = document.createElement("style");
     style.id = "blockly-dynamic-styles";
@@ -543,7 +553,6 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       console.error("Error initializing workspace:", error);
     }
   };
-  
 
   // Load saved workspace state and handle tab switching
   useEffect(() => {
@@ -566,7 +575,10 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       }
     } else if (activeTab == "Code") {
       // Dispose workspace when leaving Blocks so it can re-init on return
-      if (workspaceRef.current && typeof workspaceRef.current.dispose === "function") {
+      if (
+        workspaceRef.current &&
+        typeof workspaceRef.current.dispose === "function"
+      ) {
         try {
           workspaceRef.current.dispose();
         } catch {}
@@ -621,17 +633,17 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     }
   };
 
-    useEffect(() => {
+  useEffect(() => {
     const handler = (e) => {
       const detail = e?.detail || {};
       const sensor = detail.sensor;
       const value = detail.value;
-   
+
       // Handle Micropython analog_sensors format
       if (sensor === "analog" && detail?.pin !== undefined) {
         const pin = detail.pin;
         setLatestAnalogByPin((prev) => ({ ...prev, [pin]: value }));
-   
+
         setSensorHistory((prev) => {
           const newHistory = { ...prev };
           if (!newHistory[`pin_${pin}`]) {
@@ -643,44 +655,49 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
           return newHistory;
         });
 
-                 // Update widgetData for graph and gauge widgets that use this pin
-         setWidgetData((prev) => {
-           const newWidgetData = { ...prev };
-           
-           // Find all graph and gauge widgets that use this pin
-           widgets.forEach((widget) => {
-             if ((widget.type === "graph" || widget.type === "gauge") && widget.props.pin === pin) {
-               if (!newWidgetData[widget.id]) {
-                 newWidgetData[widget.id] = {};
-               }
-               newWidgetData[widget.id] = {
-                 ...newWidgetData[widget.id],
-                 value: Number(value),
-                 history: newWidgetData[widget.id].history || []
-               };
-               
-               // Update history for graph widgets (gauge widgets don't need history)
-               if (widget.type === "graph") {
-                 const existingHistory = newWidgetData[widget.id].history;
-                 const updatedHistory = [...existingHistory, Number(value)].slice(-60);
-                 newWidgetData[widget.id].history = updatedHistory;
-               }
-             }
-           });
-           
-           return newWidgetData;
-         });
-      }
+        // Update widgetData for graph and gauge widgets that use this pin
+        setWidgetData((prev) => {
+          const newWidgetData = { ...prev };
 
-   
+          // Find all graph and gauge widgets that use this pin
+          widgets.forEach((widget) => {
+            if (
+              (widget.type === "graph" || widget.type === "gauge") &&
+              widget.props.pin === pin
+            ) {
+              if (!newWidgetData[widget.id]) {
+                newWidgetData[widget.id] = {};
+              }
+              newWidgetData[widget.id] = {
+                ...newWidgetData[widget.id],
+                value: Number(value),
+                history: newWidgetData[widget.id].history || [],
+              };
+
+              // Update history for graph widgets (gauge widgets don't need history)
+              if (widget.type === "graph") {
+                const existingHistory = newWidgetData[widget.id].history;
+                const updatedHistory = [
+                  ...existingHistory,
+                  Number(value),
+                ].slice(-60);
+                newWidgetData[widget.id].history = updatedHistory;
+              }
+            }
+          });
+
+          return newWidgetData;
+        });
+      }
     };
-   
+
     window.addEventListener("sensorData", handler);
-    return () => {window.removeEventListener("sensorData", handler);
+    return () => {
+      window.removeEventListener("sensorData", handler);
       // window.removeEventListener("blocklyWorkspaceChange", blocklyWorkspaceChange);
-    }
+    };
   }, [widgets]);
-  
+
   // Handle BLE connection state
   useEffect(() => {
     const handleBleConnection = (event) => {
@@ -691,7 +708,6 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     return () =>
       window.removeEventListener("bleConnection", handleBleConnection);
   }, []);
-
 
   // Handle tab switching with code editing warning
   const handleTabSwitch = (newTab) => {
@@ -752,7 +768,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   // }, [activeTab]);
 
   // Handle workspace clearing
-  
+
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (workspaceRef.current && activeTab === "Blocks") {
@@ -783,7 +799,11 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     const margin = { top: 12, right: 16, bottom: 32, left: 44 };
     const width = outerWidth - margin.left - margin.right;
     const height = outerHeight - margin.top - margin.bottom;
-    const points = series.length ? series : (latestAnalogByPin[pin] ? [latestAnalogByPin[pin]] : [0]);
+    const points = series.length
+      ? series
+      : latestAnalogByPin[pin]
+      ? [latestAnalogByPin[pin]]
+      : [0];
 
     // Fixed scale for analog values (0-4095)
     const yMin = 0;
@@ -802,7 +822,6 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     const xTickIdx = Array.from({ length: xTickCount + 1 }, (_, i) =>
       Math.round((i * (n - 1)) / xTickCount)
     );
-
 
     return (
       <div className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:col-span-1 lg:col-span-2">
@@ -907,19 +926,28 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   };
 
   // Calculate dynamic margin based on sidebar state
-  const sidebarWidth = sidebarCollapsed ? 65 : window.location.href.includes("missions") ? 65 : 235;
-  const instructionColumnWidth = window.location.href.includes("missions") ? -50 : window.location.href.includes("playground") ? 30 : -50; // Mission page needs smaller gap (-50), playground keeps current gap (30)
-  const consistentGap =1 ; // Reduced gap between instruction and Blockly
-  const containerMarginLeft = sidebarWidth + instructionColumnWidth + consistentGap;
+  const sidebarWidth = sidebarCollapsed
+    ? 65
+    : window.location.href.includes("missions")
+    ? 65
+    : 235;
+  const instructionColumnWidth = window.location.href.includes("missions")
+    ? -50
+    : window.location.href.includes("playground")
+    ? 30
+    : -50; // Mission page needs smaller gap (-50), playground keeps current gap (30)
+  const consistentGap = 1; // Reduced gap between instruction and Blockly
+  const containerMarginLeft =
+    sidebarWidth + instructionColumnWidth + consistentGap;
 
   return (
     <div className="h-full bg-white flex flex-col">
       <div
         className="relative gap-3px my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
-        style={{ 
+        style={{
           borderRadius: "48px",
           marginLeft: `${containerMarginLeft}px`,
-          marginRight: "12px"
+          marginRight: "12px",
         }}
       >
         {/* Tab Navigation */}
@@ -1071,151 +1099,152 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
                       );
                     }
 
-                                         // Gauge Widget
-                     if (widget.type === "gauge") {
-                       const pin = widget.props.pin ?? 32;
-                       const widgetInfo = widgetData[widget.id];
-                       const value = widgetInfo?.value ?? latestAnalogByPin[pin] ?? 0;
-                       
-                                               // Calculate gauge properties
-                        const minValue = 0;
-                        const maxValue = 4095;
-                        const percentage = Math.min(100, Math.max(0, ((value - minValue) / (maxValue - minValue)) * 100));
-                        const angle = (percentage / 100) * 180 - 90; 
-                        // Calculate the end point for the fill path
-                        const radius = 50;
-                        const centerX = 60;
-                        const centerY = 70;
-                        const startAngle = -180; // Start from left side
-                        const endAngle = startAngle + (percentage / 100) * 180;
-                        
-                        // Convert angles to radians and calculate end point
-                        const endAngleRad = (endAngle * Math.PI) / 180;
-                        const endX = centerX + radius * Math.cos(endAngleRad);
-                        const endY = centerY + radius * Math.sin(endAngleRad);
-                        
-                        // Color based on value
-                        const getGaugeColor = (val) => {
-                          const pct = (val / maxValue) * 100;
-                          if (pct < 33) return "#10B981"; // Green
-                          if (pct < 66) return "#F59E0B"; // Yellow
-                          return "#EF4444"; // Red
-                        };
+                    // Gauge Widget
+                    if (widget.type === "gauge") {
+                      const pin = widget.props.pin ?? 32;
+                      const widgetInfo = widgetData[widget.id];
+                      const value =
+                        widgetInfo?.value ?? latestAnalogByPin[pin] ?? 0;
 
-                       return (
-                         <div
-                           key={widget.id}
-                           className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
-                         >
-                           <div className="flex items-center justify-between mb-4">
-                             <div className="text-sm font-medium text-[#222E3A] opacity-80">
-                               Gauge Meter
-                             </div>
-                             <div className="flex items-center gap-2">
-                               <select
-                                 value={pin}
-                                 onChange={(e) =>
-                                   updateWidgetProps(
-                                     widget.id,
-                                     "pin",
-                                     parseInt(e.target.value)
-                                   )
-                                 }
-                                 className="text-xs text-black border border-gray-200 rounded px-2 py-1"
-                               >
-                                 {ANALOG_PINS.map((pinNum) => (
-                                   <option key={pinNum} value={pinNum}>
-                                     Pin {pinNum}
-                                   </option>
-                                 ))}
-                               </select>
-                               <button
-                                 onClick={() => removeWidget(widget.id)}
-                                 aria-label="Remove widget"
-                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
-                               >
-                                 ×
-                               </button>
-                             </div>
-                           </div>
-                           
-                           {/* Gauge SVG */}
-                           <div className="flex justify-center mb-3">
-                             <svg width="120" height="80" viewBox="0 0 120 80">
-                               {/* Gauge background */}
-                               <path
-                                 d="M 10 70 A 50 50 0 0 1 110 70"
-                                 fill="none"
-                                 stroke="#E5E7EB"
-                                 strokeWidth="8"
-                                 strokeLinecap="round"
-                               />
-                               
-                                                               {/* Gauge fill */}
-                                <path
-                                  d={`M 10 70 A 50 50 0 0 1 ${endX} ${endY}`}
-                                  fill="none"
-                                  stroke={getGaugeColor(value)}
-                                  strokeWidth="8"
-                                  strokeLinecap="round"
-                                  // className="transition-all duration-500 ease-out"
-                                />
-                               
-                               {/* Center point */}
-                               <circle
-                                 cx="60"
-                                 cy="70"
-                                 r="3"
-                                 fill="#6B7280"
-                               />
-                               
-                                                               {/* Needle */}
-                                <line
-                                  x1="60"
-                                  y1="70"
-                                  x2={centerX + Math.cos(endAngleRad) * 35}
-                                  y2={centerY + Math.sin(endAngleRad) * 35}
-                                  stroke="#374151"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  // className="transition-all duration-1 ease-out"
-                                />
-                               
-                               {/* Value text */}
-                               <text
-                                 x="60"
-                                 y="45"
-                                 textAnchor="middle"
-                                 fontSize="12"
-                                 fontWeight="600"
-                                 fill="#111827"
-                               >
-                                 {bleConnected ? Math.round(value) : "—"}
-                               </text>
-                               
-                               {/* Pin label */}
-                               <text
-                                 x="60"
-                                 y="60"
-                                 textAnchor="middle"
-                                 fontSize="10"
-                                 fill="#6B7280"
-                               >
-                                 PIN {pin}
-                               </text>
-                             </svg>
-                           </div>
-                           
-                           {/* Scale markers */}
-                           <div className="flex justify-between text-xs text-gray-500 px-2">
-                             <span>0</span>
-                             <span>2048</span>
-                             <span>4095</span>
-                           </div>
-                           
-                         </div>
-                       );
-                     }
+                      // Calculate gauge properties
+                      const minValue = 0;
+                      const maxValue = 4095;
+                      const percentage = Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          ((value - minValue) / (maxValue - minValue)) * 100
+                        )
+                      );
+                      const angle = (percentage / 100) * 180 - 90;
+                      // Calculate the end point for the fill path
+                      const radius = 50;
+                      const centerX = 60;
+                      const centerY = 70;
+                      const startAngle = -180; // Start from left side
+                      const endAngle = startAngle + (percentage / 100) * 180;
+
+                      // Convert angles to radians and calculate end point
+                      const endAngleRad = (endAngle * Math.PI) / 180;
+                      const endX = centerX + radius * Math.cos(endAngleRad);
+                      const endY = centerY + radius * Math.sin(endAngleRad);
+
+                      // Color based on value
+                      const getGaugeColor = (val) => {
+                        const pct = (val / maxValue) * 100;
+                        if (pct < 33) return "#10B981"; // Green
+                        if (pct < 66) return "#F59E0B"; // Yellow
+                        return "#EF4444"; // Red
+                      };
+
+                      return (
+                        <div
+                          key={widget.id}
+                          className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="text-sm font-medium text-[#222E3A] opacity-80">
+                              Gauge Meter
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={pin}
+                                onChange={(e) =>
+                                  updateWidgetProps(
+                                    widget.id,
+                                    "pin",
+                                    parseInt(e.target.value)
+                                  )
+                                }
+                                className="text-xs text-black border border-gray-200 rounded px-2 py-1"
+                              >
+                                {ANALOG_PINS.map((pinNum) => (
+                                  <option key={pinNum} value={pinNum}>
+                                    Pin {pinNum}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => removeWidget(widget.id)}
+                                aria-label="Remove widget"
+                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Gauge SVG */}
+                          <div className="flex justify-center mb-3">
+                            <svg width="120" height="80" viewBox="0 0 120 80">
+                              {/* Gauge background */}
+                              <path
+                                d="M 10 70 A 50 50 0 0 1 110 70"
+                                fill="none"
+                                stroke="#E5E7EB"
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                              />
+
+                              {/* Gauge fill */}
+                              <path
+                                d={`M 10 70 A 50 50 0 0 1 ${endX} ${endY}`}
+                                fill="none"
+                                stroke={getGaugeColor(value)}
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                                // className="transition-all duration-500 ease-out"
+                              />
+
+                              {/* Center point */}
+                              <circle cx="60" cy="70" r="3" fill="#6B7280" />
+
+                              {/* Needle */}
+                              <line
+                                x1="60"
+                                y1="70"
+                                x2={centerX + Math.cos(endAngleRad) * 35}
+                                y2={centerY + Math.sin(endAngleRad) * 35}
+                                stroke="#374151"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                // className="transition-all duration-1 ease-out"
+                              />
+
+                              {/* Value text */}
+                              <text
+                                x="60"
+                                y="45"
+                                textAnchor="middle"
+                                fontSize="12"
+                                fontWeight="600"
+                                fill="#111827"
+                              >
+                                {bleConnected ? Math.round(value) : "—"}
+                              </text>
+
+                              {/* Pin label */}
+                              <text
+                                x="60"
+                                y="60"
+                                textAnchor="middle"
+                                fontSize="10"
+                                fill="#6B7280"
+                              >
+                                PIN {pin}
+                              </text>
+                            </svg>
+                          </div>
+
+                          {/* Scale markers */}
+                          <div className="flex justify-between text-xs text-gray-500 px-2">
+                            <span>0</span>
+                            <span>2048</span>
+                            <span>4095</span>
+                          </div>
+                        </div>
+                      );
+                    }
 
                     // Graph Widget
                     if (widget.type === "graph") {
@@ -1258,62 +1287,62 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
                           >
                             Analog
                           </button>
-                                                     <button
-                             onClick={() => {
-                               const newWidgetId = `${Date.now()}-gauge`;
-                               setWidgets((prev) => [
-                                 ...prev,
-                                 {
-                                   id: newWidgetId,
-                                   type: "gauge",
-                                   props: { pin: 32 },
-                                 },
-                               ]);
-                               
-                               // Initialize widget data with current sensor value if available
-                               const currentPinValue = latestAnalogByPin[32];
-                               if (currentPinValue !== undefined) {
-                                 setWidgetData((prev) => ({
-                                   ...prev,
-                                   [newWidgetId]: {
-                                     value: currentPinValue,
-                                     history: [currentPinValue]
-                                   }
-                                 }));
-                               }
-                               
-                               setShowAddMenu(false);
-                             }}
-                             className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
-                           >
-                             Gauge Meter
-                           </button>
-                                                     <button
-                             onClick={() => {
-                               const newWidgetId = `${Date.now()}-graph`;
-                               setWidgets((prev) => [
-                                 ...prev,
-                                 {
-                                   id: newWidgetId,
-                                   type: "graph",
-                                   props: { sensor: "ldr", pin: 32 },
-                                 },
-                               ]);
-                               
-                               // Initialize widget data with current sensor value if available
-                               const currentPinValue = latestAnalogByPin[32];
-                               if (currentPinValue !== undefined) {
-                                 setWidgetData((prev) => ({
-                                   ...prev,
-                                   [newWidgetId]: {
-                                     value: currentPinValue,
-                                     history: [currentPinValue]
-                                   }
-                                 }));
-                               }
-                               
-                               setShowAddMenu(false);
-                             }}
+                          <button
+                            onClick={() => {
+                              const newWidgetId = `${Date.now()}-gauge`;
+                              setWidgets((prev) => [
+                                ...prev,
+                                {
+                                  id: newWidgetId,
+                                  type: "gauge",
+                                  props: { pin: 32 },
+                                },
+                              ]);
+
+                              // Initialize widget data with current sensor value if available
+                              const currentPinValue = latestAnalogByPin[32];
+                              if (currentPinValue !== undefined) {
+                                setWidgetData((prev) => ({
+                                  ...prev,
+                                  [newWidgetId]: {
+                                    value: currentPinValue,
+                                    history: [currentPinValue],
+                                  },
+                                }));
+                              }
+
+                              setShowAddMenu(false);
+                            }}
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
+                          >
+                            Gauge Meter
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newWidgetId = `${Date.now()}-graph`;
+                              setWidgets((prev) => [
+                                ...prev,
+                                {
+                                  id: newWidgetId,
+                                  type: "graph",
+                                  props: { sensor: "ldr", pin: 32 },
+                                },
+                              ]);
+
+                              // Initialize widget data with current sensor value if available
+                              const currentPinValue = latestAnalogByPin[32];
+                              if (currentPinValue !== undefined) {
+                                setWidgetData((prev) => ({
+                                  ...prev,
+                                  [newWidgetId]: {
+                                    value: currentPinValue,
+                                    history: [currentPinValue],
+                                  },
+                                }));
+                              }
+
+                              setShowAddMenu(false);
+                            }}
                             className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
                           >
                             Graph
@@ -1328,24 +1357,38 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
           )}
         </div>
       </div>
-      
+
       {/* Code Reset Warning Modal */}
       {showCodeResetWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-90 backdrop-blur-sm">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl border border-gray-200">
             <div className="flex items-center mb-4">
               <div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <svg
+                  className="w-6 h-6 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">Code Will Be Reset</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Code Will Be Reset
+                </h3>
               </div>
             </div>
             <div className="mb-6">
               <p className="text-sm text-gray-600">
-                You've made changes to the Python code. Switching back to Blocks will reset your manual edits and regenerate the code from the blocks.
+                You've made changes to the Python code. Switching back to Blocks
+                will reset your manual edits and regenerate the code from the
+                blocks.
               </p>
             </div>
             <div className="flex justify-end space-x-3">
@@ -1367,6 +1410,6 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       )}
     </div>
   );
-}
+};
 
 export default forwardRef(BlocklyComponent);

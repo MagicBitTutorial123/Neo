@@ -1,1407 +1,180 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { missions } from "@/data/missions";
-import { missionLayoutMap } from "@/data/missionLayoutMap";
+
+import React, { use, useEffect, useMemo, useState } from "react";
+import SideNavbar from "@/components/SideNavbar";
+import StatusHeaderBar from "@/components/StatusHeaderBar";
+import { useSidebar } from "@/context/SidebarContext";
+import { getMissionMeta, getMissionJsonPublic } from "@/utils/queries";
+import {
+  normalizeMissionFromJson,
+  NormalizedMission,
+} from "@/utils/normalizeMission";
 import StandardMissionLayout from "@/components/StandardMissionLayout";
 import BlocklySplitLayout from "@/components/BlocklySplitLayout";
-import SideNavbar from "@/components/SideNavbar";
-import Header from "@/components/StatusHeaderBar";
-import CountdownTimer from "@/components/CountdownTimer";
-import MCQCard from "@/components/MCQCard";
-import StepRetryCard from "@/components/StepRetryCard";
-import StepSuccessCard from "@/components/StepSuccessCard";
-import CongratsCard from "@/components/CongratsCard";
-import HelpNeoOverlay from "@/components/HelpNeoOverlay";
-import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
-import { MissionStatePersistence } from "@/utils/missionStatePersistence";
-import { TimerPersistence } from "@/utils/timerPersistence";
-import { usbUpload } from "@/utils/usbUpload";
-import { bluetoothUpload } from "@/utils/bluetoothUpload";
-import { keyboardSendBLE } from "@/utils/keyboardPress";
-import FirmwareInstallModal from "@/components/FirmwareInstallModal";
-import { checkIfMicroPythonNeeded } from "@/utils/firmwareInstaller";
 
-// Simple type declarations
-interface BluetoothRemoteGATTCharacteristic {
-  writeValue: (value: BufferSource) => Promise<void>;
-}
+/**
+ * This version obeys React Rules of Hooks:
+ *  - All hooks are called unconditionally at the top.
+ *  - params is a Promise in Next 15; unwrap with React.use().
+ *  - No hooks inside conditionals/try/catch/returns.
+ *  - Conditional layout rendering is done by returning different child components.
+ */
+export default function MissionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // ✅ Unwrap params once, at top-level
+  const resolved = use(params);
+  const missionId = (resolved?.id || "").toString();
 
-interface BluetoothRemoteGATTService {
-  getCharacteristic: (uuid: string) => Promise<BluetoothRemoteGATTCharacteristic>;
-}
+  // ✅ All hooks at top-level (never inside if/try/catch)
+  const { sidebarCollapsed } = useSidebar();
 
-interface BluetoothRemoteGATTServer {
-  connected: boolean;
-  connect: () => Promise<BluetoothRemoteGATTServer>;
-  getPrimaryService: (uuid: string) => Promise<BluetoothRemoteGATTService>;
-  disconnect: () => void;
-}
+  const [loading, setLoading] = useState<boolean>(true);
+  const [mission, setMission] = useState<NormalizedMission | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showHeader, setShowHeader] = useState<boolean>(false);
+  const [showMCQ, setShowMCQ] = useState<boolean>(false);
+  const [mcqStepIndex, setMcqStepIndex] = useState<number>(0);
 
-interface BluetoothDevice {
-  name?: string;
-  gatt?: BluetoothRemoteGATTServer;
-  addEventListener: (event: string, callback: () => void) => void;
-}
-
-interface RequestDeviceOptions {
-  filters?: Array<{ name?: string; services?: Array<string> }>;
-  optionalServices?: Array<string>;
-}
-
-interface SerialPort {
-  open: (options: { baudRate: number }) => Promise<void>;
-  close: () => Promise<void>;
-  readable?: unknown;
-  writable?: unknown;
-}
-
-interface NavigatorWithSerial {
-  serial: { requestPort: () => Promise<SerialPort> };
-}
-
-declare global {
-  interface Navigator {
-    bluetooth: {
-      requestDevice: (options: RequestDeviceOptions) => Promise<BluetoothDevice>;
-    };
-  }
-  interface Window {
-    missionTimerControls?: {
-      resume: () => void;
-      pause: () => void;
-      reset: () => void;
-    };
-  }
-}
-import { useSidebar } from "@/context/SidebarContext";
-import Image from "next/image";
-
-type MissionsType = typeof missions;
-type MissionKey = keyof MissionsType;
-
-export default function MissionPage() {
-  const params = useParams();
-  const router = useRouter();
-  let id = params.id;
-  if (Array.isArray(id)) id = id[0];
-  id = String(id);
-  const numericId = Number(id);
-  const mission = missions[numericId as MissionKey];
-  const layoutType =
-    missionLayoutMap[numericId as keyof typeof missionLayoutMap] ||
-    "standardIntroLayout";
-
-  // State for mission header buttons
-
-  // BLE Connection states
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
-    "bluetooth"
-  );
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
-  const [tryingToConnect, setTryingToConnect] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-
-  // BLE Connection refs
-  const portRef = useRef<SerialPort | null>(null);
-  const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
-  const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
-  const server = useRef<BluetoothRemoteGATTServer | null>(null);
-  const keyStateRef = useRef<{ [key: string]: boolean }>({});
-  const [isRunning, setIsRunning] = useState(false);
-  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
-  const [showHeader, setShowHeader] = useState(false);
-  const [showFirmwareModal, setShowFirmwareModal] = useState(false);
-
-  // Listen for sidebar collapse state changes
+  // ✅ Single effect to fetch data; no hooks inside try/catch
   useEffect(() => {
-    const handleSidebarCollapsed = (event: CustomEvent<{ collapsed: boolean }>) => {
-      setSidebarCollapsed(event.detail.collapsed);
-    };
+    let alive = true;
 
-    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as unknown as EventListener);
-    
-    return () => {
-      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as unknown as EventListener);
-    };
-  }, [setSidebarCollapsed]);
-
-  // Keyboard event handlers for mission control
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      const keyMap: Record<string, string> = {
-        ArrowUp: "up",
-        ArrowDown: "down",
-        ArrowLeft: "left",
-        ArrowRight: "right",
-      };
-
-      let action = keyMap[e.key];
-      
-      // If not an arrow key, check if it's a custom key
-      if (!action) {
-        let customKey = e.key.toLowerCase();
-        
-        // Handle special keys
-        if (customKey === ' ') {
-          customKey = 'space';
-        } else if (customKey === 'enter') {
-          customKey = 'enter';
-        } else if (customKey === 'shift') {
-          customKey = 'shift';
-        } else if (customKey === 'control') {
-          customKey = 'ctrl';
-        } else if (customKey === 'alt') {
-          customKey = 'alt';
-        } else if (customKey.length === 1) {
-          // Single character keys (a-z, 0-9, etc.)
-          action = customKey;
-        } else {
-          // For other keys, make safe for function names
-          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
-        }
-        
-        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
-          action = customKey;
-        }
-      }
-      
-      // Prevent key repeat - only send if key is not already pressed
-      if (action) {
-        if (keyStateRef.current[action]) {
-          console.log(`Key "${action}" already pressed, ignoring repeat`);
-          return; // Key is already pressed, ignore this event
-        }
-        
-        // Mark key as pressed
-        keyStateRef.current[action] = true;
-      }
-
-      if (action) {
-        try {
-          await keyboardSendBLE(action, writeCharacteristicRef.current);
-        } catch (error) {
-          console.error("Failed to send key:", error);
-          setConnectionStatus("disconnected");
-        }
-      }
-    };
-
-    const handleKeyUp = async (e: KeyboardEvent) => {
-      const keyMap: Record<string, string> = {
-        ArrowUp: "up",
-        ArrowDown: "down",
-        ArrowLeft: "left",
-        ArrowRight: "right",
-      };
-
-      let action = keyMap[e.key];
-      
-      // If not an arrow key, check if it's a custom key
-      if (!action) {
-        let customKey = e.key.toLowerCase();
-        
-        // Handle special keys
-        if (customKey === ' ') {
-          customKey = 'space';
-        } else if (customKey === 'enter') {
-          customKey = 'enter';
-        } else if (customKey === 'shift') {
-          customKey = 'shift';
-        } else if (customKey === 'control') {
-          customKey = 'ctrl';
-        } else if (customKey === 'alt') {
-          customKey = 'alt';
-        } else if (customKey.length === 1) {
-          // Single character keys (a-z, 0-9, etc.)
-          action = customKey;
-        } else {
-          // For other keys, make safe for function names
-          action = customKey.replace(/[^a-zA-Z0-9]/g, '_');
-        }
-        
-        if (customKey !== e.key.toLowerCase() || customKey.length === 1) {
-          action = customKey;
-        }
-      }
-      
-      if (action) {
-        // Mark key as released
-        keyStateRef.current[action] = false;
-        
-        try {
-          // Send stop_all command twice for reassurance when any arrow key is released
-          await keyboardSendBLE("stop_all", writeCharacteristicRef.current);
-         
-        } catch (error) {
-          console.error("Failed to send stop command:", error);
-          setConnectionStatus("disconnected");
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [connectionStatus]);
-  const [showCountdown, setShowCountdown] = useState(false);
-  const [forceHideIntro, setForceHideIntro] = useState(false);
-
-  // Overlay states - moved to page level
-  const [showStepQuestion, setShowStepQuestion] = useState(false);
-  const [showMCQ, setShowMCQ] = useState(false);
-  const [showNice, setShowNice] = useState(false);
-  const [showDontWorry, setShowDontWorry] = useState(false);
-  const [showStepRetry, setShowStepRetry] = useState(false);
-  const [showStepSuccess, setShowStepSuccess] = useState(false);
-  const [showCongrats, setShowCongrats] = useState(false);
-  const [showHelpNeo, setShowHelpNeo] = useState(false);
-  const [showHelpAccepted, setShowHelpAccepted] = useState(false);
-  const [showPlaygroundUnlocked, setShowPlaygroundUnlocked] = useState(false);
-  const [fromNo, setFromNo] = useState(false);
-  const [currentStepForMCQ, setCurrentStepForMCQ] = useState(0);
-  const [completedMCQSteps, setCompletedMCQSteps] = useState<Set<number>>(
-    new Set()
-  );
-  const [isFinalMCQ, setIsFinalMCQ] = useState(false);
-  const [timeTaken, setTimeTaken] = useState("");
-
-  // Arrays of images for random selection
-  const successImages = [
-    "/happy-robot-correct-1.png",
-    "/happy-robot-correct-2.png",
-    "/happy-robot-correct-3.png",
-  ];
-
-  const retryImages = [
-    "/sad-robot-wrong-answer-1.png",
-    "/sad-robot-wrong-answer-2.png",
-  ];
-
-  // State to store current random images
-  const [currentSuccessImage, setCurrentSuccessImage] = useState("");
-  const [currentRetryImage, setCurrentRetryImage] = useState("");
-
-  // Function to get random image from array
-  const getRandomImage = (imageArray: string[]) => {
-    return imageArray[Math.floor(Math.random() * imageArray.length)];
-  };
-
-  // Function to set random images when showing feedback cards
-  const setRandomImages = () => {
-    setCurrentSuccessImage(getRandomImage(successImages));
-    setCurrentRetryImage(getRandomImage(retryImages));
-  };
-
-  // Navigate to next mission after HelpAcceptedOverlay
-  useEffect(() => {
-    if (showHelpAccepted) {
-      const timeout = setTimeout(() => {
-        // Navigate to the next mission intro (not directly to steps)
-        const nextMissionId = String(Number(mission.id) + 1);
-        const nextIdNum = Number(nextMissionId);
-        if (nextIdNum in missions) {
-          router.push(`/missions/${nextMissionId}`);
-        } else {
-          router.push("/missions");
-        }
-      }, 5000); // 5 seconds timeout
-      return () => clearTimeout(timeout);
-    }
-  }, [showHelpAccepted, router, mission.id]);
-
-  // Simple cleanup
-  useEffect(() => {
-    return () => {
-      // Cleanup Bluetooth
-      const gatt = bluetoothDeviceRef.current?.gatt;
-      if (gatt?.connected) {
-        gatt.disconnect();
-      }
-      
-      // Cleanup Serial port
-      if (portRef.current) {
-        try {
-          const port = portRef.current;
-          if (port && (port.readable || port.writable)) {
-            port.close().catch(console.error);
-          }
-        } catch (error) {
-          console.log("Error closing serial port on cleanup:", error);
-        }
-      }
-    };
-  }, []);
-
-  // Simple Bluetooth connection
-  const connectBluetooth = useCallback(async () => {
-    try {
-      console.log("Starting BLE connection...");
-      setConnectionStatus("connecting");
-      
-      // Request device
-      if (!bluetoothDeviceRef.current) {
-        console.log("Requesting BLE device...");
-        bluetoothDeviceRef.current = await navigator.bluetooth.requestDevice({
-          filters: [{ name: "Neo" }],
-          optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
-        });
-        console.log("BLE device selected:", bluetoothDeviceRef.current.name);
-
-        // Handle disconnection
-        bluetoothDeviceRef.current.addEventListener(
-          "gattserverdisconnected",
-          async () => {
-            console.log("BLE device disconnected");
-            setIsConnected(false);
-            setConnectionStatus("disconnected");
-          }
-        );
-      }
-
-      if (!server.current?.connected) {
-        console.log("Connecting to GATT server...");
-        server.current = await bluetoothDeviceRef.current.gatt!.connect();
-        console.log(server.current);
-        const service = await server.current?.getPrimaryService(
-          "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-        );
-        console.log("service: ", service);
-        const characteristic = await service.getCharacteristic(
-          "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-        );
-        console.log("Write characteristic obtained:", characteristic);
-
-        writeCharacteristicRef.current = characteristic;
-        setConnectionStatus("connected");
-        setIsConnected(true);
-        setTryingToConnect(false);
-        console.log("BLE connection established successfully");
-      } else {
-        console.log("GATT server already connected");
-      }
-    } catch (e) {
-      console.error("BLE connection failed:", e);
-      const error = e as { name?: string };
-      // Check if user cancelled the device selection
-      if (error?.name === "NotFoundError" || error?.name === "NotAllowedError") {
-        console.log("Bluetooth connection canceled by user");
-        setConnectionStatus("disconnected");
-        setIsConnected(false);
-        setTryingToConnect(false); // Stop trying to connect
-        return; // Don't retry on user cancellation
-      }
-      
-      // Only retry for other types of errors if still trying to connect
-      setConnectionStatus("disconnected");
-      setIsConnected(false);
-      if (tryingToConnect) {
-        setTimeout(async () => {
-          setTryingToConnect(false);
-          await connectBluetooth();
-        }, 1000);
-      }
-    }
-  }, [tryingToConnect]);
-
-  // Simple upload code
-  const uploadCode = async (generatedCode: string) => {
-    if (!generatedCode) {
-      console.error("No generated code to upload");
-      return;
-    }
-
-    console.log("Starting code upload...");
-    console.log("Connection type:", connectionType);
-    console.log("Is connected:", isConnected);
-    console.log("Generated code length:", generatedCode.length);
-
-    setIsUploading(true);
-    try {
-      if (connectionType === "bluetooth") {
-        console.log("Attempting BLE upload...");
-        if (!isConnected) {
-          console.log("Not connected, attempting to connect...");
-          await connectBluetooth();
-        }
-        
-        if (!writeCharacteristicRef.current) {
-          throw new Error("Bluetooth characteristic not available. Please ensure BLE connection is established.");
-        }
-        
-        console.log("BLE characteristic available, starting upload...");
-        await bluetoothUpload(generatedCode, writeCharacteristicRef.current);
-        console.log("BLE upload completed successfully");
-      } else {
-        console.log("Attempting USB upload...");
-        await usbUpload(generatedCode, portRef);
-        setIsConnected(true);
-        console.log("USB upload completed successfully");
-      }
-      setIsRunning(true); // Set running state after successful upload
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert(
-        `Upload failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const onConnectToggle = async (connected: boolean) => {
-    if (connected) {
+    async function load() {
       try {
-        if (connectionType === "bluetooth") {
-          setTryingToConnect(true);
-        } else {
-          // Serial connection - show connecting status first
-          setConnectionStatus("connecting");
-          setIsConnected(false);
-          
-          try {
-            const navSerial = (navigator as unknown as NavigatorWithSerial).serial;
-            let port = portRef.current || null;
-            
-            // Request port selection if needed
-            if (!port || !port.readable || !port.writable) {
-              port = await navSerial.requestPort();
-              await port.open({ baudRate: 115200 });
-              portRef.current = port;
-            }
-            
-            // Only set connected after successful port opening
-            setIsConnected(true);
-            setConnectionStatus("connected");
-            
-            // Check for MicroPython and prompt installer if missing
-            const needs = await checkIfMicroPythonNeeded(port, undefined);
-            if (needs) setShowFirmwareModal(true);
-            
-          } catch (e) {
-            const err = e as unknown;
-            console.error("Serial connection failed:", err);
-            setConnectionStatus("disconnected");
-            setIsConnected(false);
-            throw (e instanceof Error ? e : new Error(String(e))); // Re-throw to be caught by outer catch
-          }
+        setError(null);
+        setLoading(true);
+
+        // 1) Fetch mission meta
+        const meta = await getMissionMeta(missionId);
+        if (!meta) {
+          throw new Error(`Mission ${missionId} not found`);
         }
-      } catch {
-        setConnectionStatus("disconnected");
-        setIsConnected(false);
-      }
-    } else {
-      setConnectionStatus("disconnecting");
-      
-      // Handle Bluetooth disconnection
-      const gatt = bluetoothDeviceRef.current?.gatt;
-      if (gatt?.connected) {
-        gatt.disconnect();
-      }
-      bluetoothDeviceRef.current = null;
-      writeCharacteristicRef.current = null;
-      
-      // Handle Serial port disconnection
-      if (portRef.current) {
-        try {
-          const port = portRef.current;
-          if (port && (port.readable || port.writable)) {
-            await port.close();
-          }
-        } catch (error) {
-          console.log("Error closing serial port:", error);
-        }
-      }
-      portRef.current = null;
-      
-      setIsConnected(false);
-      setConnectionStatus("disconnected");
-    }
-  };
 
-  const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
-    if (isConnected) onConnectToggle(false);
-    setConnectionType(type);
-  };
-
-  useEffect(() => {
-    async function connect() {
-      if (tryingToConnect) {
-        await connectBluetooth();
-      }
-    }
-    connect();
-  }, [connectBluetooth, tryingToConnect]);
-
-  // Load mission state on mount
-  useEffect(() => {
-    const savedState = MissionStatePersistence.getMissionState(id);
-    if (savedState) {
-      console.log("🔄 Loading saved mission state:", savedState);
-      setShowHeader(savedState.showHeader);
-      setForceHideIntro(savedState.forceHideIntro);
-      setShowCountdown(savedState.showCountdown);
-      setFromNo(savedState.fromNo);
-      setCompletedMCQSteps(new Set(savedState.completedMCQSteps));
-
-      // If we're resuming a mission that was already started, resume the timer
-      if (savedState.showHeader && !savedState.showCountdown) {
-        // Wait for the timer component to be ready, then resume
-        setTimeout(() => {
-          if (
-            typeof window !== "undefined" &&
-            window.missionTimerControls
-          ) {
-            const savedTimerState = TimerPersistence.loadTimerState();
-            if (savedTimerState && savedTimerState.missionId === id) {
-              console.log("🔄 Resuming existing timer for mission", id);
-              window.missionTimerControls.resume();
-            }
-          }
-        }, 100);
-      }
-    }
-  }, [id]);
-
-  // Handle current step changes from layout components
-  const handleCurrentStepChange = (step: number) => {
-    console.log("🔄 Current step changed to:", step);
-    // Update mission state with new step
-    MissionStatePersistence.updateMissionState(id, {
-      currentStep: step,
-    });
-  };
-
-  // Function to stop timer and calculate time taken
-  const stopTimerAndCalculateTime = useCallback(() => {
-    if (typeof window !== "undefined" && window.missionTimerControls) {
-      // Pause the timer first
-      window.missionTimerControls.pause();
-
-      // Get the current timer state to calculate time taken
-      const savedTimerState = TimerPersistence.loadTimerState();
-      if (savedTimerState && savedTimerState.missionId === id) {
-        const allocatedTime = savedTimerState.allocatedTime;
-        const elapsed = Math.floor(
-          (Date.now() - savedTimerState.startTime) / 1000
+        // 2) Fetch mission JSON from Storage
+        const json = await getMissionJsonPublic(
+          meta.json_bucket,
+          meta.object_path
         );
-        const remaining = Math.max(0, allocatedTime - elapsed);
-        const timeTaken = allocatedTime - remaining;
 
-        // Format time taken as MM:SS
-        const minutes = Math.floor(timeTaken / 60);
-        const seconds = timeTaken % 60;
-        const formattedTime = `${minutes}:${seconds
-          .toString()
-          .padStart(2, "0")}`;
+        // 3) Normalize (resolves steps[].text/image, layout, intro, etc.)
+        const normalized = normalizeMissionFromJson(meta, json);
 
-        setTimeTaken(formattedTime);
-        console.log("⏱️ Time taken to complete mission:", formattedTime);
+        if (!alive) return;
+        setMission(normalized);
+      } catch (e: any) {
+        console.error("[MissionDetails] fetch error:", e);
+        if (!alive) return;
+        setError(e?.message || "Failed to load mission");
+      } finally {
+        if (alive) setLoading(false);
       }
     }
-  }, [id]);
 
-  // Save mission state when it changes
-  useEffect(() => {
-    MissionStatePersistence.updateMissionState(id, {
-      showHeader,
-      forceHideIntro,
-      showCountdown,
-      fromNo,
-      completedMCQSteps: Array.from(completedMCQSteps),
-    });
-  }, [
-    id,
-    showHeader,
-    forceHideIntro,
-    showCountdown,
-    fromNo,
-    completedMCQSteps,
-  ]);
-
-  // Stop timer when congratulations card is shown
-  useEffect(() => {
-    if (showCongrats) {
-      stopTimerAndCalculateTime();
-    }
-  }, [showCongrats, stopTimerAndCalculateTime]);
-
-  // Show header when forceHideIntro is true (backup method)
-  useEffect(() => {
-    if (forceHideIntro) {
-      console.log("🔄 forceHideIntro is true, showing header");
-      setShowHeader(true);
-    }
-  }, [forceHideIntro]);
-
-  const handleRun = () => {
-    console.log("🚀 Run button clicked from page level!");
-    // Resume timer if persistence is enabled
-    if (typeof window !== "undefined" && window.missionTimerControls) {
-      window.missionTimerControls.resume();
-    }
-    
-    // If we're in blocklySplitLayout, generate code first, then trigger upload
-    if (layoutType === "blocklySplitLayout") {
-      // First generate code, then trigger upload
-      window.dispatchEvent(new CustomEvent("generateCode"));
-      // Small delay to ensure code is generated before upload
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("triggerCodeUpload"));
-      }, 100);
-    }
-  };
-
-  // Stop code execution
-  const handleStop = async () => {
-    console.log("🛑 Stop button clicked from page level!");
-    try {
-      if (connectionType === "bluetooth" && writeCharacteristicRef.current) {
-        const stopCommand = JSON.stringify({ mode: "stop" }) + "\n";
-        const encoder = new TextEncoder();
-        await writeCharacteristicRef.current.writeValue(encoder.encode(stopCommand));
-        setIsRunning(false);
-      }
-    } catch (error) {
-      console.error("Stop failed:", error);
-      setIsRunning(false); // Set to false anyway
-    }
-  };
-
-  const handleErase = () => {
-    console.log("🧹 Erase button clicked from page level!");
-    // If we're in blocklySplitLayout, clear the workspace
-    if (layoutType === "blocklySplitLayout") {
-      // Dispatch an event to clear the Blockly workspace
-      window.dispatchEvent(new CustomEvent("clearBlocklyWorkspace"));
-    }
-  };
-
-  // Overlay handlers
-  const handleStepQuestionYes = () => {
-    setShowStepQuestion(false);
-    setShowNice(true);
-    setFromNo(false);
-  };
-
-  const handleStepQuestionNo = () => {
-    setShowStepQuestion(false);
-    setShowDontWorry(true);
-    setFromNo(true);
-  };
-
-  const handleNiceContinue = () => {
-    setShowNice(false);
-    // Trigger step progression in StandardMissionLayout
-    if (layoutType === "standardIntroLayout") {
-      // We need to communicate with StandardMissionLayout to go to elevation step
-      // For now, we'll use a custom event or state
-      window.dispatchEvent(new CustomEvent("goToElevationStep"));
-    } else if (layoutType === "blocklySplitLayout") {
-      // For BlocklySplitLayout, we need to communicate with the component
-      window.dispatchEvent(new CustomEvent("goToNextStep"));
-    }
-  };
-
-  const handleDontWorryContinue = () => {
-    setShowDontWorry(false);
-    // Trigger step progression in StandardMissionLayout
-    if (layoutType === "standardIntroLayout") {
-      // We need to communicate with StandardMissionLayout to go to elevation step
-      window.dispatchEvent(new CustomEvent("goToElevationStep"));
-    } else if (layoutType === "blocklySplitLayout") {
-      // For BlocklySplitLayout, we need to communicate with the component
-      window.dispatchEvent(new CustomEvent("goToNextStep"));
-    }
-  };
-
-  const handleBack = () => {
-    setShowCongrats(false);
-    if (mission.id === 1) {
-      setShowHelpNeo(true);
-      return;
-    }
-    // For Mission 2 and Mission 3+, navigate to missions main page
-    if (mission.id >= 2) {
-      // Clear mission state and timer when going back to missions page
-      MissionStatePersistence.clearMissionState();
-      TimerPersistence.clearTimerState();
-      router.push("/missions");
-      return;
-    }
-  };
-
-  const handleNextMission = async () => {
-    setShowCongrats(false);
-    // Clear mission state and timer for new mission
-    MissionStatePersistence.clearMissionState();
-    TimerPersistence.clearTimerState();
-    if (typeof window !== "undefined" && window.missionTimerControls) {
-      window.missionTimerControls.reset();
-    }
-    // Navigate to next mission
-    const nextMissionId = String(Number(mission.id) + 1);
-    window.location.href = `/missions/${nextMissionId}`;
-  };
-
-  const handleTryAgain = () => {
-    setShowDontWorry(false);
-    setFromNo(false);
-    // Reset timer when restarting the same mission
-    if (typeof window !== "undefined" && window.missionTimerControls) {
-      window.missionTimerControls.reset();
-    }
-    // Reset to previous step
-  };
-
-  // MCQ handlers
-  const handleMCQAnswer = (selectedAnswer: number) => {
-    setShowMCQ(false);
-    const currentStepData = mission.steps[currentStepForMCQ];
-    if (currentStepData && "mcq" in currentStepData) {
-      const isCorrect = selectedAnswer === currentStepData.mcq.correctAnswer;
-
-      if (isCorrect) {
-        // Mark this step as completed
-        setCompletedMCQSteps((prev) => new Set([...prev, currentStepForMCQ]));
-
-        // Set random images and show success card
-        setRandomImages();
-        setShowStepSuccess(true);
-      } else {
-        // Set random images and show retry card
-        setRandomImages();
-        setShowStepRetry(true);
-      }
-    }
-  };
-
-  const handleMCQTryAgain = () => {
-    setShowStepRetry(false);
-    setShowMCQ(true);
-  };
-
-  const handleMCQNext = () => {
-    setShowStepSuccess(false);
-
-    // Check if this is the final MCQ
-    if (isFinalMCQ) {
-      // Stop timer and calculate time taken for final MCQ
-      stopTimerAndCalculateTime();
-      // Show congrats for final MCQ
-      setShowCongrats(true);
-    } else {
-      // Trigger next step in BlocklySplitLayout
-      window.dispatchEvent(new CustomEvent("goToNextStep"));
-    }
-  };
-
-  // Get current step's feedback messages
-  const getCurrentStepFeedback = () => {
-    const currentStepData = mission.steps[currentStepForMCQ];
-    if (
-      currentStepData &&
-      "mcq" in currentStepData &&
-      currentStepData.mcq.feedback
-    ) {
-      return currentStepData.mcq.feedback;
-    }
-    // If no feedback found, return empty strings (shouldn't happen with proper data)
-    return {
-      success: "",
-      retry: "",
+    load();
+    return () => {
+      alive = false;
     };
+  }, [missionId]);
+
+  // State change handlers
+  const handleStateChange = (state: {
+    showIntro: boolean;
+    showCountdown: boolean;
+  }) => {
+    // Show header when we're in mission content (not intro or countdown)
+    const shouldShowHeader = !state.showIntro && !state.showCountdown;
+    console.log("🎯 MissionPage: State change received:", state);
+    console.log("🎯 MissionPage: Should show header:", shouldShowHeader);
+    setShowHeader(shouldShowHeader);
   };
 
   const handleMCQChange = (show: boolean, stepIndex: number) => {
-    // Only show MCQ if this step hasn't been completed yet
-    if (show && !completedMCQSteps.has(stepIndex)) {
-      setShowMCQ(true);
-      setCurrentStepForMCQ(stepIndex);
-      // Check if this is the final MCQ (last step)
-      setIsFinalMCQ(stepIndex === mission.steps.length - 1);
-    } else if (show && completedMCQSteps.has(stepIndex)) {
-      // If step is already completed, go to next step
-      // This will trigger the final MCQ for the last step
-      window.dispatchEvent(new CustomEvent("goToNextStep"));
-    } else {
-      setShowMCQ(false);
-    }
+    setShowMCQ(show);
+    setMcqStepIndex(stepIndex);
+    console.log(
+      `MCQ ${show ? "show" : "hide"} for step ${stepIndex} (display step ${
+        stepIndex + 1
+      })`
+    );
   };
 
-  const handleStateChange = useCallback(
-    (state: { showIntro: boolean; showCountdown: boolean }) => {
-      console.log("🔄 handleStateChange called:", state);
-      const shouldShowHeader = !state.showIntro && !state.showCountdown;
-      console.log("📊 shouldShowHeader:", shouldShowHeader);
-      setShowHeader(shouldShowHeader);
-      // Only set showCountdown to true when requested, never set to false here
-      if (state.showCountdown) setShowCountdown(true);
-    },
-    []
-  );
-
-  const handleCountdownComplete = () => {
-    console.log("🎯 handleCountdownComplete called");
-    setShowCountdown(false);
-    setForceHideIntro(true);
-    setShowHeader(true); // Ensure header is visible after countdown
-
-    // Start timer when countdown completes (only if no saved timer exists)
-    if (typeof window !== "undefined" && window.missionTimerControls) {
-      // Check if there's already a saved timer state for this mission
-      const savedTimerState = TimerPersistence.loadTimerState();
-      if (!savedTimerState || savedTimerState.missionId !== id) {
-        // Only reset if no saved timer exists for this mission
-        window.missionTimerControls.reset();
-      } else {
-        // Resume existing timer
-        window.missionTimerControls.resume();
-      }
-    }
-
-    console.log("✅ setShowHeader(true) called");
+  const handleMCQAnswer = (selectedAnswer: number) => {
+    console.log(
+      `MCQ answer selected: ${selectedAnswer} for step ${mcqStepIndex} (display step ${
+        mcqStepIndex + 1
+      })`
+    );
+    setShowMCQ(false);
   };
 
-  switch (layoutType) {
-    case "standardIntroLayout":
-      return (
-        <div className="flex h-screen bg-white relative overflow-hidden">
-          {/* Mission Header - Full width behind everything including sidebar */}
-          {showHeader && (
-            <div className="absolute top-0 left-0 right-0 z-40">
-              <Header
-                missionNumber={mission.id}
-                title={mission.title}
-                timeAllocated={mission.intro.timeAllocated}
-                liveUsers={17}
-                onRun={handleRun}
-                onPause={handleStop}
-                onErase={handleErase}
-                sidebarCollapsed={sidebarCollapsed}
-                enableTimerPersistence={true}
-                isConnected={isConnected}
-                setIsConnected={setIsConnected}
-                onConnectToggle={onConnectToggle}
-                connectionStatus={connectionStatus}
-                setConnectionStatus={setConnectionStatus}
-                onConnectionTypeChange={onConnectionTypeChange}
-                connectionType={connectionType}
-                isUploading={isUploading}
-                isRunning={isRunning}
-              />
-            </div>
-          )}
+  // Debug header state
+  useEffect(() => {
+    console.log("🎯 MissionPage: showHeader changed to:", showHeader);
+    console.log("🎯 MissionPage: mission exists:", !!mission);
+    if (mission) {
+      console.log("🎯 MissionPage: mission.id:", mission.id);
+      console.log("🎯 MissionPage: mission.title:", mission.title);
+    }
+  }, [showHeader, mission]);
 
-          <SideNavbar />
-          <div className="flex-1 overflow-hidden relative z-30">
-            <StandardMissionLayout
-              mission={mission}
-              onStateChange={handleStateChange}
-              forceHideIntro={forceHideIntro}
-              fromNo={fromNo}
-              onStepQuestionChange={setShowStepQuestion}
-              onNiceChange={setShowNice}
-              onDontWorryChange={setShowDontWorry}
-              onCongratsChange={setShowCongrats}
-              onHelpAcceptedChange={setShowHelpAccepted}
-              onTryAgain={handleTryAgain}
-              onCurrentStepChange={handleCurrentStepChange}
-              onFinish={stopTimerAndCalculateTime}
-            />
+  // Initialize header state when mission loads
+  useEffect(() => {
+    if (mission && !loading) {
+      console.log("🎯 MissionPage: Mission loaded, initializing header state");
+      setShowHeader(false); // Start with header hidden to allow intro/countdown
+    }
+  }, [mission, loading]);
+
+  // ✅ derive layout AFTER hooks
+  const layout = mission?.layout || "StandardMissionLayout";
+  console.log("🎯 MissionPage: Using layout:", layout);
+  console.log("🎯 MissionPage: Mission data:", mission);
+
+  // ✅ Render only; no hooks here
+  return (
+    <div className="flex min-h-screen bg-white">
+      <SideNavbar />
+      <main
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
+      >
+        {/* Loading / Error */}
+        {loading && (
+          <div className="flex-1 flex items-center justify-center text-sm text-[#222E3A]">
+            Loading mission…
           </div>
+        )}
 
-          {/* Countdown Overlay - Covers everything */}
-          {showCountdown && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
-            >
-              <CountdownTimer onGo={handleCountdownComplete} />
-            </div>
-          )}
-
-          {/* All overlays at page level with z-[99999] */}
-          {showStepQuestion && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
-                  Did you follow the steps correctly?
-                </div>
-                <div className="flex gap-6">
-                  <button
-                    onClick={handleStepQuestionNo}
-                    className="px-8 py-2 rounded-3xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
-                  >
-                    No
-                  </button>
-                  <button
-                    onClick={handleStepQuestionYes}
-                    className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                  >
-                    Yes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showNice && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
-                {/* Left Side - Happy Robot */}
-                <div className="mr-8">
-                  <Image
-                    src="/happy-robot-correct-3.png"
-                    alt="Happy Robot"
-                    width={256}
-                    height={256}
-                    className="w-64 h-64 object-contain"
-                  />
-                </div>
-
-                {/* Right Side - Message and Button */}
-                <div className="flex flex-col flex-1 ">
-                  <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
-                    Nice!
-                  </div>
-                  <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
-                    Let&apos;s see if you are correct or wrong.
-                  </div>
-                  <div className="flex justify-start">
-                    <button
-                      onClick={handleNiceContinue}
-                      className="px-6 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800"
-                    >
-                      Continue
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showDontWorry && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
-                  Don&apos;t worry!
-                </div>
-                <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-                  Check the images of elevation and try again.
-                </div>
-                <Image
-                  src="/dont-worry-card-image.png"
-                  alt="Don't worry"
-                  width={128}
-                  height={80}
-                  className="mb-8 w-32 h-20 object-contain"
-                />
-                <button
-                  onClick={handleDontWorryContinue}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {showCongrats && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <CongratsCard
-                onBack={handleBack}
-                onNextMission={handleNextMission}
-                headline="Congratulations!"
-                subtitle={`You completed mission ${mission.id} successfully.`}
-                points={0}
-                timeSpent={timeTaken || "0:00"}
-                robotImageSrc="/confettiBot.png"
-                backText="Back"
-                nextMissionText="Next Mission"
-              />
-            </div>
-          )}
-
-          {showHelpNeo && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
-            >
-              <HelpNeoOverlay
-                headline="Hey, Neo needs your help!"
-                subtitle="He needs you the most right now!"
-                imageSrc="/crying-bot.png"
-                laterText="Yes, But later"
-                helpText="I will help!"
-                onLater={() => {
-                  setShowHelpNeo(false);
-                  window.location.href = "/missions";
-                }}
-                onHelp={() => {
-                  setShowHelpNeo(false);
-                  setShowHelpAccepted(true);
-                }}
-              />
-            </div>
-          )}
-
-          {showHelpAccepted && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
-              onClick={() => setShowHelpAccepted(false)}
-            >
-              <HelpAcceptedOverlay />
-            </div>
-          )}
-
-          {showPlaygroundUnlocked && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
-                  Playground Unlocked!
-                </div>
-                <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-                  You can now access the Playground from the sidebar and try out
-                  your own robot code!
-                </div>
-                <Image
-                  src="/playground-unlocked-placeholder.png"
-                  alt="Playground Unlocked"
-                  width={128}
-                  height={80}
-                  className="mb-8 w-32 h-20 object-contain"
-                />
-                <button
-                  onClick={() => setShowPlaygroundUnlocked(false)}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-          {/* Firmware Install Modal for USB only */}
-          <FirmwareInstallModal 
-            open={showFirmwareModal} 
-            onClose={() => setShowFirmwareModal(false)} 
-            portRef={portRef}
-          />
-        </div>
-      );
-    case "blocklySplitLayout":
-      return (
-        <div className="flex h-screen bg-white relative overflow-hidden">
-          {/* Mission Header - Full width behind everything including sidebar */}
-          {showHeader && (
-            <div className="absolute top-0 left-0 right-0 z-40">
-              <Header
-                missionNumber={mission.id}
-                title={mission.title}
-                timeAllocated={mission.intro.timeAllocated}
-                liveUsers={17}
-                onRun={handleRun}
-                onPause={handleStop}
-                onErase={handleErase}
-                sidebarCollapsed={sidebarCollapsed}
-                enableTimerPersistence={true}
-                isConnected={isConnected}
-                setIsConnected={setIsConnected}
-                onConnectToggle={onConnectToggle}
-                connectionStatus={connectionStatus}
-                setConnectionStatus={setConnectionStatus}
-                onConnectionTypeChange={onConnectionTypeChange}
-                connectionType={connectionType}
-                isUploading={isUploading}
-                isRunning={isRunning}
-              />
-            </div>
-          )}
-
-          <SideNavbar />
-          <div className="flex-1 overflow-hidden relative z-30">
-            <BlocklySplitLayout
-              mission={mission}
-              sidebarCollapsed={sidebarCollapsed}
-              onStateChange={handleStateChange}
-              forceHideIntro={forceHideIntro}
-              fromNo={fromNo}
-              onStepQuestionChange={setShowStepQuestion}
-              onNiceChange={setShowNice}
-              onDontWorryChange={setShowDontWorry}
-              onCongratsChange={setShowCongrats}
-              onHelpAcceptedChange={setShowHelpAccepted}
-              onTryAgain={handleTryAgain}
-              onMCQAnswer={handleMCQAnswer}
-              onMCQChange={handleMCQChange}
-              onCurrentStepChange={handleCurrentStepChange}
-              onFinish={stopTimerAndCalculateTime}
-              onUploadCode={uploadCode}
-              isUploading={isUploading}
-            />
+        {!loading && error && (
+          <div className="flex-1 flex items-center justify-center text-red-600">
+            {error}
           </div>
+        )}
 
-          {/* Countdown Overlay - Covers everything */}
-          {showCountdown && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
-            >
-              <CountdownTimer onGo={handleCountdownComplete} />
-            </div>
-          )}
-
-          {/* MCQ Overlay for Mission 3+ */}
-          {showMCQ &&
-            mission.steps[currentStepForMCQ] &&
-            "mcq" in mission.steps[currentStepForMCQ] && (
-              <div
-                className="fixed inset-0 z-[99999] flex items-center justify-center"
-                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-              >
-                <MCQCard
-                  question={mission.steps[currentStepForMCQ].mcq.question}
-                  options={mission.steps[currentStepForMCQ].mcq.options}
-                  correctAnswer={
-                    mission.steps[currentStepForMCQ].mcq.correctAnswer
-                  }
-                  questionNumber={currentStepForMCQ + 1}
-                  onAnswer={handleMCQAnswer}
-                />
-              </div>
+        {/* Ready */}
+        {!loading && !error && mission && (
+          <>
+            {layout === "BlocklySplitLayout" ? (
+              <BlocklySplitLayout
+                mission={mission}
+                onStateChange={handleStateChange}
+                onMCQChange={handleMCQChange}
+                onMCQAnswer={handleMCQAnswer}
+                showHeader={showHeader}
+              />
+            ) : (
+              <StandardMissionLayout
+                mission={mission}
+                onStateChange={handleStateChange}
+                showHeader={showHeader}
+              />
             )}
-
-          {/* Step Retry Overlay for Mission 3+ */}
-          {showStepRetry && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <StepRetryCard
-                onTryAgain={handleMCQTryAgain}
-                message={getCurrentStepFeedback().retry}
-                imageSrc={currentRetryImage}
-              />
-            </div>
-          )}
-
-          {/* Step Success Overlay for Mission 3+ */}
-          {showStepSuccess && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <StepSuccessCard
-                onNext={handleMCQNext}
-                message={getCurrentStepFeedback().success}
-                buttonText={isFinalMCQ ? "Finish" : "Next"}
-                buttonColor={isFinalMCQ ? "blue" : "black"}
-                imageSrc={currentSuccessImage}
-              />
-            </div>
-          )}
-
-          {/* All overlays at page level with z-[99999] - Same as StandardMissionLayout */}
-          {showStepQuestion && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-8 text-center text-base font-medium text-[#222E3A]">
-                  Did you follow the steps correctly?
-                </div>
-                <div className="flex gap-6">
-                  <button
-                    onClick={handleStepQuestionNo}
-                    className="px-8 py-2 rounded-3xl bg-[#D9F2FF] text-[#222E3A] font-bold text-base focus:outline-none focus:ring-2 focus:ring-[#00AEEF] transition"
-                  >
-                    No
-                  </button>
-                  <button
-                    onClick={handleStepQuestionYes}
-                    className="px-8 py-2 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                  >
-                    Yes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showNice && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="relative bg-white rounded-2xl shadow-lg px-8 py-8 flex items-center min-w-[400px] max-w-[50vw]">
-                {/* Left Side - Happy Robot */}
-                <div className="mr-8">
-                  <Image
-                    src="/happy-robot-correct-3.png"
-                    alt="Happy Robot"
-                    width={256}
-                    height={256}
-                    className="w-64 h-64 object-contain"
-                  />
-                </div>
-
-                {/* Right Side - Message and Button */}
-                <div className="flex flex-col flex-1">
-                  <div className="mb-4 text-3xl font-extrabold text-[#222E3A]">
-                    Nice!
-                  </div>
-                  <div className="mb-6 text-xl font-medium text-[#222E3A] leading-relaxed">
-                    Let&apos;s see if you are correct or wrong.
-                  </div>
-                  <div className="flex justify-start">
-                    <button
-                      onClick={handleNiceContinue}
-                      className="px-6 py-3 rounded-3xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition hover:bg-gray-800"
-                    >
-                      Continue
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showDontWorry && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="relative bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
-                  Don&apos;t worry!
-                </div>
-                <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-                  Check the images of elevation and try again.
-                </div>
-                <Image
-                  src="/dont-worry-card-image.png"
-                  alt="Don't worry"
-                  width={128}
-                  height={80}
-                  className="mb-8 w-32 h-20 object-contain"
-                />
-                <button
-                  onClick={handleDontWorryContinue}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {showCongrats && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <CongratsCard
-                onBack={handleBack}
-                onNextMission={handleNextMission}
-                headline="Congratulations!"
-                subtitle={`You completed mission ${mission.id} successfully.`}
-                points={0}
-                timeSpent={timeTaken || "0:00"}
-                robotImageSrc="/confettiBot.png"
-                backText="Back"
-                nextMissionText="Next Mission"
-              />
-            </div>
-          )}
-
-          {showHelpNeo && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <HelpNeoOverlay
-                headline="Hey, Neo needs your help!"
-                subtitle="He needs you the most right now!"
-                imageSrc="/crying-bot.png"
-                laterText="Yes, But later"
-                helpText="I will help!"
-                onLater={() => {
-                  setShowHelpNeo(false);
-                  window.location.href = "/missions";
-                }}
-                onHelp={() => {
-                  setShowHelpNeo(false);
-                  setShowHelpAccepted(true);
-                }}
-              />
-            </div>
-          )}
-
-          {showHelpAccepted && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-              onClick={() => setShowHelpAccepted(false)}
-            >
-              <HelpAcceptedOverlay />
-            </div>
-          )}
-
-          {showPlaygroundUnlocked && (
-            <div
-              className="fixed inset-0 z-[99999] flex items-center justify-center"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
-            >
-              <div className="bg-white rounded-2xl shadow-lg px-12 py-10 flex flex-col items-center min-w-[350px] max-w-[90vw]">
-                <div className="mb-4 text-3xl font-extrabold text-center">
-                  Playground Unlocked!
-                </div>
-                <div className="mb-4 text-center text-base font-medium text-[#222E3A]">
-                  You can now access the Playground from the sidebar and try out
-                  your own robot code!
-                </div>
-                <Image
-                  width={128}
-                  height={80}
-                  src="/playground-unlocked-placeholder.png"
-                  alt="Playground Unlocked"
-                  className="mb-8 w-32 h-20 object-contain"
-                />
-                <button
-                  onClick={() => setShowPlaygroundUnlocked(false)}
-                  className="px-8 py-2 rounded-xl bg-black text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-black transition"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    default:
-      return <div>Unknown layout</div>;
-  }
+          </>
+        )}
+      </main>
+    </div>
+  );
 }

@@ -39,7 +39,7 @@ export default function HomePage() {
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
-  const [isNewUser,setIsNewUser] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // On mount, set hydrated state and check for new user query param
   useEffect(() => {
@@ -51,9 +51,12 @@ export default function HomePage() {
       router.replace("/home");
       setIsNewUser(true);
     }
-    
+
     // Also check if user is new based on mission progress
-    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
+    if (
+      userData?.isNewUser ||
+      (userData?.missionProgress !== undefined && userData?.missionProgress < 2)
+    ) {
       setIsNewUser(true);
     }
   }, [searchParams, router, userData]);
@@ -64,10 +67,16 @@ export default function HomePage() {
       setSidebarCollapsed(event.detail.collapsed);
     };
 
-    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
-    
+    window.addEventListener(
+      "sidebarCollapsed",
+      handleSidebarCollapsed as EventListener
+    );
+
     return () => {
-      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+      window.removeEventListener(
+        "sidebarCollapsed",
+        handleSidebarCollapsed as EventListener
+      );
     };
   }, []);
 
@@ -79,12 +88,31 @@ export default function HomePage() {
     }
   }, [step, userData?.isNewUser]);
 
-  // Dummy data for mission progress
-  const totalSteps = 5;
-  const completedSteps = 3; // Change this to simulate progress
-  const xpPoints = 120;
-  const missionLabel = `Mission 02`;
-  const progressPercent = (completedSteps / totalSteps) * 100;
+  // Dynamic data for mission progress - using real user data
+  const xpPoints = userData?.xp || 0;
+  const currentMission = userData?.missionProgress || 0;
+  const missionLabel = `Mission ${String(currentMission + 1).padStart(2, "0")}`;
+
+  // Calculate progress based on completed missions vs total available missions
+  // For now, we'll use a simple calculation - you can adjust this based on your total mission count
+  const totalMissions = 5; // Adjust this to match your total number of missions
+  const progressPercent = (currentMission / totalMissions) * 100;
+
+  // Debug logging for home page progress
+  console.log("🏠 Home Page Progress Data:", {
+    xpPoints,
+    currentMission,
+    missionLabel,
+    totalMissions,
+    progressPercent,
+    userData: userData
+      ? {
+          xp: userData.xp,
+          missionProgress: userData.missionProgress,
+          name: userData.name,
+        }
+      : null,
+  });
 
   // Dummy data for badges
   const badges = [
@@ -105,42 +133,40 @@ export default function HomePage() {
   const nextMission = (userData?.missionProgress ?? 0) + 1;
 
   const newUserContent = useMemo(() => {
-      return (
-        <div className="flex flex-1 w-full h-full relative animate-fade-in">
-          <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
-            <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
-              {mainTextStep}
-            </div>
-            <div className="text-3xl text-[#555] font-poppins mb-18">
-              {subTextStep}
-            </div>
-            <LetsGoButton
-              style={{ width: 200, height: 60 }}
-              onClick={() => router.push(`/missions/${nextMission}`)}
-            >
-              Lets Go
-            </LetsGoButton>
+    return (
+      <div className="flex flex-1 w-full h-full relative animate-fade-in">
+        <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
+          <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
+            {mainTextStep}
           </div>
-          <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 60, damping: 18 }}
-            className="absolute bottom-0 right-0 flex items-end justify-end"
-            style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
+          <div className="text-3xl text-[#555] font-poppins mb-18">
+            {subTextStep}
+          </div>
+          <LetsGoButton
+            style={{ width: 200, height: 60 }}
+            onClick={() => router.push(`/missions/${nextMission}`)}
           >
-            <Image
-              src="/welcome-robot.png"
-              alt="Robot"
-              width={450}
-              height={450}
-              style={{ maxWidth: "100%", maxHeight: "100%" }}
-            />
-          </motion.div>
+            Lets Go
+          </LetsGoButton>
         </div>
-      );
-    }
-  
-  , [router, mainTextStep, subTextStep, nextMission]);
+        <motion.div
+          initial={{ x: 300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 60, damping: 18 }}
+          className="absolute bottom-0 right-0 flex items-end justify-end"
+          style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
+        >
+          <Image
+            src="/welcome-robot.png"
+            alt="Robot"
+            width={450}
+            height={450}
+            style={{ maxWidth: "100%", maxHeight: "100%" }}
+          />
+        </motion.div>
+      </div>
+    );
+  }, [router, mainTextStep, subTextStep, nextMission]);
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
@@ -186,7 +212,14 @@ export default function HomePage() {
               height={300}
               className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
             />
-            <button className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition">
+            <button
+              onClick={() =>
+                router.push(
+                  `/missions/${String(currentMission + 1).padStart(2, "0")}`
+                )
+              }
+              className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition"
+            >
               Continue mission{" "}
               <span className="inline-block">
                 <svg
@@ -360,10 +393,10 @@ export default function HomePage() {
   }
 
   // Get user data from context or localStorage fallback
-  
+
   // Check if user came from signup flow (newUser=true in URL)
   const isFromSignup = searchParams.get("newUser") === "true";
-  
+
   // Show onboarding ONLY for new users who came from signup flow
   // Existing users (from signin) should see dashboard directly
   const shouldShowOnboarding = isNewUser && isFromSignup;
@@ -373,7 +406,10 @@ export default function HomePage() {
   console.log("🔍 Mission progress:", userData?.missionProgress);
   console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
   console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
-  console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
+  console.log(
+    "🔍 UserData.missionProgress < 2:",
+    userData?.missionProgress !== undefined && userData?.missionProgress < 2
+  );
   console.log("🔍 Final isNewUser calculation:", isNewUser);
   console.log("🔍 isFromSignup:", isFromSignup);
   console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
@@ -390,8 +426,6 @@ export default function HomePage() {
             marginLeft: sidebarCollapsed ? "80px" : "260px",
           }}
         >
-          
-          
           {shouldShowOnboarding ? newUserContent : defaultHomeContent}
         </main>
       </div>

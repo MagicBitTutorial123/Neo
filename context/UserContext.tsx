@@ -1,7 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getUserProgress } from "@/utils/queries";
 
 type UserRegistrationData = {
   name?: string;
@@ -61,35 +68,62 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const checkAuthSimple = useCallback(async () => {
     try {
       setCheckingAuth(true);
-      
+
       // Basic auth check only
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
       if (user && !error) {
         console.log("✅ User authenticated");
-        // Set basic user data
-        const basicUserData: UserData = {
-          _id: user.id,
-          email: user.email || '',
-          name: user.user_metadata?.full_name || '',
-          phone: user.user_metadata?.phone || '',
-          age: user.user_metadata?.age || 0,
-          avatar: user.user_metadata?.avatar || '',
-          isNewUser: true,
-          missionProgress: 0,
-          xp: 0,
-          hasCompletedMission2: false,
-          hasCompletedMission3: false,
-          createdAt: new Date().toISOString()
-        };
-        
-        setUserData(basicUserData);
+
+        // Get user progress from Supabase
+        try {
+          const userProgress = await getUserProgress(user.id);
+          const basicUserData: UserData = {
+            _id: user.id,
+            email: user.email || "",
+            name: user.user_metadata?.full_name || "",
+            phone: user.user_metadata?.phone || "",
+            age: user.user_metadata?.age || 0,
+            avatar: user.user_metadata?.avatar || "",
+            isNewUser: true,
+            missionProgress: userProgress?.current_mission || 0,
+            xp: userProgress?.xp || 0,
+            hasCompletedMission2: false,
+            hasCompletedMission3: false,
+            createdAt: new Date().toISOString(),
+          };
+
+          setUserData(basicUserData);
+        } catch (progressError) {
+          console.error("Failed to get user progress:", progressError);
+          // Fallback to basic data
+          const basicUserData: UserData = {
+            _id: user.id,
+            email: user.email || "",
+            name: user.user_metadata?.full_name || "",
+            phone: user.user_metadata?.phone || "",
+            age: user.user_metadata?.age || 0,
+            avatar: user.user_metadata?.avatar || "",
+            isNewUser: true,
+            missionProgress: 0,
+            xp: 0,
+            hasCompletedMission2: false,
+            hasCompletedMission3: false,
+            createdAt: new Date().toISOString(),
+          };
+
+          setUserData(basicUserData);
+        }
+
         setLoading(false);
       } else {
         console.log("❌ User not authenticated");
         setLoading(false);
       }
-      
+
       setCheckingAuth(false);
     } catch (err) {
       console.error("❌ Simple auth check failed:", err);
@@ -98,22 +132,28 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const updateRegistrationData = useCallback((data: Partial<UserRegistrationData>) => {
-    const updated = { ...registrationData, ...data };
-    setRegistrationData(updated);
-    localStorage.setItem("registrationData", JSON.stringify(updated));
-  }, [registrationData]);
+  const updateRegistrationData = useCallback(
+    (data: Partial<UserRegistrationData>) => {
+      const updated = { ...registrationData, ...data };
+      setRegistrationData(updated);
+      localStorage.setItem("registrationData", JSON.stringify(updated));
+    },
+    [registrationData]
+  );
 
   const clearRegistrationData = useCallback(() => {
     setRegistrationData({});
     localStorage.removeItem("registrationData");
   }, []);
 
-  const updateUserData = useCallback((data: Partial<UserData>) => {
-    const updated = { ...userData, ...data };
-    setUserData(updated);
-    localStorage.setItem("userData", JSON.stringify(updated));
-  }, [userData]);
+  const updateUserData = useCallback(
+    (data: Partial<UserData>) => {
+      const updated = { ...userData, ...data };
+      setUserData(updated);
+      localStorage.setItem("userData", JSON.stringify(updated));
+    },
+    [userData]
+  );
 
   const handleSetUserData = useCallback((user: UserData | null) => {
     setUserData(user);

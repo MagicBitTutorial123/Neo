@@ -27,6 +27,7 @@ interface CongratsCardProps {
   robotImageSrc?: string;
   backText?: string;
   nextMissionText?: string;
+  isPracticeCompletion?: boolean; // New prop to distinguish practice vs first completion
 }
 
 export default function CongratsCard({
@@ -36,9 +37,10 @@ export default function CongratsCard({
   subtitle = "You completed mission 1 successfully.",
   points = 0,
   timeSpent = "0:00",
-  robotImageSrc = "/aww-robot-new.png",
+  robotImageSrc = "/confettiBot.png",
   backText = "Back",
-  nextMissionText = "Mission 2",
+  nextMissionText = "Next Mission",
+  isPracticeCompletion = false, // Default to false (first completion)
 }: CongratsCardProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [showContent, setShowContent] = useState(false);
@@ -59,15 +61,16 @@ export default function CongratsCard({
   }, []);
 
   useEffect(() => {
-    if (showContent) {
+    if (showContent && !isPracticeCompletion) {
       // Delay slightly so the card appears first
+      // Only show coins animation for first completion, not practice
       const timer = setTimeout(() => {
         setFlyCoins(true);
         coinAudioRef.current?.play();
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [showContent]);
+  }, [showContent, isPracticeCompletion]);
 
   return (
     <>
@@ -78,8 +81,8 @@ export default function CongratsCard({
         className="fixed inset-0 flex items-center justify-center z-50"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
       >
-        {/* Floating Coins Animation */}
-        {flyCoins && (
+        {/* Floating Coins Animation - Only for first completion */}
+        {flyCoins && !isPracticeCompletion && (
           <>
             {[...Array(12)].map((_, i) => (
               <motion.div
@@ -237,26 +240,35 @@ export default function CongratsCard({
 
             {/* Stats */}
             <div className="flex gap-6 mb-6">
-              <div className="flex flex-col items-center">
-                <motion.div
-                  className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1"
-                  initial={{ scale: 0 }}
-                  animate={showContent ? { scale: 1 } : {}}
-                  transition={{ duration: 0.6, delay: 1.2, type: "spring" }}
-                >
-                  {points}
-                  <span className="text-sm">XP</span>
-                </motion.div>
-                <div className="text-[#A1A6B0] text-xs font-semibold">
-                  Points
+              {/* Points - Only show for first completion */}
+              {!isPracticeCompletion && (
+                <div className="flex flex-col items-center">
+                  <motion.div
+                    className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1"
+                    initial={{ scale: 0 }}
+                    animate={showContent ? { scale: 1 } : {}}
+                    transition={{ duration: 0.6, delay: 1.2, type: "spring" }}
+                  >
+                    {points}
+                    <span className="text-sm">XP</span>
+                  </motion.div>
+                  <div className="text-[#A1A6B0] text-xs font-semibold">
+                    Points
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Timing - Always show */}
               <div className="flex flex-col items-center">
                 <motion.div
                   className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-lg font-extrabold text-[#232733] mb-1"
                   initial={{ scale: 0 }}
                   animate={showContent ? { scale: 1 } : {}}
-                  transition={{ duration: 0.6, delay: 1.4, type: "spring" }}
+                  transition={{
+                    duration: 0.6,
+                    delay: isPracticeCompletion ? 1.2 : 1.4,
+                    type: "spring",
+                  }}
                 >
                   {timeSpent}
                 </motion.div>
@@ -274,12 +286,15 @@ export default function CongratsCard({
               >
                 {backText}
               </button>
-              <button
-                onClick={onNextMission}
-                className="w-40 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                {nextMissionText}
-              </button>
+              {/* Only show Next Mission button for first completion, not practice */}
+              {!isPracticeCompletion && (
+                <button
+                  onClick={onNextMission}
+                  className="w-40 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  {nextMissionText}
+                </button>
+              )}
             </div>
           </div>
         </motion.div>
