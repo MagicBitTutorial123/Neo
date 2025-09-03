@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from "react";
+import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, useCallback } from "react";
 import blocksTabIcon from "@/assets/blocksTabIcon.svg";
 import codingIcon from "@/assets/codingIcon.svg";
 import dashboardIcon from "@/assets/dashboardIcon.svg";
@@ -41,6 +41,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   const [widgetData, setWidgetData] = useState({});
   const [sensorHistory, setSensorHistory] = useState({});
   const [isPaletteLocked, setIsPaletteLocked] = useState(false);
+  const [isFlyoutPinned, setIsFlyoutPinned] = useState(false);
   
   // Python code editing state
   const [editableCode, setEditableCode] = useState("");
@@ -49,6 +50,21 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
 
   const workspaceRef = useRef(null);
   const isLoadingWorkspace = useRef(false);
+
+  // Pin toggle function
+  const togglePin = useCallback(() => {
+    console.log("togglePin called, current state:", isFlyoutPinned);
+    const newState = !isFlyoutPinned;
+    console.log("Setting pin state to:", newState);
+    setIsFlyoutPinned(newState);
+    // Store pin state globally so flyout overrides can access it
+    window.blocklyFlyoutPinned = newState;
+  }, [isFlyoutPinned]);
+
+  // Initialize global pin state
+  useEffect(() => {
+    window.blocklyFlyoutPinned = isFlyoutPinned;
+  }, [isFlyoutPinned]);
 
      // Constants
    const ANALOG_PINS = [
@@ -265,13 +281,64 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     if (activeTab !== "Blocks") return;
 
     const handleMainBackgroundClick = () => {
-      setExpandMenu(false);
-      setSelectedCategory("");
+      if (!isFlyoutPinned) {
+        setExpandMenu(false);
+        setSelectedCategory("");
+      }
+    };
+
+    // Handle workspace interactions
+    const handleWorkspaceInteraction = () => {
+      // Keep flyout open during workspace interactions
+      setExpandMenu(true);
+    };
+
+    // Handle drag operations to keep flyout open
+    const handleDragStart = () => {
+      console.log("Drag started - maintaining flyout state");
+      if (expandMenu && selectedCategory) {
+        setExpandMenu(true);
+      }
+    };
+
+    const handleDragEnd = () => {
+      console.log("Drag ended");
+      // Only close flyout if not pinned
+      if (!isFlyoutPinned) {
+        // Small delay to prevent immediate closing
+        setTimeout(() => {
+          if (!isFlyoutPinned) {
+            setExpandMenu(false);
+            setSelectedCategory("");
+          }
+        }, 100);
+      }
     };
 
     const blocklyBgDiv = document.querySelector(".blocklyMainBackground");
     if (blocklyBgDiv) {
       blocklyBgDiv.addEventListener("click", handleMainBackgroundClick);
+      // Add listeners for various workspace interactions
+      blocklyBgDiv.addEventListener("mousedown", handleWorkspaceInteraction);
+      blocklyBgDiv.addEventListener("mouseup", handleWorkspaceInteraction);
+      blocklyBgDiv.addEventListener("dragstart", handleWorkspaceInteraction);
+      blocklyBgDiv.addEventListener("dragend", handleWorkspaceInteraction);
+    }
+
+    // Also listen for block interactions
+    const blocklyWorkspace = document.querySelector(".blocklyMainWorkspace");
+    if (blocklyWorkspace) {
+      blocklyWorkspace.addEventListener("mousedown", handleWorkspaceInteraction);
+      blocklyWorkspace.addEventListener("mouseup", handleWorkspaceInteraction);
+      blocklyWorkspace.addEventListener("dragstart", handleDragStart);
+      blocklyWorkspace.addEventListener("dragend", handleDragEnd);
+    }
+
+    // Listen for drag events on the flyout as well
+    const flyout = document.querySelector(".blocklyFlyout");
+    if (flyout) {
+      flyout.addEventListener("dragstart", handleDragStart);
+      flyout.addEventListener("dragend", handleDragEnd);
     }
 
     // Handle category row clicks
@@ -286,12 +353,18 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
         const clickedCategoryId = row.getAttribute("id");
 
         if (selectedCategory === clickedCategoryId) {
-          setSelectedCategory("");
-          setExpandMenu(false);
-          console.log("Closing flyout");
+          if (!isFlyoutPinned) {
+            setSelectedCategory("");
+            setExpandMenu(false);
+            console.log("Closing flyout");
+          } else {
+            console.log("Flyout is pinned, keeping it open");
+          }
         } else {
           setSelectedCategory(clickedCategoryId);
           setExpandMenu(true);
+          // Unpin when switching to a different category
+          setIsFlyoutPinned(false);
           console.log("Opening flyout for:", clickedCategoryId);
         }
       };
@@ -300,15 +373,115 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       clickHandlers.push({ element: row, handler: handleClick });
     });
 
+
+
+    // Add selected class to category icon - try multiple selectors
+    if (selectedCategory) {
+      console.log("Selected category:", selectedCategory);
+      
+      // Add a small delay to ensure DOM is updated
+      setTimeout(() => {
+                     // Try different selectors to find the icon
+             const selectors = [
+               `#${selectedCategory} .categoryBubble`,
+               `#${selectedCategory}.blocklyTreeSelected .categoryBubble`,
+               `#${selectedCategory}.blocklyTreeRow .categoryBubble`,
+               `#${selectedCategory} .blocklyToolboxCategoryIcon`,
+               `#${selectedCategory} .blocklyTreeRow .blocklyToolboxCategoryIcon`,
+               `#${selectedCategory} .blocklyToolboxCategory .blocklyToolboxCategoryIcon`,
+               `#${selectedCategory} svg`,
+               `#${selectedCategory} .blocklyIcon`,
+               `#${selectedCategory} [class*="Icon"]`,
+               `#${selectedCategory} [class*="icon"]`
+             ];
+        
+        // First try to find the selected row
+        const selectedRow = document.querySelector(`#${selectedCategory}`);
+        if (selectedRow) {
+          console.log("Found selected row:", selectedRow);
+          
+          // Look for categoryBubble within the row
+          const categoryIcon = selectedRow.querySelector('.categoryBubble');
+          if (categoryIcon) {
+            console.log("Found categoryBubble:", categoryIcon);
+            console.log("Current style:", categoryIcon.getAttribute('style'));
+            console.log("Computed style:", window.getComputedStyle(categoryIcon).backgroundColor);
+            
+            // Remove any forced styling - let CSS handle the visual indicators
+            console.log("Selected category found - CSS will handle visual indicators");
+            
+            console.log("Applied dark color to categoryBubble");
+            console.log("New style:", categoryIcon.getAttribute('style'));
+            console.log("New computed style:", window.getComputedStyle(categoryIcon).backgroundColor);
+            
+            // No need for forced styling - CSS handles visual indicators
+            
+                         // No need to apply black styling to children - CSS handles visual indicators
+          } else {
+            console.log("Could not find categoryBubble in selected row");
+            console.log("Row children:", selectedRow.children);
+            
+            // Try to find any element with background-color style
+            const allElements = selectedRow.querySelectorAll('*');
+            allElements.forEach((el, index) => {
+              const style = el.getAttribute('style');
+              if (style && style.includes('background-color')) {
+                console.log(`Element ${index} with background-color:`, el, style);
+              }
+            });
+          }
+        } else {
+          console.log("Could not find selected row with ID:", selectedCategory);
+        }
+      }, 100);
+    }
+
+
+
     return () => {
       if (blocklyBgDiv) {
         blocklyBgDiv.removeEventListener("click", handleMainBackgroundClick);
+        blocklyBgDiv.removeEventListener("mousedown", handleWorkspaceInteraction);
+        blocklyBgDiv.removeEventListener("mouseup", handleWorkspaceInteraction);
+        blocklyBgDiv.removeEventListener("dragstart", handleWorkspaceInteraction);
+        blocklyBgDiv.removeEventListener("dragend", handleWorkspaceInteraction);
       }
+      
+      const blocklyWorkspace = document.querySelector(".blocklyMainWorkspace");
+      if (blocklyWorkspace) {
+        blocklyWorkspace.removeEventListener("mousedown", handleWorkspaceInteraction);
+        blocklyWorkspace.removeEventListener("mouseup", handleWorkspaceInteraction);
+        blocklyWorkspace.removeEventListener("dragstart", handleDragStart);
+        blocklyWorkspace.removeEventListener("dragend", handleDragEnd);
+      }
+
+      const flyout = document.querySelector(".blocklyFlyout");
+      if (flyout) {
+        flyout.removeEventListener("dragstart", handleDragStart);
+        flyout.removeEventListener("dragend", handleDragEnd);
+      }
+      
       clickHandlers.forEach(({ element, handler }) => {
         element.removeEventListener("click", handler);
       });
     };
-  }, [activeTab, selectedCategory]);
+  }, [activeTab, selectedCategory, isFlyoutPinned]);
+
+  // Handle keyboard shortcuts for pin functionality
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+        event.preventDefault();
+        event.stopPropagation();
+        if (activeTab === "Blocks" && expandMenu && selectedCategory) {
+          togglePin();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, expandMenu, selectedCategory, togglePin]);
 
   // Apply dynamic styles for Blocks tab
   useEffect(() => {
@@ -325,9 +498,6 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
         fill: url(#blocklyGridPattern) !important;
         border-radius: 999px;
       }
-
-      
-
       .blocklyToolboxDiv {
         width: 70px !important;
         min-width: 70px !important;
@@ -358,14 +528,15 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     }
     
     .blocklyToolboxCategory:hover {
-      background-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background-color: rgba(113, 114, 115, 0.8);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+      transform: scale(1.02);
     }
     
 
     .blocklyToolboxCategoryIcon {
       width: 40px !important;
-      height: 40px !important;
+      height: 100px !important;
       min-width: 40px !important;
       min-height: 40px !important;
       flex-shrink: 0 !important;
@@ -391,12 +562,11 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       font-weight: 500 !important;
     }
 
-    .blocklyTreeRow.selected-category {
-      background-color: #FFFFFF !important;
-      border-radius: 12px !important;
-      padding: 4px 0 !important;
+    .blocklyTreeRow.selected-category .blocklyToolboxCategoryLabel {
+      color: #ffffff !important;
     }
 
+   
     .blocklyToolboxCategory {
       width: 100% !important;
       display: flex !important;
@@ -405,12 +575,26 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       transition: all 0.2s ease-in-out;
     }
 
-    .blocklyToolboxCategoryIcon.selected-category {
-      background-color: var(--selected-category-color, #2196f3) !important;
-      border: 3px solid white !important;
-      box-shadow: 0 0 0 2px var(--selected-category-color, #2196f3) !important;
-      
+   
+     .blocklyTreeRow.blocklyTreeSelected .blocklyTreeLabel {
+      line-height: 1.2 !important;
+      max-height: 100% !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
     }
+    
+  
+         /* Circular button effect for selected category */
+     .blocklyTreeRow.blocklyTreeSelected .categoryBubble {
+       border: 1px solid #ffffff !important;
+       box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3) !important;
+       transform: scale(1.1) !important;
+       transition: all 0.3s ease !important;
+     }
+     
+    
+
 
     .blocklyTreeLabel {
       font-size: 12px !important;
@@ -424,10 +608,12 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
     .blocklyFlyout {
       margin-left: 35px !important;
       max-height: 80vh !important;
-      top: 4vh !important;
+      top: calc(4vh + 32px) !important;
       overflow: hidden !important;
       width: 280px !important;
       transition: all 0.3s ease-in-out;
+      position: relative !important;
+      border-radius: 0 0 12px 12px !important;
     }
 
     .blocklyFlyout .blocklyBlockCanvas {
@@ -435,15 +621,69 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       transform-origin: 0 0 !important;
     }
 
-    .blocklyFlyoutBackground {
-      fill: #ffffff !important;
-      fill-opacity: 1 !important;
-      transition: all 0.3s ease-in-out;
-    }
+         .blocklyFlyoutBackground {
+       fill: ${isFlyoutPinned ? '#f8fafc' : '#ffffff'} !important;
+       fill-opacity: 1 !important;
+       transition: all 0.3s ease-in-out;
+       ${isFlyoutPinned ? 'stroke: #3b82f6 !important; stroke-width: 3 !important; stroke-dasharray: 5,5 !important;' : 'stroke: #e5e7eb !important; stroke-width: 1 !important;'}
+     }
+
+     /* Hide scrollbars in Blockly workspace */
+     .blocklyMainWorkspace {
+       overflow: hidden !important;
+     }
+     
+     .blocklyMainWorkspace > svg {
+       overflow: hidden !important;
+     }
+     
+     .blocklyWorkspace {
+       overflow: hidden !important;
+     }
+     
+     .blocklyWorkspace > svg {
+       overflow: hidden !important;
+     }
+     
+     /* Hide scrollbars in flyout */
+     .blocklyFlyout {
+       overflow: hidden !important;
+     }
+     
+     .blocklyFlyout > svg {
+       overflow: hidden !important;
+     }
+     
+     /* Hide all scrollbars globally */
+     .blocklyScrollbarHorizontal,
+     .blocklyScrollbarVertical,
+     .blocklyScrollbarHandle,
+     .blocklyScrollbarBackground {
+       display: none !important;
+       visibility: hidden !important;
+     }
+     
+     /* Hide scrollbars on all Blockly elements */
+     .blocklyMainWorkspace *,
+     .blocklyWorkspace *,
+     .blocklyFlyout * {
+       scrollbar-width: none !important;
+       -ms-overflow-style: none !important;
+     }
+     
+     .blocklyMainWorkspace *::-webkit-scrollbar,
+     .blocklyWorkspace *::-webkit-scrollbar,
+     .blocklyFlyout *::-webkit-scrollbar {
+       display: none !important;
+       width: 0 !important;
+       height: 0 !important;
+     }
 
     .blocklyFlyoutScrollbar {
-      display: ${expandMenu ? "block" : "none"} !important;
+      display: none !important;
+      visibility: hidden !important;
       margin-left: 35px !important;
+      top: calc(4vh + 32px) !important;
     }
 
     .blocklyMainWorkspaceScrollbar {
@@ -467,15 +707,17 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       pointer-events: none !important;
     }
 
-    .blocklyToolboxCategory:hover {
-      background-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
+ 
     .blocklyToolboxCategory:hover .blocklyTreeLabel {
       color: #ffffff;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      font-weight: 600;
     }
+    
+ 
+    
+
+
     `;
 
     document.head.appendChild(style);
@@ -486,7 +728,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
         document.head.removeChild(existingStyle);
       }
     };
-  }, [activeTab, sidebarCollapsed]);
+  }, [activeTab, sidebarCollapsed, isFlyoutPinned]);
 
   // Initialize Blockly workspace
   const initializeWorkspace = (element) => {
@@ -542,7 +784,72 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
         }
       });
 
+      // Override flyout behavior to prevent closing during drag operations or when pinned
+      const originalFlyout = workspace.getFlyout();
+      if (originalFlyout) {
+        const originalHide = originalFlyout.hide;
+        originalFlyout.hide = function() {
+          // Don't hide flyout if we're in the middle of a drag operation or if pinned
+          if (workspace.isDragging()) {
+            console.log("Preventing flyout hide - dragging in progress");
+            return;
+          }
+          // Check current pin state from global variable
+          if (window.blocklyFlyoutPinned) {
+            console.log("Preventing flyout hide - flyout is pinned");
+            return;
+          }
+          originalHide.call(this);
+        };
+      }
+
+      // Track drag operations to maintain flyout state
+      workspace.addChangeListener((event) => {
+        if (event.type === Blockly.Events.BLOCK_DRAG) {
+          if (event.isStart) {
+            console.log("Block drag started - keeping flyout open");
+            // Ensure flyout stays open during drag
+            if (expandMenu && selectedCategory) {
+              setExpandMenu(true);
+            }
+          }
+        }
+      });
+
       workspaceRef.current = workspace;
+      
+      // Set up flyout behavior override after workspace is ready
+      setTimeout(() => {
+        const toolbox = workspace.getToolbox();
+        if (toolbox && toolbox.flyout_) {
+          const flyout = toolbox.flyout_;
+          const originalHide = flyout.hide;
+          const originalShow = flyout.show;
+          
+          flyout.hide = function() {
+            // Don't hide if we're dragging or if flyout is pinned
+            if (workspace.isDragging()) {
+              console.log("Preventing flyout hide during drag");
+              return;
+            }
+            // Check current pin state from global variable
+            if (window.blocklyFlyoutPinned) {
+              console.log("Preventing flyout hide - flyout is pinned");
+              return;
+            }
+            originalHide.call(this);
+          };
+          
+          flyout.show = function(categoryId) {
+            originalShow.call(this, categoryId);
+            // Ensure flyout stays visible during drag operations
+            if (workspace.isDragging()) {
+              console.log("Ensuring flyout stays visible during drag");
+            }
+          };
+        }
+      }, 100);
+      
       console.log("Workspace initialization complete");
     } catch (error) {
       console.error("Error initializing workspace:", error);
@@ -698,6 +1005,7 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
   }, []);
 
 
+
   // Handle tab switching with code editing warning
   const handleTabSwitch = (newTab) => {
     if (activeTab === "Code" && newTab === "Blocks" && codeHasBeenEdited) {
@@ -707,6 +1015,10 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
       if (newTab === "Code") {
         setEditableCode(generatedCode);
         setCodeHasBeenEdited(false);
+      }
+      // Only unpin flyout when switching away from Blocks tab
+      if (newTab !== "Blocks") {
+        setIsFlyoutPinned(false);
       }
     }
   };
@@ -1003,17 +1315,66 @@ const BlocklyComponent = ({ generatedCode, setGeneratedCode, onWorkspaceChange }
 
         {/* Main Content Area */}
         <div className="z-5 flex-grow w-full">
-          {/* Blocks Tab */}
-          {activeTab === "Blocks" && (
-            <div
-              ref={initializeWorkspace}
-              style={{
-                height: "100%",
-                width: "100%",
-                backgroundColor: "white",
-              }}
-            />
-          )}
+                     {/* Blocks Tab */}
+           {activeTab === "Blocks" && (
+             <>
+               {/* Pin button inside flyout */}
+               {expandMenu && selectedCategory && (
+                 <div
+                   className="absolute z-50"
+                   style={{
+                     left: "115px",
+                     top: "5.5vh",
+                     pointerEvents: "auto"
+                   }}
+                 >
+                   <button
+                     data-flyout-pinned={isFlyoutPinned}
+                     onClick={(e) => {
+                       e.preventDefault();
+                       e.stopPropagation();
+                       togglePin();
+                     }}
+                     onMouseDown={(e) => {
+                       e.preventDefault();
+                       e.stopPropagation();
+                     }}
+                     className={`p-1.5 rounded-md transition-all duration-200 shadow-sm ${
+                       isFlyoutPinned
+                         ? "bg-blue-500 text-white hover:bg-blue-600"
+                         : "bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 border border-gray-300"
+                     }`}
+                     title={isFlyoutPinned ? "Unpin flyout (Ctrl+P)" : "Pin flyout (Ctrl+P)"}
+                   >
+                     <svg
+                       width="12"
+                       height="12"
+                       viewBox="0 0 24 24"
+                       fill={isFlyoutPinned ? "currentColor" : "none"}
+                       stroke="currentColor"
+                       strokeWidth="2"
+                       strokeLinecap="round"
+                       strokeLinejoin="round"
+                     >
+                       <path d="M16 12V4a4 4 0 0 0-8 0v8m-4-8h16" />
+                       <circle cx="12" cy="16" r="2" />
+                     </svg>
+                   </button>
+                 </div>
+               )}
+
+               <div
+                 ref={initializeWorkspace}
+                 style={{
+                   height: "100%",
+                   width: "100%",
+                   backgroundColor: "white",
+                 }}
+               />
+             </>
+           )}
+
+
 
           {/* Code Tab */}
           {activeTab === "Code" && (

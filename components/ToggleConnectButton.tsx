@@ -76,7 +76,7 @@ export default function ToggleConnectButton({
   } else if (connectionStatus === "disconnected") {
     pillColor = "bg-[#FF4D4F] border-[#FF4D4F]";
     iconBg = "bg-transparent border-[#FF4D4F]";
-    pillText = "Disconnected";
+    pillText = "Connect";
     textColor = "text-white";
   } else {
     pillColor = "bg-[#FF9C32] border-[#FF9C32]";
