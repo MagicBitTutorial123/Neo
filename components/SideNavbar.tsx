@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { APP_BASE_URL } from "@/lib/env";
@@ -82,7 +82,6 @@ export default function SideNavbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
 
-
   // Contact modal state
   const [contactOpen, setContactOpen] = useState(false);
   const [contactEmail, setContactEmail] = useState<string>("");
@@ -100,10 +99,10 @@ export default function SideNavbar({
       try {
         URL.revokeObjectURL(contactFileUrl);
       } catch (error) {
-        console.error('Error revoking object URL:', error);
+        console.error("Error revoking object URL:", error);
       }
     }
-    
+
     setContactOpen(false);
     setContactEmail("");
     setContactMessage("");
@@ -116,14 +115,14 @@ export default function SideNavbar({
   // localStorage-backed values
   const [lsName, setLsName] = useState<string | null>(null);
   const [lsAvatar, setLsAvatar] = useState<string | null>(null);
-  
+
   // Supabase user data
   const [supabaseUserData, setSupabaseUserData] = useState<{
     full_name?: string;
     avatar?: string;
     email?: string;
   } | null>(null);
-  
+
   // Loading and error states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,43 +138,51 @@ export default function SideNavbar({
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Fetching user data from Supabase...');
-      
+      console.log("🔍 Fetching user data from Supabase...");
+
       // Get current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError || !user) {
-        console.log('❌ No authenticated user found in Supabase Auth');
+        console.log("❌ No authenticated user found in Supabase Auth");
         setError("No authenticated user found");
         setLoading(false);
         return;
       }
 
-      console.log('✅ Found authenticated user:', user.id);
-      
+      console.log("✅ Found authenticated user:", user.id);
+
       // Fetch user profile from user_profiles table
       const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('full_name, avatar, email')
-        .eq('user_id', user.id)
+        .from("user_profiles")
+        .select("full_name, avatar, email")
+        .eq("user_id", user.id)
         .single();
 
       if (profileError) {
-        console.error('❌ Error fetching user profile:', profileError);
-        
+        console.error("❌ Error fetching user profile:", profileError);
+
         // If profile doesn't exist, try to get user metadata from auth
-        if (profileError.code === 'PGRST116') {
-          console.log('🔄 Profile not found, trying to get user metadata from auth...');
-          
+        if (profileError.code === "PGRST116") {
+          console.log(
+            "🔄 Profile not found, trying to get user metadata from auth..."
+          );
+
           const userMetadata = user.user_metadata;
           if (userMetadata && (userMetadata.full_name || userMetadata.avatar)) {
             const fallbackProfile = {
               full_name: userMetadata.full_name || null,
               avatar: userMetadata.avatar || null,
-              email: user.email
+              email: user.email,
             };
             setSupabaseUserData(fallbackProfile);
-            console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
+            console.log(
+              "✅ Using fallback data from auth metadata:",
+              fallbackProfile
+            );
             setLoading(false);
             return;
           }
@@ -188,34 +195,38 @@ export default function SideNavbar({
       if (profile) {
         // Ensure avatar has proper path
         let avatarPath = profile.avatar;
-        if (avatarPath && !avatarPath.startsWith('/') && !avatarPath.startsWith('http')) {
+        if (
+          avatarPath &&
+          !avatarPath.startsWith("/") &&
+          !avatarPath.startsWith("http")
+        ) {
           avatarPath = `/${avatarPath}`;
         }
-        
+
         const updatedProfile = {
           ...profile,
-          avatar: avatarPath
+          avatar: avatarPath,
         };
-        
+
         setSupabaseUserData(updatedProfile);
-        console.log('✅ User profile fetched from Supabase:', updatedProfile);
-        
+        console.log("✅ User profile fetched from Supabase:", updatedProfile);
+
         // Update localStorage with Supabase data for consistency
         if (profile.full_name) {
-          localStorage.setItem('name', profile.full_name);
+          localStorage.setItem("name", profile.full_name);
         }
         if (profile.avatar) {
-          localStorage.setItem('avatar', profile.avatar);
+          localStorage.setItem("avatar", profile.avatar);
         }
         if (profile.email) {
-          localStorage.setItem('email', profile.email);
+          localStorage.setItem("email", profile.email);
         }
       } else {
-        console.log('❌ No profile found for user');
+        console.log("❌ No profile found for user");
         setError("No user profile found");
       }
     } catch (error) {
-      console.error('❌ Error fetching user data from Supabase:', error);
+      console.error("❌ Error fetching user data from Supabase:", error);
       setError("Failed to load user data");
     } finally {
       setLoading(false);
@@ -230,72 +241,88 @@ export default function SideNavbar({
   // Listen for profile updates from settings page
   useEffect(() => {
     const handleProfileUpdate = () => {
-      console.log('🔄 Profile update event received, refreshing sidebar data...');
+      console.log(
+        "🔄 Profile update event received, refreshing sidebar data..."
+      );
       fetchUserDataFromSupabase();
     };
 
     // Listen for custom event when profile is updated
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+
     return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, []);
 
-  // // Refresh data periodically to catch changes
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     fetchUserDataFromSupabase();
-  //   }, 30000); // Refresh every 30 seconds
+  // Refresh data periodically to catch changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUserDataFromSupabase();
+    }, 30000); // Refresh every 30 seconds
 
-  //   return () => clearInterval(interval);
-  // }, []);
+    return () => clearInterval(interval);
+  }, []);
 
   // Try to create user profile if it doesn't exist
   const createUserProfileIfNeeded = async () => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
       if (authError || !user) return;
 
       // Check if profile exists
       const { data: existingProfile, error: profileCheckError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', user.id)
+        .from("user_profiles")
+        .select("id")
+        .eq("user_id", user.id)
         .single();
 
-      if (profileCheckError && profileCheckError.code === 'PGRST116') {
-        console.log('🔄 Creating missing user profile...');
-        
+      if (profileCheckError && profileCheckError.code === "PGRST116") {
+        console.log("🔄 Creating missing user profile...");
+
         // Try to get data from localStorage or context
-        const name = localStorage.getItem('name') || userData?.name || registrationData?.name;
-        const avatar = localStorage.getItem('avatar') || userData?.avatar || registrationData?.avatar;
-        const email = localStorage.getItem('email') || userData?.email || registrationData?.email;
-        
+        const name =
+          localStorage.getItem("name") ||
+          userData?.name ||
+          registrationData?.name;
+        const avatar =
+          localStorage.getItem("avatar") ||
+          userData?.avatar ||
+          registrationData?.avatar;
+        const email =
+          localStorage.getItem("email") ||
+          userData?.email ||
+          registrationData?.email;
+
         if (name && avatar && email) {
           const { data: newProfile, error: createError } = await supabase
-            .from('user_profiles')
-            .insert([{
-              user_id: user.id,
-              email: email,
-              full_name: name,
-              avatar: avatar,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }])
-            .select('full_name, avatar')
+            .from("user_profiles")
+            .insert([
+              {
+                user_id: user.id,
+                email: email,
+                full_name: name,
+                avatar: avatar,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+            ])
+            .select("full_name, avatar")
             .single();
 
           if (createError) {
-            console.error('❌ Failed to create profile:', createError);
+            console.error("❌ Failed to create profile:", createError);
           } else {
-            console.log('✅ Created user profile:', newProfile);
+            console.log("✅ Created user profile:", newProfile);
             setSupabaseUserData(newProfile);
           }
         }
       }
     } catch (error) {
-      console.error('❌ Error creating user profile:', error);
+      console.error("❌ Error creating user profile:", error);
     }
   };
 
@@ -308,14 +335,21 @@ export default function SideNavbar({
     }
   }, [supabaseUserData]);
 
+  // We'll use the user data from Supabase table (what user selected during signup)
+  console.log("🔍 Using user data from Supabase table:", {
+    supabaseUserData,
+    userData,
+    registrationData,
+  });
+
   // ---- load from localStorage
   const refreshFromLocalStorage = () => {
     try {
       const n = localStorage.getItem("name");
       const a = localStorage.getItem("avatar");
-      
-      console.log('🔍 localStorage raw values:', { name: n, avatar: a });
-      
+
+      console.log("🔍 localStorage raw values:", { name: n, avatar: a });
+
       setLsName(n && n.trim() ? n.trim() : null);
 
       // normalize avatar path
@@ -327,7 +361,10 @@ export default function SideNavbar({
         setLsAvatar(null);
       }
 
-      console.log('🔍 localStorage processed values:', { lsName: n && n.trim() ? n.trim() : null, lsAvatar: av });
+      console.log("🔍 localStorage processed values:", {
+        lsName: n && n.trim() ? n.trim() : null,
+        lsAvatar: av,
+      });
 
       // seed contact email from localStorage if present
       const e = localStorage.getItem("email");
@@ -335,7 +372,7 @@ export default function SideNavbar({
         setContactEmail(e.trim());
       }
     } catch (error) {
-      console.error('❌ Error reading localStorage:', error);
+      console.error("❌ Error reading localStorage:", error);
     }
   };
 
@@ -349,21 +386,23 @@ export default function SideNavbar({
     // const onFocus = () => refreshFromLocalStorage();
     const onStorage = () => refreshFromLocalStorage();
     const onAvatarChanged = (event: CustomEvent) => {
-      console.log('🔄 Avatar changed event received:', event.detail);
+      console.log("🔄 Avatar changed event received:", event.detail);
       refreshFromLocalStorage();
     };
-    
+
     // window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
     window.addEventListener("avatarChanged", onAvatarChanged as EventListener);
-    
+
     return () => {
       // window.removeEventListener("focus", onFocus);
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("avatarChanged", onAvatarChanged as EventListener);
+      window.removeEventListener(
+        "avatarChanged",
+        onAvatarChanged as EventListener
+      );
     };
   }, []);
-
 
   // close menus on outside click / Esc
   useEffect(() => {
@@ -432,13 +471,27 @@ export default function SideNavbar({
   // Ensure avatar has proper path
   const finalAvatar = (() => {
     if (!userAvatar) return "/Avatar02.png";
-    if (userAvatar.startsWith('/') || userAvatar.startsWith('http')) {
+    if (userAvatar.startsWith("/") || userAvatar.startsWith("http")) {
       return userAvatar;
     }
     return `/${userAvatar}`;
   })();
 
   const finalName = userName || "User";
+
+  // Debug logging
+  console.log("🔍 SideNavbar data sources:", {
+    supabaseUserData,
+    lsAvatar,
+    lsName,
+    userData: { avatar: userData?.avatar, name: userData?.name },
+    registrationData: {
+      avatar: registrationData.avatar,
+      name: registrationData.name,
+    },
+    finalAvatar: finalAvatar,
+    finalName: finalName,
+  });
 
   const hasCompletedMission2 = userData?.hasCompletedMission2 || false;
 
@@ -454,12 +507,6 @@ export default function SideNavbar({
       label: "Missions",
       href: "/missions",
       active: pathname === "/missions",
-    },
-    {
-      icon: "/progress.svg",
-      label: "Progress",
-      href: "/progress",
-      active: pathname === "/progress",
     },
     hasCompletedMission2
       ? {
@@ -494,45 +541,23 @@ export default function SideNavbar({
     router.push(`${APP_BASE_URL}/`);
   };
 
-  // FAQ and Contact Us click handlers with useCallback
-  const handleFAQClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('🔍 FAQ clicked!');
-    setHelpMenuOpen(false);
-    console.log('🔍 Navigating to /faq...');
-    router.push("/faq");
-  }, [router]);
-
-  const handleContactClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('🔍 Contact Us clicked!');
-    setHelpMenuOpen(false);
-    console.log('🔍 Navigating to /contact...');
-    router.push("/contact");
-  }, [router]);
-
   // Open contact modal from Help menu
   const openContact = () => {
-    console.log('🔍 Contact Us clicked!');
     setHelpMenuOpen(false);
     setSendError(null);
     setSendOk(null);
-    
+
     // Always refresh email from localStorage when opening modal
     const storedEmail = localStorage.getItem("email");
-    console.log('🔍 Opening contact modal, stored email:', storedEmail);
+    console.log("🔍 Opening contact modal, stored email:", storedEmail);
     if (storedEmail && storedEmail.trim()) {
       setContactEmail(storedEmail.trim());
-      console.log('✅ Set contact email to:', storedEmail.trim());
+      console.log("✅ Set contact email to:", storedEmail.trim());
     } else {
-      console.log('❌ No email found in localStorage');
+      console.log("❌ No email found in localStorage");
     }
-    
-    console.log('🔍 Setting contactOpen to true');
+
     setContactOpen(true);
-    console.log('🔍 contactOpen state should now be true');
   };
 
   // File selection
@@ -542,10 +567,10 @@ export default function SideNavbar({
       try {
         URL.revokeObjectURL(contactFileUrl);
       } catch (error) {
-        console.error('Error revoking previous object URL:', error);
+        console.error("Error revoking previous object URL:", error);
       }
     }
-    
+
     if (!file) {
       setContactFile(null);
       setContactFileUrl(null);
@@ -563,13 +588,13 @@ export default function SideNavbar({
     }
     setSendError(null);
     setContactFile(file);
-    
+
     // Create and store object URL
     try {
       const objectUrl = URL.createObjectURL(file);
       setContactFileUrl(objectUrl);
     } catch (error) {
-      console.error('Error creating object URL:', error);
+      console.error("Error creating object URL:", error);
       setSendError("Failed to process image file.");
     }
   };
@@ -606,7 +631,7 @@ export default function SideNavbar({
         try {
           URL.revokeObjectURL(contactFileUrl);
         } catch (error) {
-          console.error('Error revoking object URL:', error);
+          console.error("Error revoking object URL:", error);
         }
       }
     };
@@ -661,7 +686,7 @@ export default function SideNavbar({
         try {
           URL.revokeObjectURL(contactFileUrl);
         } catch (error) {
-          console.error('Error revoking object URL:', error);
+          console.error("Error revoking object URL:", error);
         }
       }
       setContactFile(null);
@@ -715,16 +740,16 @@ export default function SideNavbar({
             sidebarCollapsed ? "w-14 h-14" : "w-[150px] h-[50px]"
           }`}
         >
-                     <Image
-             src={
-               sidebarCollapsed
-                 ? "/BuddyNeo-collapsed.svg"
-                 : "/BuddyNeo-expanded.svg"
-             }
-             alt="BuddyNeo Logo"
-             width={sidebarCollapsed ? 40 : 120}
-             height={sidebarCollapsed ? 40 : 40}
-           />
+          <Image
+            src={
+              sidebarCollapsed
+                ? "/BuddyNeo-collapsed.svg"
+                : "/BuddyNeo-expanded.svg"
+            }
+            alt="BuddyNeo Logo"
+            width={sidebarCollapsed ? 40 : 120}
+            height={sidebarCollapsed ? 40 : 40}
+          />
         </div>
       </div>
 
@@ -791,111 +816,98 @@ export default function SideNavbar({
             )
           )}
 
-                    {/* Help Menu Item */}
-                    <div
-                      className={`flex flex-col ${
-                        sidebarCollapsed ? "w-12 px-0" : "w-[80%] px-4"
-                      }`}
-                    >
-                      {/* Help Button */}
-                      <div
-                        ref={helpMenuRef}
-                        className={`flex flex-row items-center gap-3 py-3 rounded-2xl transition-colors cursor-pointer hover:bg-[#F0F4F8]`}
-                        onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-                      >
-                        {/* Help Icon */}
-                        <div className="w-6 h-6 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
-                        <Image src="/Help.svg" alt="Help" width={25} height={25} />
-                        </div>
-                        
-                        {!sidebarCollapsed && (
-                          <span className="text-base font-semibold text-[#222E3A]">
-                            Help
-                          </span>
-                        )}
+          {/* Help Button */}
+          <div
+            ref={helpMenuRef}
+            className={`relative flex flex-row items-center gap-3 ${
+              sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
+            } py-3 rounded-2xl hover:bg-[#F0F4F8] transition-colors cursor-pointer`}
+            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+          >
+            <Image src="/help.svg" alt="Help" width={24} height={24} />
+            {!sidebarCollapsed && (
+              <span className="text-base font-semibold text-[#222E3A]">
+                Help
+              </span>
+            )}
 
-                        {/* Caret Icon */}
-                        {!sidebarCollapsed && (
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            aria-hidden="true"
-                            className={`ml-auto transition-transform ${helpMenuOpen ? 'rotate-180' : ''}`}
-                          >
-                            <path
-                              d="M6 9l6 6 6-6"
-                              stroke="#222E3A"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </div>
-
-                      {/* FAQ and Contact Us - Inline below Help, not in popup */}
-                      {helpMenuOpen && !sidebarCollapsed && (
-                        <div className="ml-2 mt-1 space-y-1">
-                          {/* FAQ Item */}
-                          <div 
-                            className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              console.log('🔍 FAQ mousedown!');
-                              // Handle navigation on mousedown instead of click
-                              setHelpMenuOpen(false);
-                              router.push("/faq");
-                            }}
-                          >
-                            <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
-                              <Image
-                                src="/help-icon.png"
-                                alt="FAQ"
-                                width={8}
-                                height={8}
-                                className="object-contain"
-                              />
-                            </div>
-                            <span className="text-sm text-[#222E3A]">FAQ</span>
-                          </div>
-                          
-                          {/* Contact Us Item */}
-                          <div 
-                            className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#F0F4F8] cursor-pointer"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              console.log('🔍 Contact Us mousedown!');
-                              // Handle navigation on mousedown instead of click
-                              setHelpMenuOpen(false);
-                              router.push("/contact");
-                            }}
-                          >
-                            <div className="w-4 h-4 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
-                              <svg
-                                width="8"
-                                height="8"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                  stroke="#222E3A"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </div>
-                            <span className="text-sm text-[#222E3A]">Contact Us</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+            {/* Help Dropdown Menu */}
+            {helpMenuOpen && (
+              <div
+                className={`absolute ${
+                  sidebarCollapsed
+                    ? "left-full ml-2 top-0"
+                    : "left-0 bottom-full mb-2"
+                } w-48 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50`}
+                role="menu"
+              >
+                {/* tiny arrow */}
+                <div
+                  className={`absolute ${
+                    sidebarCollapsed ? "left-0 -ml-1 top-4" : "left-4 -bottom-1"
+                  } w-3 h-3 bg-white rotate-45 border-r border-b border-gray-100`}
+                />
+                <button
+                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-black"
+                  onClick={() => {
+                    setHelpMenuOpen(false);
+                    router.push("/faq");
+                  }}
+                  role="menuitem"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+                      stroke="#111827"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
+                      stroke="#111827"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  FAQ
+                </button>
+                <div className="h-px bg-gray-100" />
+                <button
+                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 hover:bg-gray-50 text-sm text-black"
+                  onClick={openContact}
+                  role="menuitem"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                      stroke="#111827"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M22 6l-10 7L2 6"
+                      stroke="#111827"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Contact Us
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
       </div>
 
@@ -1162,18 +1174,28 @@ export default function SideNavbar({
                           className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
                           title="Remove attachment"
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <path
+                              d="M18 6L6 18M6 6l12 12"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
                           </svg>
                         </button>
                       </div>
-                                             <div className="relative w-full h-32 bg-white rounded-lg overflow-hidden border border-gray-200">
-                         <img
-                           src={contactFileUrl || ''}
-                           alt="Preview"
-                           className="w-full h-full object-cover"
-                         />
-                       </div>
+                      <div className="relative w-full h-32 bg-white rounded-lg overflow-hidden border border-gray-200">
+                        <img
+                          src={contactFileUrl || ""}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <div className="mt-2 text-xs text-gray-500">
                         Size: {(contactFile.size / 1024).toFixed(1)} KB
                       </div>
@@ -1212,7 +1234,9 @@ export default function SideNavbar({
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+                      onChange={(e) =>
+                        onFileChange(e.target.files?.[0] ?? null)
+                      }
                     />
                   </label>
                 )}

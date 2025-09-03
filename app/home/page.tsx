@@ -8,8 +8,6 @@ import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
 import { useUser } from "@/context/UserContext";
 import BasicAuthGuard from "@/components/BasicAuthGuard";
-import { supabase } from "@/lib/supabaseClient";
-
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -38,186 +36,30 @@ export default function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userData } = useUser();
-  const [isFirstTimeOAuth, setIsFirstTimeOAuth] = useState(false);
-  const [showProfileUpdateNotification, setShowProfileUpdateNotification] = useState(false);
-  const [userName, setUserName] = useState<string>("");
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
-  const [isNewUser,setIsNewUser] = useState(false)
-
-  // Get user name from localStorage
-  useEffect(() => {
-    const getUserName = () => {
-      try {
-        // Check all possible localStorage keys for name
-        const possibleKeys = [
-          "userData",
-          "registrationData", 
-          "name",
-          "googleOAuthName"
-        ];
-        
-        for (const key of possibleKeys) {
-          const value = localStorage.getItem(key);
-          
-          if (value) {
-            try {
-              const parsed = JSON.parse(value);
-              if (parsed.name) {
-                return parsed.name;
-              }
-            } catch {
-              // If it's not JSON, it might be a direct string value
-              if (key === "name" || key === "googleOAuthName") {
-                return value;
-              }
-            }
-          }
-        }
-
-        // Also check userData from context
-        if (userData?.name) {
-          return userData.name;
-        }
-
-        return "";
-      } catch (error) {
-        console.error("Error reading user name from localStorage:", error);
-        return "";
-      }
-    };
-
-    const name = getUserName();
-    setUserName(name);
-  }, [userData]);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // On mount, set hydrated state and check for new user query param
   useEffect(() => {
     setHydrated(true);
 
-    // Check if this is a new user from signup process
+    // Check if this is a new user from signup
     const isNewUserFromSignup = searchParams.get("newUser") === "true";
-    const isOnboarding = searchParams.get("onboarding") === "true";
-    
-    if (isNewUserFromSignup && isOnboarding) {
-      console.log('🆕 New user from signup process - showing onboarding');
-      router.replace("/home?newUser=true&onboarding=true");
-      setIsNewUser(true);
-    } else if (isNewUserFromSignup && !isOnboarding) {
-      // User came from signup but no onboarding flag - redirect to onboarding
-      console.log('🔄 New user from signup - redirecting to onboarding');
-      router.replace("/home?newUser=true&onboarding=true");
+    if (isNewUserFromSignup) {
+      router.replace("/home");
       setIsNewUser(true);
     }
-    
-    // Check if user returned from settings with profile update
-    const profileUpdated = searchParams.get("profileUpdated") === "true";
-    if (profileUpdated) {
-      console.log('🔄 User returned from settings, checking profile status...');
-      router.replace("/home"); // Clean up URL
-      // Refresh profile status to check if notification should be hidden
-      setTimeout(() => refreshProfileStatus(), 500); // Small delay to ensure settings page has saved
+
+    // Also check if user is new based on mission progress
+    if (
+      userData?.isNewUser ||
+      (userData?.missionProgress !== undefined && userData?.missionProgress < 2)
+    ) {
+      setIsNewUser(true);
     }
-    
-    // Check if user is new based on mission progress (for existing users who haven't completed missions)
-    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
-      // Only set as new user if they didn't come from signup (to avoid double onboarding)
-      if (!isNewUserFromSignup) {
-        setIsNewUser(true);
-      }
-    }
-    
-    // Check if this is a first-time Google OAuth user
-    const checkFirstTimeOAuth = async () => {
-      
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Check if user has a profile and get all profile details
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('user_id, created_at, full_name, phone, age, avatar')
-            .eq('user_id', user.id)
-            .single();
-            
-          if (profile) {
-            // Check if this is a first-time OAuth user by looking at:
-            // 1. No mission progress (missionProgress === 0 or undefined)
-            // 2. Profile was created recently (within last 24 hours)
-            const isNewProfile = new Date(profile.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const hasNoMissionProgress = !userData?.missionProgress || userData.missionProgress === 0;
-            
-            // Check if profile is complete (has name, phone, age, and avatar)
-            const isProfileComplete = profile.full_name && profile.phone && profile.age && profile.avatar;
-            
-            if (isNewProfile && hasNoMissionProgress && !isProfileComplete) {
-              // Show notification only if profile is incomplete
-              setIsFirstTimeOAuth(true);
-              setShowProfileUpdateNotification(true);
-              console.log('🆕 First-time OAuth user detected - new profile and incomplete profile');
-            } else if (isProfileComplete) {
-              // Profile is complete, hide notification
-              setShowProfileUpdateNotification(false);
-              setIsFirstTimeOAuth(false);
-              console.log('✅ Profile is complete, hiding notification');
-            } else {
-              // Returning user but profile incomplete
-              setShowProfileUpdateNotification(true);
-              console.log('⚠️ Returning OAuth user with incomplete profile');
-            }
-          }
-        }
-      } catch (error) {
-        console.log('🔍 Error checking first-time OAuth status:', error);
-      }
-    };
-    
-    checkFirstTimeOAuth();
   }, [searchParams, router, userData]);
-
-  // Function to refresh profile status (can be called when returning from settings)
-  const refreshProfileStatus = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('full_name, phone, age, avatar')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (profile) {
-          const isProfileComplete = profile.full_name && profile.phone && profile.age && profile.avatar;
-          
-          if (isProfileComplete) {
-            setShowProfileUpdateNotification(false);
-            setIsFirstTimeOAuth(false);
-            console.log('✅ Profile completed, notification hidden');
-          } else {
-            setShowProfileUpdateNotification(true);
-            console.log('⚠️ Profile still incomplete, notification shown');
-          }
-        }
-      }
-    } catch (error) {
-      console.log('🔍 Error refreshing profile status:', error);
-    }
-  };
-
-  // Listen for navigation back to home (when user returns from settings)
-  useEffect(() => {
-    const handleFocus = () => {
-      // Check profile status when user returns to the page
-      refreshProfileStatus();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -225,10 +67,16 @@ export default function HomePage() {
       setSidebarCollapsed(event.detail.collapsed);
     };
 
-    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
-    
+    window.addEventListener(
+      "sidebarCollapsed",
+      handleSidebarCollapsed as EventListener
+    );
+
     return () => {
-      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+      window.removeEventListener(
+        "sidebarCollapsed",
+        handleSidebarCollapsed as EventListener
+      );
     };
   }, []);
 
@@ -240,12 +88,31 @@ export default function HomePage() {
     }
   }, [step, userData?.isNewUser]);
 
-  // Dummy data for mission progress
-  const totalSteps = 5;
-  const completedSteps = 3; // Change this to simulate progress
-  const xpPoints = 120;
-  const missionLabel = `Mission 02`;
-  const progressPercent = (completedSteps / totalSteps) * 100;
+  // Dynamic data for mission progress - using real user data
+  const xpPoints = userData?.xp || 0;
+  const currentMission = userData?.missionProgress || 0;
+  const missionLabel = `Mission ${String(currentMission + 1).padStart(2, "0")}`;
+
+  // Calculate progress based on completed missions vs total available missions
+  // For now, we'll use a simple calculation - you can adjust this based on your total mission count
+  const totalMissions = 5; // Adjust this to match your total number of missions
+  const progressPercent = (currentMission / totalMissions) * 100;
+
+  // Debug logging for home page progress
+  console.log("🏠 Home Page Progress Data:", {
+    xpPoints,
+    currentMission,
+    missionLabel,
+    totalMissions,
+    progressPercent,
+    userData: userData
+      ? {
+          xp: userData.xp,
+          missionProgress: userData.missionProgress,
+          name: userData.name,
+        }
+      : null,
+  });
 
   // Dummy data for badges
   const badges = [
@@ -256,7 +123,7 @@ export default function HomePage() {
     { src: "/badge5.png", alt: "Badge5", earned: false },
     { src: "/badge6.png", alt: "Badge6", earned: false },
     { src: "/badge6.png", alt: "Badge7", earned: false },
-    { src: "/badge5.png", alt: "Badge8", earned: false },
+    { src: "/badge8.png", alt: "Badge8", earned: false },
   ];
 
   // Dummy battery level (0-100)
@@ -266,50 +133,44 @@ export default function HomePage() {
   const nextMission = (userData?.missionProgress ?? 0) + 1;
 
   const newUserContent = useMemo(() => {
-      return (
-        <div className="flex flex-1 w-full h-full relative animate-fade-in">
-
-          
-          <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
-            <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
-              {mainTextStep}
-            </div>
-            <div className="text-3xl text-[#555] font-poppins mb-18">
-              {subTextStep}
-            </div>
-            <LetsGoButton
-              style={{ width: 200, height: 60 }}
-              onClick={() => router.push(`/missions/${nextMission}`)}
-            >
-              Lets Go
-            </LetsGoButton>
+    return (
+      <div className="flex flex-1 w-full h-full relative animate-fade-in">
+        <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
+          <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
+            {mainTextStep}
           </div>
-          <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 60, damping: 18 }}
-            className="absolute bottom-0 right-0 flex items-end justify-end"
-            style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
+          <div className="text-3xl text-[#555] font-poppins mb-18">
+            {subTextStep}
+          </div>
+          <LetsGoButton
+            style={{ width: 200, height: 60 }}
+            onClick={() => router.push(`/missions/${nextMission}`)}
           >
-            <Image
-              src="/welcome-robot.png"
-              alt="Robot"
-              width={450}
-              height={450}
-              style={{ maxWidth: "100%", maxHeight: "100%" }}
-            />
-          </motion.div>
+            Lets Go
+          </LetsGoButton>
         </div>
-      );
-    }
-  
-  , [router, mainTextStep, subTextStep, nextMission, userName]);
+        <motion.div
+          initial={{ x: 300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 60, damping: 18 }}
+          className="absolute bottom-0 right-0 flex items-end justify-end"
+          style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
+        >
+          <Image
+            src="/welcome-robot.png"
+            alt="Robot"
+            width={450}
+            height={450}
+            style={{ maxWidth: "100%", maxHeight: "100%" }}
+          />
+        </motion.div>
+      </div>
+    );
+  }, [router, mainTextStep, subTextStep, nextMission]);
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
     <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
-
-
       {/* Mobile Mission Progress Bar - Top of page */}
       <div className="lg:hidden w-full flex flex-col items-center mb-4">
         <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -336,7 +197,10 @@ export default function HomePage() {
               Welcome back!
             </span>
             <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
-              {userName || userData?.name || "there"}{" "}
+              {userData?.name}{" "}
+              {/* <span className="inline-block">
+                <Image src="/User.png" alt="User" width={32} height={32} />
+              </span> */}
             </div>
           </div>
           {/* Mission Card */}
@@ -348,7 +212,14 @@ export default function HomePage() {
               height={300}
               className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
             />
-            <button className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition">
+            <button
+              onClick={() =>
+                router.push(
+                  `/missions/${String(currentMission + 1).padStart(2, "0")}`
+                )
+              }
+              className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition"
+            >
               Continue mission{" "}
               <span className="inline-block">
                 <svg
@@ -522,33 +393,26 @@ export default function HomePage() {
   }
 
   // Get user data from context or localStorage fallback
-  
+
   // Check if user came from signup flow (newUser=true in URL)
   const isFromSignup = searchParams.get("newUser") === "true";
-  const isOnboarding = searchParams.get("onboarding") === "true";
-  
+
   // Show onboarding ONLY for new users who came from signup flow
   // Existing users (from signin) should see dashboard directly
-  const shouldShowOnboarding = isNewUser && isFromSignup && isOnboarding;
-  
-  // Check if user is coming from regular login (not signup)
-  const isFromRegularLogin = !isFromSignup && !isOnboarding;
+  const shouldShowOnboarding = isNewUser && isFromSignup;
 
   console.log("🔍 User data:", userData);
   console.log("🔍 Is new user:", isNewUser);
   console.log("🔍 Mission progress:", userData?.missionProgress);
   console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
   console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
-  console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
+  console.log(
+    "🔍 UserData.missionProgress < 2:",
+    userData?.missionProgress !== undefined && userData?.missionProgress < 2
+  );
   console.log("🔍 Final isNewUser calculation:", isNewUser);
   console.log("🔍 isFromSignup:", isFromSignup);
-  console.log("🔍 isOnboarding:", isOnboarding);
   console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
-  console.log("🔍 isFromRegularLogin:", isFromRegularLogin);
-  console.log("🔍 Google OAuth Status:", {
-    isFirstTimeOAuth,
-    showProfileUpdateNotification
-  });
 
   return (
     <BasicAuthGuard>
@@ -561,24 +425,8 @@ export default function HomePage() {
           style={{
             marginLeft: sidebarCollapsed ? "80px" : "260px",
           }}
-                 >
-           
-           
-           {/* Profile Update Notification for Google Users */}
-          
-           
-           
-                       {/* Smart Content Routing */}
-            {shouldShowOnboarding ? (
-              // New user from signup process - show onboarding (clean layout)
-              newUserContent
-                       ) : isFromRegularLogin ? (
-              // Existing user from regular login - show clean dashboard
-              defaultHomeContent
-           ) : (
-             // Default case - show appropriate content based on user state
-             defaultHomeContent
-           )}
+        >
+          {shouldShowOnboarding ? newUserContent : defaultHomeContent}
         </main>
       </div>
     </BasicAuthGuard>

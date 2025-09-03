@@ -1,19 +1,25 @@
 "use client";
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect } from "react";
 import MissionIntro from "@/components/MissionIntro";
-// import Header from "@/components/StatusHeaderBar";
-// import CongratsCard from "@/components/CongratsCard";
+import CountdownTimer from "@/components/CountdownTimer";
+import StatusHeaderBar from "@/components/StatusHeaderBar";
+
 // import StepQuestionCard from "@/components/StepQuestionCard";
-// import MCQCard from "@/components/MCQCard";
+import MCQCard from "@/components/MCQCard";
+import StepSuccessCard from "@/components/StepSuccessCard";
+import StepRetryCard from "@/components/StepRetryCard";
+import CongratsCard from "@/components/CongratsCard";
 // import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 // import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 // import { useRouter } from "next/navigation";
 // import { missions } from "@/data/missions";
 // import { useUser } from "@/context/UserContext";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
+import { updateUserXP, isMissionAlreadyCompleted } from "@/utils/queries";
+import { useUser } from "@/context/UserContext";
 import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 
-const BlocklySplitLayout = forwardRef(({
+export default function BlocklySplitLayout({
   mission,
   sidebarCollapsed = false,
   onStateChange,
@@ -30,9 +36,9 @@ const BlocklySplitLayout = forwardRef(({
   onCurrentStepChange,
   onFinish,
   onUploadCode,
-  // isUploading = false,
-  onWorkspaceChange,
-}: {
+  showHeader = false,
+}: // isUploading = false,
+{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mission: any;
   sidebarCollapsed?: boolean;
@@ -54,18 +60,8 @@ const BlocklySplitLayout = forwardRef(({
   onFinish?: () => void;
   onUploadCode?: (code: string) => void;
   isUploading?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onWorkspaceChange?: (workspace: any) => void;
-}, ref) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const blocklyRef = useRef<any>(null);
-  
-  // Expose the BlocklyComponent ref to parent
-  useImperativeHandle(ref, () => ({
-    workspaceRef: blocklyRef.current?.workspaceRef,
-    getCurrentCode: blocklyRef.current?.getCurrentCode,
-  }));
-  
+  showHeader?: boolean;
+}) {
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -77,12 +73,18 @@ const BlocklySplitLayout = forwardRef(({
   const [showHelpNeo, setShowHelpNeo] = useState(false);
   const [showHelpAccepted, setShowHelpAccepted] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
+  const [answeredMCQs, setAnsweredMCQs] = useState<Set<number>>(new Set());
+  const [isPracticeCompletion, setIsPracticeCompletion] = useState(false);
+  const [missionStartTime, setMissionStartTime] = useState<Date | null>(null);
+  const { userData, updateUserData } = useUser();
 
   // Debug: Monitor generatedCode changes
   useEffect(() => {
     console.log("🔄 BlocklySplitLayout: generatedCode changed:", {
       length: generatedCode?.length,
-      content: generatedCode?.substring(0, 100) + (generatedCode?.length > 100 ? "..." : "")
+      content:
+        generatedCode?.substring(0, 100) +
+        (generatedCode?.length > 100 ? "..." : ""),
     });
   }, [generatedCode]);
 
@@ -97,7 +99,35 @@ const BlocklySplitLayout = forwardRef(({
       setShowIntro(!savedState.showHeader);
       setShowCountdown(savedState.showCountdown);
     }
-  }, [mission.id]);
+
+    // Debug mission data structure
+    console.log("🎯 Mission data loaded:", {
+      id: mission.id,
+      title: mission.title,
+      stepsCount: mission.steps?.length,
+      steps: mission.steps?.map((step: any, index: number) => ({
+        index,
+        title: step.title,
+        hasMCQ: !!step.mcq,
+        mcqQuestion: step.mcq?.question,
+        mcqOptions: step.mcq?.options,
+        mcqCorrectAnswer: step.mcq?.correctAnswer,
+        isLastStep: index === mission.steps.length - 1,
+      })),
+    });
+
+    // Specifically check the last step
+    if (mission.steps?.length > 0) {
+      const lastStep = mission.steps[mission.steps.length - 1];
+      console.log("🎯 Last step details:", {
+        index: mission.steps.length - 1,
+        title: lastStep.title,
+        hasMCQ: !!lastStep.mcq,
+        mcqData: lastStep.mcq,
+        fullStepData: lastStep,
+      });
+    }
+  }, [mission.id, mission.steps]);
 
   // Notify parent of initial state
   useEffect(() => {
@@ -146,6 +176,44 @@ const BlocklySplitLayout = forwardRef(({
     onCurrentStepChange?.(currentStep);
   }, [currentStep, onCurrentStepChange]);
 
+  // Debug showCongrats changes
+  useEffect(() => {
+    console.log("🎯 showCongrats changed to:", showCongrats);
+  }, [showCongrats]);
+
+  // Debug answeredMCQs changes
+  useEffect(() => {
+    console.log("🎯 answeredMCQs changed:", Array.from(answeredMCQs));
+  }, [answeredMCQs]);
+
+  // Check if mission has been completed before (for Mission 3+)
+  useEffect(() => {
+    const checkMissionCompletion = async () => {
+      if (!userData?._id) return;
+
+      const missionNumber = parseInt(mission.id.replace(/\D/g, "")) || 0;
+      if (missionNumber >= 3) {
+        try {
+          const alreadyCompleted = await isMissionAlreadyCompleted(
+            userData._id,
+            mission.id
+          );
+          console.log("🎯 Mission completion check:", {
+            missionId: mission.id,
+            missionNumber,
+            alreadyCompleted,
+            isPracticeCompletion: alreadyCompleted,
+          });
+          setIsPracticeCompletion(alreadyCompleted);
+        } catch (error) {
+          console.error("🎯 Error checking mission completion:", error);
+          setIsPracticeCompletion(false);
+        }
+      }
+    };
+
+    checkMissionCompletion();
+  }, [userData?._id, mission.id]);
 
   // Listen for goToNextStep event
   useEffect(() => {
@@ -163,7 +231,10 @@ const BlocklySplitLayout = forwardRef(({
         // Store the code before calling onUploadCode to ensure it's preserved
         const codeToUpload = generatedCode;
         onUploadCode(codeToUpload);
-        console.log("onUploadCode called, generatedCode should still be:", codeToUpload);
+        console.log(
+          "onUploadCode called, generatedCode should still be:",
+          codeToUpload
+        );
       } else {
         console.log("Cannot upload: onUploadCode or generatedCode missing");
       }
@@ -249,13 +320,45 @@ const BlocklySplitLayout = forwardRef(({
   }, [handleMouseMove, isResizing]);
 
   const handleStart = () => {
+    setShowIntro(false);
     setShowCountdown(true);
     onStateChange?.({ showIntro: false, showCountdown: true });
   };
   const handleCountdownGo = () => {
     setShowCountdown(false);
     setShowIntro(false);
-    onStateChange?.({ showIntro: false, showCountdown: false }); // Notify parent to show header
+    // Set mission start time when countdown finishes
+    const startTime = new Date();
+    setMissionStartTime(startTime);
+    console.log("🎯 BlocklySplitLayout: Mission start time set:", startTime);
+    onStateChange?.({ showIntro: false, showCountdown: false });
+  };
+
+  // Calculate time spent on mission
+  const calculateTimeSpent = (): string => {
+    if (!missionStartTime) {
+      console.log(
+        "🎯 calculateTimeSpent: No mission start time, returning 0:00"
+      );
+      return "0:00";
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - missionStartTime.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffSecs = Math.floor((diffMs % 60000) / 1000);
+    const timeSpent = `${diffMins}:${diffSecs.toString().padStart(2, "0")}`;
+
+    console.log("🎯 calculateTimeSpent:", {
+      missionStartTime,
+      now,
+      diffMs,
+      diffMins,
+      diffSecs,
+      timeSpent,
+    });
+
+    return timeSpent;
   };
 
   // Helper to know if we're on the elevation step
@@ -264,11 +367,74 @@ const BlocklySplitLayout = forwardRef(({
 
   // Next handler
   const handleNext = () => {
-    // For Mission 3+, show MCQ question after each step (except last step)
-    if (mission.id >= 3 && currentStep < mission.steps.length - 1) {
-      onMCQChange?.(true, currentStep);
-      return;
+    const missionNumber = parseInt(mission.id.replace(/\D/g, "")) || 0;
+    const isLastStep = currentStep === mission.steps.length - 1;
+
+    console.log("🎯 handleNext called:", {
+      missionNumber,
+      currentStep,
+      totalSteps: mission.steps.length,
+      isLastStep,
+      currentStepData: mission.steps[currentStep],
+      hasMCQ: mission.steps[currentStep]?.mcq,
+      mcqQuestion: mission.steps[currentStep]?.mcq?.question,
+      mcqOptions: mission.steps[currentStep]?.mcq?.options,
+      stepDisplayNumber: currentStep + 1, // Human-readable step number
+    });
+
+    // For Mission 3+, show MCQ question after each step (including last step)
+    if (missionNumber >= 3) {
+      const currentStepData = mission.steps[currentStep];
+      const hasMCQ =
+        currentStepData?.mcq?.question && currentStepData?.mcq?.options;
+      const isMCQAnswered = answeredMCQs.has(currentStep);
+
+      console.log("🎯 MCQ Check:", {
+        currentStep,
+        hasMCQ,
+        isMCQAnswered,
+        answeredMCQs: Array.from(answeredMCQs),
+      });
+
+      if (hasMCQ && !isMCQAnswered) {
+        console.log("🎯 Showing MCQ for step:", currentStep);
+        setShowMCQ(true);
+        onMCQChange?.(true, currentStep);
+        return;
+      } else if (hasMCQ && isMCQAnswered) {
+        console.log(
+          "🎯 MCQ already answered for step:",
+          currentStep,
+          "- skipping to next step"
+        );
+        // MCQ already answered, move to next step
+        if (currentStep < mission.steps.length - 1) {
+          console.log("🎯 Moving to next step");
+          setCurrentStep((s: number) => s + 1);
+        } else {
+          console.log("🎯 Last step MCQ already answered, showing congrats");
+          handleMissionComplete();
+          setShowCongrats(true);
+        }
+        return;
+      } else {
+        console.log("🎯 No MCQ data found for step:", currentStep);
+        console.log("🎯 Current step data:", currentStepData);
+        // No MCQ data, skip to next step or finish
+        if (currentStep < mission.steps.length - 1) {
+          console.log("🎯 Moving to next step");
+          setCurrentStep((s: number) => s + 1);
+        } else {
+          console.log("🎯 Last step without MCQ, showing congrats");
+          console.log("🎯 Calling handleMissionComplete and setShowCongrats");
+          // Last step without MCQ, show congrats
+          handleMissionComplete();
+          setShowCongrats(true);
+        }
+        return;
+      }
     }
+
     // For older missions, keep the original StepQuestion logic
     if (isStep3) {
       setShowStepQuestion(true);
@@ -291,7 +457,8 @@ const BlocklySplitLayout = forwardRef(({
 
   const handleBack = () => {
     setShowCongrats(false);
-    if (mission.id === 1) {
+    const missionNumber = parseInt(mission.id.replace(/\D/g, "")) || 0;
+    if (missionNumber === 1) {
       setShowHelpNeo(true);
       return;
     }
@@ -309,13 +476,48 @@ const BlocklySplitLayout = forwardRef(({
 
   // MCQ handlers
   const handleMCQAnswer = (selectedAnswer: number) => {
+    const isLastStep = currentStep === mission.steps.length - 1;
+    console.log("🎯 handleMCQAnswer called:", {
+      selectedAnswer,
+      currentStep,
+      stepDisplayNumber: currentStep + 1,
+      totalSteps: mission.steps.length,
+      isLastStep,
+      correctAnswer: mission.steps[currentStep]?.mcq?.correctAnswer,
+      isCorrect:
+        selectedAnswer === mission.steps[currentStep]?.mcq?.correctAnswer,
+    });
+
+    setShowMCQ(false);
     onMCQChange?.(false, currentStep);
     const currentStepData = mission.steps[currentStep];
     const isCorrect = selectedAnswer === currentStepData.mcq.correctAnswer;
 
+    // Mark MCQ as answered only if the answer is correct
     if (isCorrect) {
-      setShowNice(true);
+      console.log(
+        "🎯 Correct answer - marking MCQ as answered for step:",
+        currentStep
+      );
+      setAnsweredMCQs((prev) => new Set([...prev, currentStep]));
+
+      if (isLastStep) {
+        console.log("🎯 Last step correct answer - showing success card first");
+        // Last step with correct answer - show success card first, then complete mission
+        setShowNice(true);
+      } else {
+        console.log("🎯 Correct answer - showing success card");
+        // Not last step - show success card
+        setShowNice(true);
+      }
     } else {
+      console.log(
+        "🎯 Wrong answer - showing retry card (MCQ not marked as answered)"
+      );
+      if (isLastStep) {
+        console.log("🎯 Wrong answer on LAST step - will retry same question");
+      }
+      // Wrong answer - show retry card (don't mark as answered)
       setShowDontWorry(true);
     }
 
@@ -325,14 +527,49 @@ const BlocklySplitLayout = forwardRef(({
 
   const handleNiceContinue = () => {
     setShowNice(false);
-    setCurrentStep(mission.steps.length - 1);
+    const isLastStep = currentStep === mission.steps.length - 1;
+
+    if (isLastStep) {
+      console.log("🎯 handleNiceContinue - last step, completing mission");
+      console.log("🎯 Mission completion details:", {
+        missionId: mission.id,
+        missionNumber: parseInt(mission.id.replace(/\D/g, "")) || 0,
+        totalSteps: mission.steps.length,
+        currentStep,
+        isLastStep,
+      });
+      // Last step - complete mission and show congrats
+      handleMissionComplete();
+      setShowCongrats(true);
+    } else {
+      console.log("🎯 handleNiceContinue - moving to next step");
+      // Not last step - move to next step
+      setCurrentStep((s: number) => s + 1);
+    }
   };
   const handleDontWorryContinue = () => {
+    console.log(
+      "🎯 handleDontWorryContinue called - staying on step:",
+      currentStep
+    );
     setShowDontWorry(false);
-    setCurrentStep(mission.steps.length - 1);
+    // Don't advance to next step - stay on current step and show MCQ again
+    const missionNumber = parseInt(mission.id.replace(/\D/g, "")) || 0;
+    if (missionNumber >= 3) {
+      const currentStepData = mission.steps[currentStep];
+      if (currentStepData?.mcq?.question && currentStepData?.mcq?.options) {
+        console.log("🎯 Retrying MCQ for step:", currentStep);
+        setShowMCQ(true);
+        onMCQChange?.(true, currentStep);
+      } else {
+        console.log("🎯 No MCQ data found for retry on step:", currentStep);
+      }
+    }
   };
   const handleTryAgain = () => {
     setCurrentStep(0);
+    setAnsweredMCQs(new Set()); // Clear answered MCQs
+    MissionStatePersistence.clearMissionState();
   };
   const handleFinish = () => {
     onFinish?.(); // Notify parent that finish was clicked
@@ -340,19 +577,86 @@ const BlocklySplitLayout = forwardRef(({
     onMCQChange?.(true, mission.steps.length - 1);
   };
 
+  // Mission completion handler
+  const handleMissionComplete = async () => {
+    console.log("🎯 handleMissionComplete called");
+    console.log("🎯 User data:", {
+      userId: userData?._id,
+      hasUserData: !!userData,
+    });
+    console.log("🎯 Is practice completion:", isPracticeCompletion);
+
+    if (!userData?._id) {
+      console.log("❌ No user data available for mission completion");
+      return;
+    }
+
+    // Only update XP and mission progress for first completions, not practice
+    if (!isPracticeCompletion) {
+      try {
+        const missionNumber = parseInt(mission.id.replace(/\D/g, "")) || 0;
+        const totalPoints = mission.steps.reduce(
+          (sum: number, step: any) => sum + (step.points || 0),
+          0
+        );
+
+        console.log(
+          `🎯 First completion - updating XP and mission progress for mission ${missionNumber} with ${totalPoints} points`
+        );
+        console.log("🎯 Mission details:", {
+          missionId: mission.id,
+          missionNumber,
+          totalPoints,
+          userId: userData._id,
+        });
+
+        const result = await updateUserXP(
+          userData._id,
+          mission.id,
+          totalPoints
+        );
+
+        if (result.success) {
+          console.log("✅ Mission completed successfully:", result);
+          // Update local user data
+          updateUserData({
+            xp: (userData.xp || 0) + result.xpAdded,
+            missionProgress: result.missionProgress,
+          });
+        } else {
+          console.log("⚠️ Mission completion result:", result);
+        }
+      } catch (error) {
+        console.error("❌ Error completing mission:", error);
+      }
+    } else {
+      console.log("🎯 Practice completion - no XP or mission progress update");
+    }
+  };
+
   // Mission header button handlers are now handled at page level
 
-  if (showIntro && !forceHideIntro) {
+  // Show intro when showIntro is true and not forceHideIntro, or when countdown is active
+  if ((showIntro && !forceHideIntro) || showCountdown) {
     return (
-      <MissionIntro
-        missionNumber={mission.id}
-        title={mission.title}
-        timeAllocated={mission.intro.timeAllocated}
-        image={mission.intro.image}
-        instructions={mission.intro.description}
-        onStart={handleStart}
-        onMissionStart={handleCountdownGo}
-      />
+      <>
+        <MissionIntro
+          missionNumber={mission.id}
+          title={mission.title}
+          timeAllocated={mission.intro.timeAllocated}
+          image={mission.intro.image}
+          instructions={mission.intro.description}
+          onStart={handleStart}
+          onMissionStart={handleCountdownGo}
+        />
+        {/* Countdown Overlay on MissionIntro */}
+        {showCountdown && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black opacity-85" />
+            <CountdownTimer onGo={handleCountdownGo} />
+          </div>
+        )}
+      </>
     );
   }
 
@@ -364,11 +668,29 @@ const BlocklySplitLayout = forwardRef(({
         marginRight: "0px",
       }}
     >
+      {/* Mission Header - Fixed at top */}
+      {!showIntro && !showCountdown && (
+        <StatusHeaderBar
+          missionNumber={Number(mission.id)}
+          title={mission.title}
+          timeAllocated={mission.intro.timeAllocated}
+          liveUsers={0}
+          isConnected={false}
+          setIsConnected={() => {}}
+          onConnectionTypeChange={() => {}}
+          setConnectionStatus={() => {}}
+          connectionStatus="disconnected"
+          connectionType="bluetooth"
+          isUploading={false}
+          isRunning={false}
+        />
+      )}
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-row h-screen relative">
         {/* Split Content Area - Below the header */}
         <div
-          className="relative h-screen flex w-full mt-16"
+          className="relative h-screen flex w-full mt-[65px]"
           style={{
             width: sidebarCollapsed
               ? "calc(100vw - 80px)"
@@ -463,14 +785,26 @@ const BlocklySplitLayout = forwardRef(({
                     {currentStep === 0 && <div></div>}
                     {currentStep < mission.steps.length - 1 ? (
                       <button
-                        onClick={handleNext}
+                        onClick={() => {
+                          console.log("🎯 Next button clicked - not last step");
+                          handleNext();
+                        }}
                         className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
                       >
                         Next
                       </button>
                     ) : (
                       <button
-                        onClick={handleFinish}
+                        onClick={() => {
+                          console.log("🎯 Next button clicked - LAST STEP");
+                          console.log(
+                            "🎯 Current step:",
+                            currentStep,
+                            "Total steps:",
+                            mission.steps.length
+                          );
+                          handleNext();
+                        }}
                         className="w-24 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors ml-auto"
                       >
                         Next
@@ -507,10 +841,9 @@ const BlocklySplitLayout = forwardRef(({
           <div className="w-full mb-16">
             {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
             <BlocklyComponent
-              ref={blocklyRef}
               generatedCode={generatedCode}
               setGeneratedCode={setGeneratedCode}
-              onWorkspaceChange={onWorkspaceChange}
+              onWorkspaceChange={() => {}}
             />
           </div>
           {/* <div className="flex-grow bg-white border-2 rounded-lg shadow-md mt-4  mr-4 mb-4">
@@ -616,11 +949,95 @@ const BlocklySplitLayout = forwardRef(({
         </div>
       </div> */}
 
-      {/* All overlays are now handled at the page level */}
+      {/* MCQ Overlay */}
+      {showMCQ && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <MCQCard
+            question={mission.steps[currentStep]?.mcq?.question || "Question"}
+            options={
+              mission.steps[currentStep]?.mcq?.options || [
+                "Option 1",
+                "Option 2",
+                "Option 3",
+                "Option 4",
+              ]
+            }
+            correctAnswer={mission.steps[currentStep]?.mcq?.correctAnswer || 0}
+            onAnswer={handleMCQAnswer}
+            questionNumber={currentStep + 1}
+          />
+        </div>
+      )}
+
+      {/* Step Success Overlay */}
+      {showNice && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <StepSuccessCard
+            onNext={handleNiceContinue}
+            message="Yay, Awesome!"
+            buttonText={
+              currentStep === mission.steps.length - 1 ? "Finish" : "Next"
+            }
+            buttonColor={
+              currentStep === mission.steps.length - 1 ? "blue" : "black"
+            }
+          />
+        </div>
+      )}
+
+      {/* Step Retry Overlay */}
+      {showDontWorry && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <StepRetryCard
+            onTryAgain={handleDontWorryContinue}
+            message="Hmm... that doesn't look correct. Let's try this question again!"
+          />
+        </div>
+      )}
+
+      {/* Congrats Overlay */}
+      {showCongrats && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <CongratsCard
+            onBack={() => {
+              setShowCongrats(false);
+              // Navigate back to missions page
+              window.location.href = "/missions";
+            }}
+            onNextMission={() => {
+              // Navigate to next mission (only for first completions)
+              const missionNumber =
+                parseInt(mission.id.replace(/\D/g, "")) || 0;
+              const nextMissionId = String(missionNumber + 1).padStart(2, "0");
+              window.location.href = `/missions/${nextMissionId}`;
+            }}
+            headline={
+              isPracticeCompletion ? "Great Practice!" : "Mission Complete!"
+            }
+            subtitle={
+              isPracticeCompletion
+                ? `You completed mission ${mission.id} again for practice.`
+                : "Great job completing this mission!"
+            }
+            points={
+              isPracticeCompletion
+                ? 0
+                : mission.steps.reduce(
+                    (sum: number, step: any) => sum + (step.points || 0),
+                    0
+                  )
+            }
+            timeSpent={calculateTimeSpent()}
+            isPracticeCompletion={isPracticeCompletion}
+          />
+        </div>
+      )}
+
+      {/* All other overlays are now handled at the page level */}
     </div>
   );
-});
-
-BlocklySplitLayout.displayName = 'BlocklySplitLayout';
-
-export default BlocklySplitLayout;
+}

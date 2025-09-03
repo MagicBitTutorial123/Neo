@@ -25,7 +25,6 @@ const bluetoothUpload = async (allCode, txChar) => {
     await txChar.writeValue(encoder.encode(payload + "\n"));
   }
 
-
   // Send code line by line
   lines = code.split("\n");
   for (const line of lines) {
