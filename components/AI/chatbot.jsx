@@ -15,7 +15,7 @@ export default function AIChatbot({ position = "right", workspaceRef, onClose, u
   ]);
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
-  const [collapseLevel, setCollapseLevel] = useState(2); // Start in mini pill mode to show bubble
+  const [isExpanded, setIsExpanded] = useState(false); // Start collapsed (image only)
   
 
 
@@ -28,20 +28,15 @@ export default function AIChatbot({ position = "right", workspaceRef, onClose, u
 
 
 
-  // Toggle between collapse states
-  const toggleCollapseLevel = () => {
-    setCollapseLevel(prev => (prev + 1) % 3);
+  // Toggle expand/collapse
+  const toggleExpanded = () => {
+    setIsExpanded(prev => !prev);
   };
 
-  // Get chatbot container classes based on collapse level
+  // Get chatbot container classes based on state
   const getChatbotClasses = () => {
     const baseClasses = "chatbot-container-modern";
-    switch (collapseLevel) {
-      case 0: return `${baseClasses} expanded`;
-      case 1: return `${baseClasses} header-only`;
-      case 2: return `${baseClasses} mini-pill`;
-      default: return baseClasses;
-    }
+    return isExpanded ? `${baseClasses} expanded` : `${baseClasses} image-only`;
   };
 
   const blockList = `
@@ -451,130 +446,133 @@ setMessages((prev) => [...prev, { role: "ai", text: aiAnswer }]);
 };
 
   return (
-          <div
-        className={getChatbotClasses()}
-      >
-
-
-      {/* Helper Bubble - Only visible in mini pill state */}
-      {collapseLevel === 2 && (
-        <div className="helper-bubble">
-          <div className="bubble-content">
-            Need a hand? Looks like I can help you out!
-          </div>
+    <div className={getChatbotClasses()}>
+      {/* Image Only State - Click to expand */}
+      {!isExpanded && (
+        <div className="chatbot-image-only" onClick={toggleExpanded}>
+          <Image
+            src={chatbotImg}
+            alt="Neo AI Assistant"
+            width={60}
+            height={60}
+            className="chatbot-avatar-large"
+          />
+          <div className="avatar-status active"></div>
         </div>
       )}
 
-      {/* Main chatbot container */}
-      <div className="chatbot-main">
-        {/* Header */}
-        <div className="chatbot-header-modern">
-          {/* Left side - dots grid */}
-          <div className="dots-menu">
-            <div className="dots-grid">
-              <div className="dot"></div>
-              <div className="dot"></div>
-              <div className="dot"></div>
-              <div className="dot"></div>
-              <div className="dot"></div>
-              <div className="dot"></div>
+      {/* Expanded State - Full chatbot */}
+      {isExpanded && (
+        <div className="chatbot-main">
+          {/* Header */}
+          <div className="chatbot-header-modern">
+            {/* Left side - dots grid */}
+            <div className="dots-menu">
+              <div className="dots-grid">
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
+              </div>
             </div>
-          </div>
 
-          {/* Center - Avatar and info */}
-          <div className="header-center">
-            <div className="avatar-container">
-              <Image
-                src={chatbotImg}
-                alt="Neo AI"
-                width={32}
-                height={32}
-                className="avatar-img"
-              />
-              <div className="avatar-status active"></div>
-            </div>
-            {collapseLevel < 2 && (
+            {/* Center - Avatar and info */}
+            <div className="header-center">
+              <div className="avatar-container">
+                <Image
+                  src={chatbotImg}
+                  alt="Neo AI"
+                  width={32}
+                  height={32}
+                  className="avatar-img"
+                />
+                <div className="avatar-status active"></div>
+              </div>
               <div className="user-info">
                 <div className="user-name">Neo</div>
                 <div className="user-status">AI Assistant</div>
               </div>
-            )}
+            </div>
+
+            {/* Right side - close button */}
+            <div className="header-controls">
+              <button
+                className="close-btn"
+                onClick={toggleExpanded}
+                title="Close chatbot"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          {/* Right side - chevron */}
-          <div className="header-controls">
-            <button
-              className="collapse-btn"
-              onClick={toggleCollapseLevel}
-              title="Toggle chatbot size"
-            >
-              <FaChevronRight 
-                className={`chevron-icon ${collapseLevel === 0 ? 'rotated' : ''}`}
+          {/* Messages area */}
+          <div className="messages-container">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
+              >
+                {msg.text}
+              </div>
+            ))}
+            {loading && (
+              <div className="message ai-message typing">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input area */}
+          <div className="input-container">
+            <div className="input-wrapper">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') {
+                    handleSend(e);
+                  }
+                }}
+                placeholder="Hey! Can you help me with...."
+                className="chatbot-input"
               />
-            </button>
+              <button
+                onClick={handleSend}
+                className="send-btn"
+                disabled={!input.trim()}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 21L21 12L3 3L7 12L3 21Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Messages area - only show in expanded mode */}
-        {collapseLevel === 0 && (
-          <>
-            <div className="messages-container">
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
-                >
-                  {msg.text}
-                </div>
-              ))}
-              {loading && (
-                <div className="message ai-message typing">
-                  <div className="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Input area */}
-            <div className="input-container">
-              <div className="input-wrapper">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter') {
-                      handleSend(e);
-                    }
-                  }}
-                  placeholder="Hey! Can you help me with...."
-                  className="chatbot-input"
-                />
-                <button
-                  onClick={handleSend}
-                  className="send-btn"
-                  disabled={!input.trim()}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M3 21L21 12L3 3L7 12L3 21Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      )}
     </div>
   );
 }
