@@ -10,13 +10,13 @@ import time
 import bluetooth
 
 # GPIO pins that can be reset
-GPIO_PINS = [0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
+GPIO_PINS = [2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33]
 
 # Global task reference
 main_task = None
 
 # Pin definitions - only analog input pins
-ANALOG_PINS = [0, 2, 4,  12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 39]
+ANALOG_PINS = [2, 4,12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 39]
 writing_code = False
 code = ""
 ULTRASOUND_PIN = Pin(26, Pin.OUT)  # single pin
@@ -244,9 +244,6 @@ async def start_ble_service():
                                 
                         # Send data 5 times per second
                         await asyncio.sleep(0.2)
-                    else:
-                        # No connections, sleep longer
-                        await asyncio.sleep(1.0)
                         
                 except Exception as e:
                     print(f"Analog sensor loop error: {e}")
@@ -283,16 +280,9 @@ async def start_ble_service():
                 except Exception as e:
                     print(f"BLE processing error: {e}")
             
-            # Show status every 10 seconds
-            current_time = time.ticks_ms() if hasattr(time, 'ticks_ms') else int(time.time() * 1000)
-            if current_time - last_status_time > 10000:  # 10 seconds
-                if len(uart._connections) > 0:
-                    print("Status: Connected - streaming analog data")
-                else:
-                    print("Status: No connections - waiting for connection")
-                last_status_time = current_time
-            
-            await asyncio.sleep(0.01)
+       
+              
+            await asyncio.sleep(0.1)
             
     except Exception as e:
         print(f"BLE service error: {e}")

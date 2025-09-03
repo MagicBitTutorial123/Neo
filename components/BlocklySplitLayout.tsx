@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import MissionIntro from "@/components/MissionIntro";
 // import Header from "@/components/StatusHeaderBar";
 // import CongratsCard from "@/components/CongratsCard";
@@ -13,7 +13,7 @@ import MissionIntro from "@/components/MissionIntro";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import BlocklyComponent from "@/components/Blockly/BlocklyComponent";
 
-export default function BlocklySplitLayout({
+const BlocklySplitLayout = forwardRef(({
   mission,
   sidebarCollapsed = false,
   onStateChange,
@@ -56,7 +56,16 @@ export default function BlocklySplitLayout({
   isUploading?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onWorkspaceChange?: (workspace: any) => void;
-}) {
+}, ref) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blocklyRef = useRef<any>(null);
+  
+  // Expose the BlocklyComponent ref to parent
+  useImperativeHandle(ref, () => ({
+    workspaceRef: blocklyRef.current?.workspaceRef,
+    getCurrentCode: blocklyRef.current?.getCurrentCode,
+  }));
+  
   const [showIntro, setShowIntro] = useState(true);
   const [showCountdown, setShowCountdown] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -498,6 +507,7 @@ export default function BlocklySplitLayout({
           <div className="w-full mb-16">
             {/* Right Side - Coding Workspace - Flex grow to fill remaining space */}
             <BlocklyComponent
+              ref={blocklyRef}
               generatedCode={generatedCode}
               setGeneratedCode={setGeneratedCode}
               onWorkspaceChange={onWorkspaceChange}
@@ -609,4 +619,8 @@ export default function BlocklySplitLayout({
       {/* All overlays are now handled at the page level */}
     </div>
   );
-}
+});
+
+BlocklySplitLayout.displayName = 'BlocklySplitLayout';
+
+export default BlocklySplitLayout;

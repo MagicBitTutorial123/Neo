@@ -23,6 +23,10 @@ export default function SignupAvatar() {
   const [hovered, setHovered] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
+=======
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+>>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [userNameForPopup, setUserNameForPopup] = useState<string>("");
 
@@ -121,6 +125,7 @@ export default function SignupAvatar() {
     setError(null);
 
     try {
+<<<<<<< HEAD
       // Collect all signup data from localStorage
       const email = localStorage.getItem("userEmail") || localStorage.getItem("signupEmail");
       let phone = localStorage.getItem("fullPhone");
@@ -466,6 +471,15 @@ export default function SignupAvatar() {
       
       // Show success popup instead of redirecting to email confirmation
       setShowSuccessPopup(true);
+=======
+      if (isOAuthUser) {
+        // Handle OAuth user avatar selection
+        await handleOAuthUserAvatarSelection();
+      } else {
+        // Handle regular signup flow
+        await handleRegularSignup();
+      }
+>>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
     } catch (error) {
       console.error('❌ Registration failed:', error);
       setError(error instanceof Error ? error.message : "Registration failed. Please try again.");
@@ -583,7 +597,7 @@ export default function SignupAvatar() {
 
     // Validate phone format (exactly 10 digits)
     const cleanPhone = phone.replace(/[+\s-]/g, "");
-    if (!/^\d{10}$/.test(cleanPhone)) {
+    if (!/^\d{12}$/.test(cleanPhone)) {
       console.error('❌ Phone validation failed:', { phone, cleanPhone });
       throw new Error("Please enter a valid phone number (exactly 10 digits). Please go back to the phone step.");
     }
@@ -837,7 +851,14 @@ export default function SignupAvatar() {
             disabled={selected === null || loading} 
             onClick={handleNext}
           >
+<<<<<<< HEAD
             {loading ? "Creating Account..." : "Complete Signup"}
+=======
+            {loading 
+              ? (isOAuthUser ? "Setting up profile..." : "Creating Account...") 
+              : (isOAuthUser ? "Complete Setup with Default Avatar" : "Complete Signup & Send Confirmation")
+            }
+>>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
           </NextButton>
         </div>
       </div>
