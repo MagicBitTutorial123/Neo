@@ -158,10 +158,10 @@ export default function SignupAvatar() {
         throw new Error("Age is required. Please go back to the age step.");
       }
 
-      // Validate age is a valid number between 13-120
+      // Validate age is a valid number between 5-120
       const ageNum = parseInt(age);
-      if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
-        throw new Error("Age must be between 13 and 120 years. Please go back to the age step.");
+      if (isNaN(ageNum) || ageNum < 5 || ageNum > 120) {
+        throw new Error("Age must be between 5 and 120 years. Please go back to the age step.");
       }
 
       // Google OAuth users skip password validation, regular users need it
@@ -561,10 +561,10 @@ export default function SignupAvatar() {
       throw new Error("Age is required. Please go back to the age step.");
     }
 
-    // Validate age is a valid number between 13-120
+    // Validate age is a valid number between 5-120
     const ageNum = parseInt(age);
-    if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
-      throw new Error("Age must be between 13 and 120 years. Please go back to the age step.");
+    if (isNaN(ageNum) || ageNum < 5 || ageNum > 120) {
+      throw new Error("Age must be between 5 and 120 years. Please go back to the age step.");
     }
 
     if (!password || !password.trim()) {

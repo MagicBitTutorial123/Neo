@@ -62,7 +62,7 @@ export default function SignupAge() {
   const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!validateAge(age)) {
-      setError("Please enter a valid age between 13 and 120 years.");
+      setError("Please enter a valid age between 5 and 120 years.");
       return;
     }
     
@@ -154,7 +154,7 @@ export default function SignupAge() {
               }}
               style={{ height: 56, maxWidth: 400 }}
               maxLength={3}
-              min={13}
+              min={5}
               max={120}
               inputMode="numeric"
             />

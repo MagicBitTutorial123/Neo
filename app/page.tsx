@@ -35,6 +35,7 @@ export default function Home() {
         access_type: "offline",
         prompt: "consent",
       },
+      skipBrowserRedirect: false,
     },
   });
   if (error) setError(error.message);
