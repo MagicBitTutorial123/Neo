@@ -64,7 +64,10 @@ export default function MissionPage({
 
         if (!alive) return;
         setMission(normalized);
-      } catch (e: any) {
+        
+      } 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      catch (e: any) {
         console.error("[MissionDetails] fetch error:", e);
         if (!alive) return;
         setError(e?.message || "Failed to load mission");

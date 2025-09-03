@@ -105,6 +105,7 @@ export default function BlocklySplitLayout({
       id: mission.id,
       title: mission.title,
       stepsCount: mission.steps?.length,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       steps: mission.steps?.map((step: any, index: number) => ({
         index,
         title: step.title,
@@ -596,6 +597,7 @@ export default function BlocklySplitLayout({
       try {
         const missionNumber = parseInt(mission.id.replace(/\D/g, "")) || 0;
         const totalPoints = mission.steps.reduce(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (sum: number, step: any) => sum + (step.points || 0),
           0
         );
@@ -1027,6 +1029,7 @@ export default function BlocklySplitLayout({
               isPracticeCompletion
                 ? 0
                 : mission.steps.reduce(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (sum: number, step: any) => sum + (step.points || 0),
                     0
                   )

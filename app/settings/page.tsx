@@ -112,11 +112,7 @@ export default function SettingsPage() {
         console.error('❌ Error creating profile manually:', insertError);
         // Even if profile creation fails, try to use metadata
         const fallbackProfile = {
-<<<<<<< HEAD
-          full_name: userMetadata?.full_name || 'User',
-=======
           full_name: userMetadata?.full_name || userMetadata?.name || userMetadata?.display_name || 'User',
->>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
           avatar: userMetadata?.avatar || '/Avatar01.png',
           email: user.email || '',
           phone: userMetadata?.phone || '',
@@ -137,11 +133,7 @@ export default function SettingsPage() {
       // Last resort: use whatever data we can get
       const userMetadata = user.user_metadata;
       const fallbackProfile = {
-<<<<<<< HEAD
-        full_name: userMetadata?.full_name || 'User',
-=======
         full_name: userMetadata?.full_name || userMetadata?.name || userMetadata?.display_name || 'User',
->>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
         avatar: userMetadata?.avatar || '/Avatar01.png',
         email: user.email || '',
         phone: userMetadata?.phone || '',
@@ -241,10 +233,6 @@ export default function SettingsPage() {
         ? profile.avatar
         : `/${profile.avatar}`;
       setAvatar(avatarPath);
-<<<<<<< HEAD
-=======
-      console.log('✅ Avatar set to:', avatarPath);
->>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
     }
 
     // Set name fields - prioritize Google account data
@@ -483,11 +471,11 @@ export default function SettingsPage() {
   const canSave = !!firstName.trim() && phoneValid && ageValid && !saving;
 
   // Handle immediate avatar update
-  // const handleAvatarChange = (newAvatar: string) => {
-  //   setAvatar(newAvatar);
-  //   setAvatarChanged(true);
-  //   setOk(null); // Clear any previous success message
-  // };
+  const handleAvatarChange = (newAvatar: string) => {
+    setAvatar(newAvatar);
+    setAvatarChanged(true);
+    setOk(null); // Clear any previous success message
+  };
 
   // Handle immediate avatar save
   const handleAvatarSave = async () => {
@@ -881,11 +869,7 @@ export default function SettingsPage() {
                         width: 80,
                         height: 80,
                       }}
-<<<<<<< HEAD
                       onClick={() => handleAvatarChange(avatarSrc)}
-=======
-                      onClick={() => handleAvatarChange(idx)}
->>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
                       tabIndex={0}
                       aria-label={`Select avatar ${idx + 1}`}
                     >

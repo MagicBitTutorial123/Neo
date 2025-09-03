@@ -608,7 +608,7 @@ export default function StandardMissionLayout({
             <div className="bg-white rounded-lg p-6 max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4">Great!</h3>
               <p className="mb-4">
-                You're doing well! Let's continue to the final step.
+                You&apos;re doing well! Let&apos;s continue to the final step.
               </p>
               <button
                 onClick={handleNiceContinue}
@@ -627,9 +627,9 @@ export default function StandardMissionLayout({
           <div className="absolute inset-0 bg-black opacity-50 z-[60]" />
           <div className="relative z-[70]">
             <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4">Don't Worry!</h3>
+              <h3 className="text-lg font-semibold mb-4">Don&apos;t Worry!</h3>
               <p className="mb-4">
-                It's okay to make mistakes. Let's try the final step together.
+                It&apos;s okay to make mistakes. Let&apos;s try the final step together.
               </p>
               <button
                 onClick={handleDontWorryContinue}

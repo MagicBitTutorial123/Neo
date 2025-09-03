@@ -100,41 +100,6 @@ export default function SignIn() {
     } finally {
       setGoogleLoading(false);
     }
-<<<<<<< HEAD
-=======
-  };
-
-  // Google OAuth sign in function
-  const handleGoogleLogin = async () => {
-    setError(null);
-    setLoading(true);
-    
-    console.log("🔍 Current origin:", window.location.origin);
-    console.log("🔍 Full redirect URL:", `${window.location.origin}/auth/callback`);
-    console.log("🔍 About to call Google OAuth...");
-    
-    // Force the correct redirect URL for port 3000
-    const redirectUrl = `${window.location.origin}/auth/callback`;
-    console.log("🔍 Using forced redirect URL:", redirectUrl);
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: redirectUrl,
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    });
-    
-    if (error) {
-      console.error("❌ Google OAuth error:", error);
-      setError(error.message);
-      setLoading(false);
-    }
-    // Don't set loading to false here as user will be redirected
->>>>>>> 1b704db24440555eb7b53a799e6dafe16d265345
   };
 
   // Sign in function following Supabase tutorial
