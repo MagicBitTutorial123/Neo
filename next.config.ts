@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.supabase.co" },
     ],
   },
+  // Disable Turbopack to fix font loading issues
+  experimental: {
+    turbo: {
+      rules: {},
+    },
+  },
 };
 
 export default nextConfig;
