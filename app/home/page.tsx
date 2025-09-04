@@ -41,60 +41,150 @@ export default function HomePage() {
   const [isFirstTimeOAuth, setIsFirstTimeOAuth] = useState(false);
   const [showProfileUpdateNotification, setShowProfileUpdateNotification] = useState(false);
   const [userName, setUserName] = useState<string>("");
+  const [isNameLoaded, setIsNameLoaded] = useState<boolean>(false);
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
   const [isNewUser,setIsNewUser] = useState(false)
 
-  // Get user name from localStorage
+  // Get user name from Supabase user profiles (prioritize Supabase over Google account)
   useEffect(() => {
-    const getUserName = () => {
+    // Only run after component is mounted on client side
+    if (!mounted) return;
+
+    const getUserName = async () => {
       try {
-        // Check all possible localStorage keys for name
+        console.log("🔍 Getting user name from Supabase user profiles...");
+        
+        // First, check direct "name" key in localStorage (highest priority)
+        const directName = localStorage.getItem("name");
+        console.log("🔍 Direct name from localStorage:", directName);
+        if (directName && directName.trim()) {
+          console.log("✅ Using direct name from localStorage:", directName.trim());
+          return directName.trim();
+        }
+
+        // Then check other localStorage keys for name
         const possibleKeys = [
           "userData",
-          "registrationData", 
-          "name",
-          "googleOAuthName"
+          "registrationData"
         ];
         
         for (const key of possibleKeys) {
           const value = localStorage.getItem(key);
+          console.log(`🔍 Checking ${key}:`, value);
           
           if (value) {
             try {
               const parsed = JSON.parse(value);
-              if (parsed.name) {
-                return parsed.name;
+              if (parsed.name && parsed.name.trim()) {
+                console.log(`✅ Using name from ${key}:`, parsed.name.trim());
+                return parsed.name.trim();
               }
             } catch {
-              // If it's not JSON, it might be a direct string value
-              if (key === "name" || key === "googleOAuthName") {
-                return value;
-              }
+              // Skip if not JSON
+              continue;
             }
           }
         }
 
-        // Also check userData from context
-        if (userData?.name) {
-          return userData.name;
+        // Try to get name from Supabase user profiles
+        try {
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          if (!authError && user) {
+            console.log("🔍 Fetching user profile from Supabase...");
+            const { data: profile, error: profileError } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .eq('user_id', user.id)
+              .single();
+
+            if (!profileError && profile?.full_name) {
+              console.log("✅ Using name from Supabase user profile:", profile.full_name);
+              return profile.full_name.trim();
+            }
+          }
+        } catch (supabaseError) {
+          console.log("❌ Error fetching from Supabase:", supabaseError);
         }
 
+        // Only use Google account name as last resort
+        if (userData?.name && userData.name.trim()) {
+          console.log("✅ Using Google account name as fallback:", userData.name.trim());
+          return userData.name.trim();
+        }
+
+        console.log("❌ No name found in localStorage, Supabase, or userData");
         return "";
       } catch (error) {
-        console.error("Error reading user name from localStorage:", error);
+        console.error("Error reading user name:", error);
         return "";
       }
     };
 
-    const name = getUserName();
-    setUserName(name);
-  }, [userData]);
+    const loadName = async () => {
+      const name = await getUserName();
+      console.log("🔍 Final userName set to:", name);
+      setUserName(name);
+      setIsNameLoaded(true);
+    };
 
-  // On mount, set hydrated state and check for new user query param
+    loadName();
+  }, [userData, mounted]);
+
+  // Listen for localStorage changes to update name
   useEffect(() => {
+    const handleStorageChange = () => {
+      console.log("🔄 localStorage changed, refreshing name...");
+      const directName = localStorage.getItem("name");
+      if (directName && directName.trim()) {
+        console.log("✅ Name updated from localStorage:", directName.trim());
+        setUserName(directName.trim());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+    setIsHydrated(true);
     setHydrated(true);
+
+    // Immediately try to get name from localStorage
+    const directName = localStorage.getItem("name");
+    if (directName && directName.trim()) {
+      console.log("🚀 Immediate name load from localStorage:", directName.trim());
+      setUserName(directName.trim());
+      setIsNameLoaded(true);
+    } else {
+      // If no localStorage name, try to get from Supabase immediately
+      const loadFromSupabase = async () => {
+        try {
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          if (!authError && user) {
+            const { data: profile, error: profileError } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .eq('user_id', user.id)
+              .single();
+
+            if (!profileError && profile?.full_name) {
+              console.log("🚀 Immediate name load from Supabase:", profile.full_name);
+              setUserName(profile.full_name.trim());
+              setIsNameLoaded(true);
+            }
+          }
+        } catch (error) {
+          console.log("❌ Error in immediate Supabase load:", error);
+        }
+      };
+      loadFromSupabase();
+    }
 
     // Check if this is a new user from signup process
     const isNewUserFromSignup = searchParams.get("newUser") === "true";
@@ -336,7 +426,15 @@ export default function HomePage() {
               Welcome back!
             </span>
             <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#222E3A] mt-1 flex items-center gap-2">
-              {userName || userData?.name || "there"}{" "}
+              {!mounted ? (
+                <span className="animate-pulse bg-gray-200 h-8 w-24 rounded"></span>
+              ) : !isNameLoaded ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : userName ? (
+                userName
+              ) : (
+                ""
+              )}{" "}
             </div>
           </div>
           {/* Mission Card */}
