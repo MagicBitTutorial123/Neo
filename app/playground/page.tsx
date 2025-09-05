@@ -72,13 +72,11 @@ export default function Playground() {
   // User context for personalization
   const { userData, refreshUserData } = useUser();
   
-  // Debug: Log user data
+  // User data management
   useEffect(() => {
-    console.log("🔍 Playground - Current user data:", userData);
     if (userData?.name) {
-      console.log("✅ User name found:", userData.name);
+      // User data is available
     } else {
-      console.log("⚠️ No user name found, attempting to refresh...");
       refreshUserData();
     }
   }, [userData, refreshUserData]);
@@ -140,16 +138,9 @@ export default function Playground() {
 
   // Function to check for keyboard blocks and update state
   const checkForKeyboardBlocks = useCallback(() => {
-    console.log("checkForKeyboardBlocks called");
-    console.log("blocklyRef.current:", blocklyRef.current);
-    console.log("workspaceRef.current:", blocklyRef.current?.workspaceRef?.current);
-    
     if (blocklyRef.current?.workspaceRef?.current) {
       const hasBlocks = hasKeyboardBlocks(blocklyRef.current.workspaceRef.current);
       setHasKeyboardBlocksPresent(hasBlocks);
-      console.log("Keyboard blocks detected:", hasBlocks);
-    } else {
-      console.log("Workspace not ready yet");
     }
   }, []);
 
@@ -176,13 +167,11 @@ export default function Playground() {
       try {
         // Check connection health before sending
         if (connectionStatus !== "connected" || !writeCharacteristicRef.current) {
-          console.log("BLE not connected, skipping command:", commandItem.command);
           continue;
         }
 
         await keyboardSendBLE(commandItem.command, writeCharacteristicRef.current);
         lastCommandTime.current = Date.now();
-        console.log("BLE command sent successfully:", commandItem.command);
         
       } catch (error) {
         console.error("Failed to send BLE command:", commandItem.command, error);
@@ -191,7 +180,6 @@ export default function Playground() {
         if (commandItem.retries > 0) {
           commandItem.retries--;
           bleCommandQueue.current.unshift(commandItem);
-          console.log(`Retrying command ${commandItem.command}, ${commandItem.retries} retries left`);
           
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -222,10 +210,12 @@ export default function Playground() {
 
   // Show welcome popup only on first visit (not on refresh)
   useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem('playground-welcome-seen');
-    if (!hasSeenWelcome) {
-      setShowWelcomePopup(true);
-      localStorage.setItem('playground-welcome-seen', 'true');
+    if (typeof window !== 'undefined') {
+      const hasSeenWelcome = localStorage.getItem('playground-welcome-seen');
+      if (!hasSeenWelcome) {
+        setShowWelcomePopup(true);
+        localStorage.setItem('playground-welcome-seen', 'true');
+      }
     }
   }, []);
 
@@ -246,7 +236,6 @@ export default function Playground() {
             port.close().catch(console.error);
           }
         } catch (error) {
-          console.log("Error closing serial port on cleanup:", error);
         }
       }
     };
@@ -257,7 +246,6 @@ export default function Playground() {
   useEffect(() => {
     // Only add event listeners if keyboard blocks are present
     if (!hasKeyboardBlocksPresent) {
-      console.log("No keyboard blocks present, skipping event listeners");
       return;
     }
 
@@ -302,7 +290,6 @@ export default function Playground() {
       // Prevent key repeat - only send if key is not already pressed
       if (action) {
         if (keyStateRef.current[action]) {
-          console.log(`Key "${action}" already pressed, ignoring repeat`);
           return; // Key is already pressed, ignore this event
         }
         
@@ -431,19 +418,16 @@ export default function Playground() {
       }
 
       if (!server.current?.connected) {
-        console.log("Connecting to server");
         const device = bluetoothDeviceRef.current;
         if (!device || !device.gatt) {
           throw new Error("No GATT available on device");
         }
 
         server.current = await device.gatt.connect();
-        console.log(server.current);
         const service = await server.current?.getPrimaryService(
           "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
         );
         
-        console.log("service: ", service);
         const characteristic = await service.getCharacteristic(
           "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
         );
@@ -492,7 +476,6 @@ export default function Playground() {
                        }
                    }
                  } catch {
-                   console.log("BLE raw:", line);
                  }
               });
           } catch (e) {
@@ -521,7 +504,6 @@ export default function Playground() {
       
       // Check if user cancelled the device selection
       if (error instanceof Error && (error.name === "NotFoundError" || error.name === "NotAllowedError")) {
-        console.log("Bluetooth connection canceled by user");
         setConnectionStatus("disconnected");
         setIsConnected(false);
         setTryingToConnect(false); // Stop trying to connect
@@ -543,7 +525,6 @@ export default function Playground() {
 
 
   const clearWorkspace = () => {
-    console.log("test");
     const workspace = Blockly.getMainWorkspace();
     if (workspace) {
       workspace.clear();
@@ -646,7 +627,6 @@ export default function Playground() {
             await port.close();
           }
         } catch (error) {
-          console.log("Error closing serial port:", error);
         }
       }
       portRef.current = null;
@@ -781,7 +761,8 @@ export default function Playground() {
   };
 
   return (
-    <div className="app-wrapper">
+    <>
+      <div className="app-wrapper">
       <div>
         <div className="h-screen bg-white flex flex-row w-screen">
           <SideNavbar
@@ -1631,5 +1612,6 @@ export default function Playground() {
       )}
 
     </div>
+    </>
   );
 }
