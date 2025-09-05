@@ -16,13 +16,14 @@ interface HeaderProps {
   onRun?: () => void;
   onPause?: () => void;
   onErase?: () => void;
+  onPowerUp?: () => void;
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
   isPlayground?: boolean;
-  onConnectionTypeChange: (e:"bluetooth" | "serial") => void;
+  onConnectionTypeChange: (e:"bluetooth" | "serial" | "none") => void;
   setConnectionStatus: React.Dispatch<string>;
   connectionStatus: string;
-  connectionType?: "bluetooth" | "serial";
+  connectionType?: "bluetooth" | "serial" | "none";
   isUploading?: boolean;
   isRunning?: boolean;
 }
@@ -38,7 +39,7 @@ export default function Header({
   onRun,
   onPause,
   onErase,
-
+  onPowerUp,
   sidebarCollapsed: propSidebarCollapsed = false,
   isPlayground = false,
   onConnectionTypeChange,
@@ -171,6 +172,28 @@ export default function Header({
           {/* Control buttons for mission 3+ */}
           {(missionNumber >= 3 || isPlayground) && (
             <div className="flex items-center gap-3">
+              {/* Power Up button - only for playground */}
+              {isPlayground && onPowerUp && (
+                <button
+                  onClick={onPowerUp}
+                  className="p-2 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] hover:from-[#0078D4] hover:to-[#0056A3] rounded-full transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Power Up - Select Connection Type"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                </button>
+              )}
+
               {/* Play/Pause button */}
               <button
                 onClick={isRunning ? onPause : onRun}

@@ -5,8 +5,8 @@ interface ToggleConnectButtonProps {
   onToggle: (connected: boolean) => void;
   connectionStatus: string;
   setConnectionStatus: React.Dispatch<string>;
-  onConnectionTypeChange?: (type: "bluetooth" | "serial") => void;
-  connectionType: "bluetooth" | "serial";
+  onConnectionTypeChange?: (type: "bluetooth" | "serial" | "none") => void;
+  connectionType: "bluetooth" | "serial" | "none";
 }
 
 export default function ToggleConnectButton({
@@ -43,7 +43,7 @@ export default function ToggleConnectButton({
     }
   };
 
-  const handleConnectionTypeSelect = (type: "bluetooth" | "serial") => {
+  const handleConnectionTypeSelect = (type: "bluetooth" | "serial" | "none") => {
     setShowDropdown(false);
     onConnectionTypeChange?.(type);
   };
@@ -106,13 +106,21 @@ export default function ToggleConnectButton({
             >
               <path d="M7 12l-2-2-2 2 2 2 2-2zm10.71-4.29L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z" />
             </svg>
-          ) : (
+          ) : connectionType === "serial" ? (
             <svg
               className="w-5 h-5 text-white"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
               <path d="M15 7v4h1v2h-3V5h2l-3-4-3 4h2v8H8v-2.07c.7-.37 1.2-1.08 1.2-1.93 0-1.21-.99-2.2-2.2-2.2S4.8 7.79 4.8 9c0 .85.5 1.56 1.2 1.93V13c0 1.11.89 2 2 2h3v3.05c-.71.37-1.2 1.1-1.2 1.95 0 1.22.99 2.2 2.2 2.2s2.2-.98 2.2-2.2c0-.85-.49-1.58-1.2-1.95V15h3c1.11 0 2-.89 2-2V9h-1V7z" />
+            </svg>
+          ) : (
+            <svg
+              className="w-5 h-5 text-white"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
             </svg>
           )
         ) : (
@@ -159,6 +167,17 @@ export default function ToggleConnectButton({
               <div className="flex items-center gap-2">
                 <img src="/usb-port.png" alt="Serial" className="w-4 h-4" />
                 Serial
+              </div>
+            </button>
+            <button
+              onClick={() => handleConnectionTypeSelect("none")}
+              className="w-full text-left px-3 py-2 text-sm text-[#222E3A] hover:bg-[#d5efff] transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                No Device
               </div>
             </button>
           </div>
