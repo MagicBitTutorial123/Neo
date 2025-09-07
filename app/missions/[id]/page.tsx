@@ -96,7 +96,7 @@ export default function MissionPage() {
 
   // BLE Connection states
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
+  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial" | "none">(
     "bluetooth"
   );
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -525,7 +525,7 @@ export default function MissionPage() {
     }
   };
 
-  const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
+  const onConnectionTypeChange = (type: "bluetooth" | "serial" | "none") => {
     if (isConnected) onConnectToggle(false);
     setConnectionType(type);
   };

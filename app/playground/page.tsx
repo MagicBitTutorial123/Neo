@@ -1237,7 +1237,7 @@ export default function Playground() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">2</div>
-                  <p className="text-gray-700">Connect the other end to your computer's USB port</p>
+                  <p className="text-gray-700">Connect the other end to your computer&apos;s USB port</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
@@ -1357,7 +1357,7 @@ export default function Playground() {
                 <div className="flex items-start gap-2">
                   <div className="w-5 h-5 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">!</div>
                   <div>
-                    <h4 className="text-sm font-medium text-yellow-800 mb-1">Can't see any ports?</h4>
+                    <h4 className="text-sm font-medium text-yellow-800 mb-1">Can&apos;t see any ports?</h4>
                     <ul className="text-xs text-yellow-700 space-y-0.5">
                       <li>• Check your drivers in your computer</li>
                       <li>• Make sure USB cable is properly connected</li>
@@ -1585,7 +1585,7 @@ export default function Playground() {
                 <div className="flex items-start gap-2">
                   <div className="w-5 h-5 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">!</div>
                   <div>
-                    <h4 className="text-sm font-medium text-yellow-800 mb-1">Can't see your device?</h4>
+                    <h4 className="text-sm font-medium text-yellow-800 mb-1">Can&apos;t see your device?</h4>
                     <ul className="text-xs text-yellow-700 space-y-0.5">
                       <li>• Make sure your Neo device is powered on</li>
                       <li>• Check that Bluetooth is enabled on your computer</li>
