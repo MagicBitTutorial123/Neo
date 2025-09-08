@@ -816,20 +816,28 @@ export default function SideNavbar({
             )
           )}
 
-          {/* Help Button */}
-          <div
-            ref={helpMenuRef}
-            className={`relative flex flex-row items-center gap-3 ${
-              sidebarCollapsed ? "w-12 justify-center px-0" : "w-[80%] px-4"
-            } py-3 rounded-2xl hover:bg-[#F0F4F8] transition-colors cursor-pointer`}
-            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-          >
-            <Image src="/help.svg" alt="Help" width={24} height={24} />
-            {!sidebarCollapsed && (
-              <span className="text-base font-semibold text-[#222E3A]">
-                Help
-              </span>
-            )}
+                    {/* Help Menu Item */}
+                    <div
+                      className={`flex flex-col ${
+                        sidebarCollapsed ? "w-12 px-0" : "w-[80%] px-4"
+                      }`}
+                    >
+                      {/* Help Button */}
+                      <div
+                        ref={helpMenuRef}
+                        className={`flex flex-row items-center gap-3 py-3 rounded-2xl transition-colors cursor-pointer hover:bg-[#F0F4F8]`}
+                        onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+                      >
+                        {/* Help Icon */}
+                        <div className="w-6 h-6 rounded-full bg-white border border-[#222E3A] flex items-center justify-center">
+                        <Image src="/help.svg" alt="Help" width={25} height={25} />
+                        </div>
+                        
+                        {!sidebarCollapsed && (
+                          <span className="text-base font-semibold text-[#222E3A]">
+                            Help
+                          </span>
+                        )}
 
             {/* Help Dropdown Menu */}
             {helpMenuOpen && (

@@ -474,7 +474,7 @@ export default function SignupPhone() {
              )}
 
              <div className="text-center text-sm text-gray-600 mb-4">
-              <p>Enter your phone number without country code (e.g., 769848925)</p>
+              <p></p>
               <p className="text-xs mt-1">We&apos;ll send you a verification code via WhatsApp and email</p>
               <p className="text-xs mt-1">You can verify OTP or skip to continue</p>
             </div>

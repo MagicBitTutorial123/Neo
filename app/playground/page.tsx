@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import "blockly/javascript";
 import "@/components/Blockly/customblocks/magicbitblocks";
 import "@/components/Blockly/customblocks/keyboardBlocks";
@@ -71,11 +72,22 @@ Blockly.setLocale(En);
 
 export default function Playground() {
   
+<<<<<<< HEAD
+=======
+  // User data management
+  useEffect(() => {
+    if (userData?.name) {
+      // User data is available
+    } else {
+      refreshUserData();
+    }
+  }, [userData, refreshUserData]);
+>>>>>>> c36a730a71744ced033c7e31ce8b830d7b877ce5
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blocklyRef = useRef<{ getCurrentCode: () => string; workspaceRef: React.RefObject<any> } | null>(null);
   const [generatedCode, setGeneratedCode] = useState("");
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">(
+  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial" | "none">(
     "bluetooth"
   );
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -90,7 +102,19 @@ export default function Playground() {
   const [showFirmwareModal, setShowFirmwareModal] = useState(false);
   const [showBLETroubleshootingModal, setShowBLETroubleshootingModal] = useState(false);
   const [hasKeyboardBlocksPresent, setHasKeyboardBlocksPresent] = useState(false);
+<<<<<<< HEAD
   const [bleConnectionTimeout, setBleConnectionTimeout] = useState<NodeJS.Timeout | null>(null);
+=======
+  const [showConnectionTypePopup, setShowConnectionTypePopup] = useState(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [showUsbInstructions, setShowUsbInstructions] = useState(false);
+  const [showUsbPortSelection, setShowUsbPortSelection] = useState(false);
+  const [showBluetoothInstructions, setShowBluetoothInstructions] = useState(false);
+  const [showBluetoothDeviceSelection, setShowBluetoothDeviceSelection] = useState(false);
+  const [selectedBluetoothDevice, setSelectedBluetoothDevice] = useState<string | null>(null);
+  const [selectedUsbPort, setSelectedUsbPort] = useState<string | null>(null);
+  
+>>>>>>> c36a730a71744ced033c7e31ce8b830d7b877ce5
   
   // Dashboard widget state
   const [widgets, setWidgets] = useState<Array<{ id: string; type: string; props: Record<string, unknown> }>>([]);
@@ -122,16 +146,9 @@ export default function Playground() {
 
   // Function to check for keyboard blocks and update state
   const checkForKeyboardBlocks = useCallback(() => {
-    console.log("checkForKeyboardBlocks called");
-    console.log("blocklyRef.current:", blocklyRef.current);
-    console.log("workspaceRef.current:", blocklyRef.current?.workspaceRef?.current);
-    
     if (blocklyRef.current?.workspaceRef?.current) {
       const hasBlocks = hasKeyboardBlocks(blocklyRef.current.workspaceRef.current);
       setHasKeyboardBlocksPresent(hasBlocks);
-      console.log("Keyboard blocks detected:", hasBlocks);
-    } else {
-      console.log("Workspace not ready yet");
     }
   }, []);
 
@@ -158,13 +175,11 @@ export default function Playground() {
       try {
         // Check connection health before sending
         if (connectionStatus !== "connected" || !writeCharacteristicRef.current) {
-          console.log("BLE not connected, skipping command:", commandItem.command);
           continue;
         }
 
         await keyboardSendBLE(commandItem.command, writeCharacteristicRef.current);
         lastCommandTime.current = Date.now();
-        console.log("BLE command sent successfully:", commandItem.command);
         
       } catch (error) {
         console.error("Failed to send BLE command:", commandItem.command, error);
@@ -173,7 +188,6 @@ export default function Playground() {
         if (commandItem.retries > 0) {
           commandItem.retries--;
           bleCommandQueue.current.unshift(commandItem);
-          console.log(`Retrying command ${commandItem.command}, ${commandItem.retries} retries left`);
           
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -202,6 +216,17 @@ export default function Playground() {
 
 
 
+  // Show welcome popup only on first visit (not on refresh)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSeenWelcome = localStorage.getItem('playground-welcome-seen');
+      if (!hasSeenWelcome) {
+        setShowWelcomePopup(true);
+        localStorage.setItem('playground-welcome-seen', 'true');
+      }
+    }
+  }, []);
+
   // Simple cleanup
   useEffect(() => {
     return () => {
@@ -219,7 +244,6 @@ export default function Playground() {
             port.close().catch(console.error);
           }
         } catch (error) {
-          console.log("Error closing serial port on cleanup:", error);
         }
       }
     };
@@ -230,7 +254,6 @@ export default function Playground() {
   useEffect(() => {
     // Only add event listeners if keyboard blocks are present
     if (!hasKeyboardBlocksPresent) {
-      console.log("No keyboard blocks present, skipping event listeners");
       return;
     }
 
@@ -275,7 +298,6 @@ export default function Playground() {
       // Prevent key repeat - only send if key is not already pressed
       if (action) {
         if (keyStateRef.current[action]) {
-          console.log(`Key "${action}" already pressed, ignoring repeat`);
           return; // Key is already pressed, ignore this event
         }
         
@@ -374,6 +396,7 @@ export default function Playground() {
     };
   }, [bleConnectionTimeout]);
 
+<<<<<<< HEAD
   // Simple Bluetooth connection using common utility
   const connectBluetooth = useCallback(createBLEConnection({
     bluetoothDeviceRef,
@@ -388,11 +411,116 @@ export default function Playground() {
     bleConnectionTimeout,
     setBleConnectionTimeout
   }), [tryingToConnect, bleConnectionTimeout]);
+=======
+      if (!server.current?.connected) {
+        const device = bluetoothDeviceRef.current;
+        if (!device || !device.gatt) {
+          throw new Error("No GATT available on device");
+        }
+
+        server.current = await device.gatt.connect();
+        const service = await server.current?.getPrimaryService(
+          "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+        );
+        
+        const characteristic = await service.getCharacteristic(
+          "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+        );
+        
+        // Subscribe to notifications from TX characteristic
+        const notifyCharacteristic = (await service.getCharacteristic(
+          "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+        )) as unknown as NotifiableCharacteristic;
+        const handleNotification = (event: Event) => {
+          try {
+            const value = (event.target as unknown as NotifiableCharacteristic)
+              .value as DataView;
+            let str = "";
+            for (let i = 0; i < value.byteLength; i++) {
+              str += String.fromCharCode(value.getUint8(i));
+            }
+            // Notifications may stream; split by newlines
+            str
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .forEach((line) => {
+                try {
+                  const msg = JSON.parse(line);
+                  if (msg?.type === "sensors") {
+                      Object.entries(msg.analog).forEach(([pinStr, val]) => {
+                          window.dispatchEvent(
+                            new CustomEvent("sensorData", {
+                              detail: {
+                                sensor: "analog",
+                                value: val,
+                                pin: Number(pinStr),
+                              },
+                            })
+                          );
+                      });
+                                             if (msg.ultrasound) {
+                         window.dispatchEvent(
+                           new CustomEvent("sensorData", {
+                             detail: {
+                               sensor: "ultrasound",
+                               value: msg.ultrasound,
+                             },
+                           })
+                         );
+                       }
+                   }
+                 } catch {
+                 }
+              });
+          } catch (e) {
+            console.error("Notification parse error", e);
+          }
+        };
+        await notifyCharacteristic.startNotifications();
+        notifyCharacteristic.addEventListener(
+          "characteristicvaluechanged",
+          handleNotification
+        );
+        notifyCharacteristicRef.current = notifyCharacteristic;
+
+        writeCharacteristicRef.current = characteristic;
+        setConnectionStatus("connected");
+        setIsConnected(true);
+        setTryingToConnect(false);
+        try {
+          window.dispatchEvent(
+            new CustomEvent("bleConnection", { detail: { connected: true } })
+          );
+        } catch {}
+      }
+    } catch (error) {
+      console.error("Connection failed:", error);
+      
+      // Check if user cancelled the device selection
+      if (error instanceof Error && (error.name === "NotFoundError" || error.name === "NotAllowedError")) {
+        setConnectionStatus("disconnected");
+        setIsConnected(false);
+        setTryingToConnect(false); // Stop trying to connect
+        return; // Don't retry on user cancellation
+      }
+      
+      // Only retry for other types of errors if still trying to connect
+      setConnectionStatus("disconnected");
+      setIsConnected(false);
+      if (tryingToConnect) {
+        setTimeout(async () => {
+          setTryingToConnect(false);
+          await connectBluetooth();
+        }, 2000);
+      }
+    }
+  }, [tryingToConnect]);
+>>>>>>> c36a730a71744ced033c7e31ce8b830d7b877ce5
 
 
 
   const clearWorkspace = () => {
-    console.log("test");
     const workspace = Blockly.getMainWorkspace();
     if (workspace) {
       workspace.clear();
@@ -511,7 +639,6 @@ export default function Playground() {
             await port.close();
           }
         } catch (error) {
-          console.log("Error closing serial port:", error);
         }
       }
       portRef.current = null;
@@ -532,7 +659,7 @@ export default function Playground() {
     }
   }, []);
 
-  const onConnectionTypeChange = (type: "bluetooth" | "serial") => {
+  const onConnectionTypeChange = (type: "bluetooth" | "serial" | "none") => {
     if (isConnected) onConnectToggle(false);
     
     // If switching from serial to BLE, ensure serial port is closed
@@ -553,6 +680,10 @@ export default function Playground() {
     }
     
     setConnectionType(type);
+    if (type === "none") {
+      setConnectionStatus("disconnected");
+      setIsConnected(false);
+    }
   };
 
   useEffect(() => {
@@ -660,7 +791,8 @@ export default function Playground() {
   };
 
   return (
-    <div className="app-wrapper">
+    <>
+      <div className="app-wrapper">
       <div>
         <div className="h-screen bg-white flex flex-row w-screen">
           <SideNavbar
@@ -668,9 +800,9 @@ export default function Playground() {
             dashboardActive={dashboardActive}
           />
           <div className="flex flex-col w-full h-full">
-                         <Header
+            <Header
                missionNumber={0}
-               title="Playground"
+               title="Neo Playground"
                liveUsers={17}
                isPlayground={true}
                onRun={uploadCode}
@@ -684,6 +816,7 @@ export default function Playground() {
                onConnectionTypeChange={onConnectionTypeChange}
                connectionType={connectionType}
                isUploading={isUploading}
+               onPowerUp={() => setShowConnectionTypePopup(true)}
              />
 
                          {dashboardActive ? (
@@ -897,16 +1030,23 @@ export default function Playground() {
                  </div>
                </div>
              ) : (
-                 <BlocklyComponent
-                   ref={blocklyRef}
-                   generatedCode={generatedCode}
-                   setGeneratedCode={setGeneratedCode}
-                   onWorkspaceChange={checkForKeyboardBlocks}
-                 />
+               <div className="flex flex-col h-full">
+                 
+                 {/* Blockly Component */}
+                 <div className="flex-1">
+                   <BlocklyComponent
+                     ref={blocklyRef}
+                     generatedCode={generatedCode}
+                     setGeneratedCode={setGeneratedCode}
+                     onWorkspaceChange={checkForKeyboardBlocks}
+                   />
+                 </div>
+               </div>
              )}
           </div>
         </div>
       </div>
+<<<<<<< HEAD
               <FirmwareInstallModal
           open={showFirmwareModal}
           onClose={() => setShowFirmwareModal(false)}
@@ -923,6 +1063,604 @@ export default function Playground() {
           }}
         />
       <AIChatbot workspaceRef={blocklyRef.current?.workspaceRef} onClose={() => {}} />
+=======
+      <FirmwareInstallModal 
+        open={showFirmwareModal} 
+        onClose={() => setShowFirmwareModal(false)} 
+        portRef={portRef}
+      />
+      <AIChatbot 
+        workspaceRef={blocklyRef.current?.workspaceRef} 
+        onClose={() => {}} 
+        username={userData?.name || "there"}
+      />
+      
+      {/* 1. WELCOME POPUP */}
+      {showWelcomePopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 backdrop-blur-lg rounded-lg shadow-2xl max-w-md w-full mx-4 overflow-hidden border-2 border-blue-300">
+            <div className="bg-gray-100 px-4 py-3 flex items-center justify-between border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-700">Power Up Robot</h3>
+              <button
+                onClick={() => setShowWelcomePopup(false)}
+                className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 text-center">
+              <div className="w-20 h-20 mx-auto mb-4 relative">
+                <div className="w-full h-full bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-2xl">🤖</span>
+                </div>
+              </div>
+              
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Power Up Robot!</h2>
+              <p className="text-gray-600 mb-6 text-sm">
+                Welcome to the playground! Click the Power Up button to select your connection type.
+              </p>
+              
+              <button
+                onClick={() => {
+                  setShowWelcomePopup(false);
+                  setShowConnectionTypePopup(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-base mb-3"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                Power Up Now
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowWelcomePopup(false);
+                }}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium hover:bg-gray-100 rounded"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. CONNECTION TYPE SELECTION POPUP */}
+      {showConnectionTypePopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 border-2 border-blue-300">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-[#222E3A] mb-2">Power Up</h2>
+              <p className="text-gray-600">Choose your connection type</p>
+            </div>
+            
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  onConnectionTypeChange("bluetooth");
+                  setShowConnectionTypePopup(false);
+                  setShowBluetoothInstructions(true);
+                  // Mark welcome as seen when user selects connection
+                  localStorage.setItem('playground-welcome-seen', 'true');
+                }}
+                className={`w-full p-4 rounded-xl border-2 transition-all duration-200 ${
+                  connectionType === "bluetooth" ? "border-[#00AEEF] bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    connectionType === "bluetooth" ? "bg-[#00AEEF]" : "bg-gray-100"
+                  }`}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={connectionType === "bluetooth" ? "white" : "#666"} strokeWidth="2">
+                      <path d="M6.5 6.5l11 11L12 23l-1-1-1-1 6-6-6-6 1-1 1-1 5.5 5.5z" />
+                      <path d="M17.5 6.5l-11 11L12 1l1 1 1 1-6 6 6 6-1 1-1 1-5.5-5.5z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-[#222E3A]">Bluetooth</div>
+                    <div className="text-sm text-gray-600">Wireless connection</div>
+                  </div>
+                  {connectionType === "bluetooth" && (
+                    <div className="ml-auto">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00AEEF" strokeWidth="2">
+                        <polyline points="20,6 9,17 4,12" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </button>
+              
+              <button
+                onClick={() => {
+                  onConnectionTypeChange("serial");
+                  setShowConnectionTypePopup(false);
+                  setShowUsbInstructions(true);
+                  // Mark welcome as seen when user selects connection
+                  localStorage.setItem('playground-welcome-seen', 'true');
+                }}
+                className={`w-full p-4 rounded-xl border-2 transition-all duration-200 ${
+                  connectionType === "serial" ? "border-[#00AEEF] bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    connectionType === "serial" ? "bg-[#00AEEF]" : "bg-gray-100"
+                  }`}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={connectionType === "serial" ? "white" : "#666"} strokeWidth="2">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                      <line x1="8" y1="21" x2="16" y2="21" />
+                      <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-[#222E3A]">USB</div>
+                    <div className="text-sm text-gray-600">Wired connection</div>
+                  </div>
+                  {connectionType === "serial" && (
+                    <div className="ml-auto">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00AEEF" strokeWidth="2">
+                        <polyline points="20,6 9,17 4,12" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </button>
+            </div>
+            
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConnectionTypePopup(false);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConnectionTypePopup(false);
+                }}
+                className="flex-1 px-4 py-2 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0078D4] transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 3. USB INSTRUCTIONS POPUP */}
+      {showUsbInstructions && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 backdrop-blur-lg rounded-lg shadow-2xl max-w-lg w-full mx-4 overflow-hidden border-2 border-blue-300">
+            <div className="bg-gray-100 px-4 py-3 flex items-center justify-between border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-700">USB Connection Setup</h3>
+              <button
+                onClick={() => {
+                  setShowUsbInstructions(false);
+                }}
+                className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 text-center">
+              <div className="w-32 h-24 mx-auto mb-4 relative bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-8 bg-gray-400 rounded flex items-center justify-center mb-2">
+                    <div className="w-12 h-4 bg-gray-600 rounded"></div>
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">USB Cable</div>
+                </div>
+              </div>
+              
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Connect via USB Cable</h2>
+              <div className="space-y-3 text-left mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">1</div>
+                  <p className="text-gray-700">Connect the USB cable to your Neo device</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">2</div>
+                  <p className="text-gray-700">Connect the other end to your computer&apos;s USB port</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
+                  <p className="text-gray-700">Turn ON the power switch on your Neo device</p>
+                </div>
+              </div>
+              
+              <div className="w-24 h-24 mx-auto mb-4 relative bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mb-2 shadow-md">
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-green-600">ON</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">Neo Switch</div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setShowUsbInstructions(false);
+                  setShowUsbPortSelection(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-base"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. USB PORT SELECTION POPUP */}
+      {showUsbPortSelection && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 backdrop-blur-lg rounded-lg shadow-2xl max-w-2xl w-full mx-4 overflow-hidden border-2 border-blue-300">
+            <div className="bg-gray-100 px-4 py-3 flex items-center justify-between border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-700">Select USB Serial Port</h3>
+              <button
+                onClick={() => {
+                  setShowUsbPortSelection(false);
+                }}
+                className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="text-center mb-4">
+                <div className="w-16 h-12 mx-auto mb-3 relative bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-12 h-8 bg-gray-300 rounded flex items-center justify-center mb-1">
+                      <div className="w-8 h-4 bg-gray-500 rounded flex items-center justify-center">
+                        <div className="w-6 h-2 bg-gray-700 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600 font-medium">USB Port</div>
+                  </div>
+                </div>
+                <h2 className="text-lg font-bold text-gray-800 mb-2">Select USB Serial Port</h2>
+                <p className="text-gray-600 text-sm">
+                  Choose the correct USB serial port for your Neo device.
+                </p>
+              </div>
+              
+              <div className="mb-4">
+                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                  <div className="text-sm text-gray-500 mb-2">Available Ports:</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 transition-colors">
+                      <span className="text-sm text-gray-700">COM3 - USB Serial Device</span>
+                      <button 
+                        onClick={() => {
+                          setSelectedUsbPort("COM3 - USB Serial Device");
+                          setShowUsbPortSelection(false);
+                          setDashboardActive(false);
+                        }}
+                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                      >
+                        Select
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 transition-colors">
+                      <span className="text-sm text-gray-700">COM5 - Arduino Uno</span>
+                      <button 
+                        onClick={() => {
+                          setSelectedUsbPort("COM5 - Arduino Uno");
+                          setShowUsbPortSelection(false);
+                          setDashboardActive(false);
+                        }}
+                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                      >
+                        Select
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-gray-100 rounded border">
+                      <span className="text-sm text-gray-400">No ports detected</span>
+                      <span className="text-xs text-gray-400">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-left">
+                <div className="flex items-start gap-2">
+                  <div className="w-5 h-5 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">!</div>
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-800 mb-1">Can&apos;t see any ports?</h4>
+                    <ul className="text-xs text-yellow-700 space-y-0.5">
+                      <li>• Check your drivers in your computer</li>
+                      <li>• Make sure USB cable is properly connected</li>
+                      <li>• Try a different USB port</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <button
+                  onClick={() => {
+                    setShowUsbPortSelection(false);
+                    setDashboardActive(false);
+                  }}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-base"
+                >
+                  Go to Playground
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. BLUETOOTH INSTRUCTIONS POPUP */}
+      {showBluetoothInstructions && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 backdrop-blur-lg rounded-lg shadow-2xl max-w-lg w-full mx-4 overflow-hidden border-2 border-blue-300">
+            <div className="bg-gray-100 px-4 py-3 flex items-center justify-between border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-700">Bluetooth Connection Setup</h3>
+              <button
+                onClick={() => {
+                  setShowBluetoothInstructions(false);
+                }}
+                className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 text-center">
+              {/* Battery Image */}
+              <div className="w-32 h-24 mx-auto mb-4 relative bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-12 bg-gray-300 rounded-lg flex items-center justify-center mb-2 shadow-md">
+                    <div className="w-12 h-8 bg-gray-500 rounded flex items-center justify-center">
+                      <div className="w-8 h-6 bg-green-400 rounded flex items-center justify-center">
+                        <span className="text-xs font-bold text-white">100%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">Battery Power</div>
+                </div>
+              </div>
+              
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Power Device via Battery</h2>
+              <div className="space-y-3 text-left mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">1</div>
+                  <p className="text-gray-700">Ensure your Neo device has sufficient battery power</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">2</div>
+                  <p className="text-gray-700">Turn ON the power switch on your Neo device</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
+                  <p className="text-gray-700">Wait for the device to boot up completely</p>
+                </div>
+              </div>
+              
+              {/* Neo Switch ON Animation */}
+              <div className="w-24 h-24 mx-auto mb-4 relative bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mb-2 shadow-md animate-pulse">
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-green-600">ON</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">Neo Switch</div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setShowBluetoothInstructions(false);
+                  setShowBluetoothDeviceSelection(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-base"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. BLUETOOTH DEVICE SELECTION POPUP */}
+      {showBluetoothDeviceSelection && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-white bg-opacity-90 backdrop-blur-lg rounded-lg shadow-2xl max-w-2xl w-full mx-4 overflow-hidden border-2 border-blue-300">
+            <div className="bg-gray-100 px-4 py-3 flex items-center justify-between border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-700">Select Bluetooth Device</h3>
+              <button
+                onClick={() => {
+                  setShowBluetoothDeviceSelection(false);
+                }}
+                className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="text-center mb-4">
+                <div className="w-16 h-12 mx-auto mb-3 relative bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-1 shadow-md">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                        <path d="M6.5 6.5l11 11L12 23l-1-1-1-1 6-6-6-6 1-1 1-1 5.5 5.5z" />
+                        <path d="M17.5 6.5l-11 11L12 1l1 1 1 1-6 6 6 6-1 1-1 1-5.5-5.5z" />
+                      </svg>
+                    </div>
+                    <div className="text-xs text-gray-600 font-medium">Bluetooth</div>
+                  </div>
+                </div>
+                <h2 className="text-lg font-bold text-gray-800 mb-2">Select Bluetooth Device</h2>
+                <p className="text-gray-600 text-sm">
+                  Choose your Neo device from the available Bluetooth devices.
+                </p>
+              </div>
+              
+              <div className="mb-4">
+                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                  <div className="text-sm text-gray-500 mb-2">Available Devices:</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M6.5 6.5l11 11L12 23l-1-1-1-1 6-6-6-6 1-1 1-1 5.5 5.5z" />
+                            <path d="M17.5 6.5l-11 11L12 1l1 1 1 1-6 6 6 6-1 1-1 1-5.5-5.5z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-medium text-gray-700">Neo-Device-001</div>
+                          <div className="text-xs text-gray-500">Signal: Strong</div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSelectedBluetoothDevice("Neo-Device-001");
+                          setShowBluetoothDeviceSelection(false);
+                          setDashboardActive(false);
+                        }}
+                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                      >
+                        Select
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M6.5 6.5l11 11L12 23l-1-1-1-1 6-6-6-6 1-1 1-1 5.5 5.5z" />
+                            <path d="M17.5 6.5l-11 11L12 1l1 1 1 1-6 6 6 6-1 1-1 1-5.5-5.5z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-medium text-gray-700">Neo-Device-002</div>
+                          <div className="text-xs text-gray-500">Signal: Medium</div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSelectedBluetoothDevice("Neo-Device-002");
+                          setShowBluetoothDeviceSelection(false);
+                          setDashboardActive(false);
+                        }}
+                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                      >
+                        Select
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-gray-100 rounded border">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M6.5 6.5l11 11L12 23l-1-1-1-1 6-6-6-6 1-1 1-1 5.5 5.5z" />
+                            <path d="M17.5 6.5l-11 11L12 1l1 1 1 1-6 6 6 6-1 1-1 1-5.5-5.5z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-medium text-gray-400">No devices found</div>
+                          <div className="text-xs text-gray-400">Make sure device is powered on</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-400">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-left">
+                <div className="flex items-start gap-2">
+                  <div className="w-5 h-5 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">!</div>
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-800 mb-1">Can&apos;t see your device?</h4>
+                    <ul className="text-xs text-yellow-700 space-y-0.5">
+                      <li>• Make sure your Neo device is powered on</li>
+                      <li>• Check that Bluetooth is enabled on your computer</li>
+                      <li>• Try refreshing the device list</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <button
+                  onClick={() => {
+                    setShowBluetoothDeviceSelection(false);
+                    setDashboardActive(false);
+                  }}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-[#00AEEF] to-[#0078D4] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-base"
+                >
+                  Go to Playground
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+>>>>>>> c36a730a71744ced033c7e31ce8b830d7b877ce5
     </div>
+    </>
   );
 }

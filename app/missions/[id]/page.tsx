@@ -38,7 +38,83 @@ export default function MissionPage({
   const [showMCQ, setShowMCQ] = useState<boolean>(false);
   const [mcqStepIndex, setMcqStepIndex] = useState<number>(0);
 
-  // ✅ Single effect to fetch data; no hooks inside try/catch
+interface BluetoothDevice {
+  name?: string;
+  gatt?: BluetoothRemoteGATTServer;
+  addEventListener: (event: string, callback: () => void) => void;
+}
+
+interface RequestDeviceOptions {
+  filters?: Array<{ name?: string; services?: Array<string> }>;
+  optionalServices?: Array<string>;
+}
+
+interface SerialPort {
+  open: (options: { baudRate: number }) => Promise<void>;
+  close: () => Promise<void>;
+  readable?: unknown;
+  writable?: unknown;
+}
+
+interface NavigatorWithSerial {
+  serial: { requestPort: () => Promise<SerialPort> };
+}
+
+declare global {
+  interface Navigator {
+    bluetooth: {
+      requestDevice: (options: RequestDeviceOptions) => Promise<BluetoothDevice>;
+    };
+  }
+  interface Window {
+    missionTimerControls?: {
+      resume: () => void;
+      pause: () => void;
+      reset: () => void;
+    };
+  }
+}
+import { useSidebar } from "@/context/SidebarContext";
+import Image from "next/image";
+
+type MissionsType = typeof missions;
+type MissionKey = keyof MissionsType;
+
+export default function MissionPage() {
+  const params = useParams();
+  const router = useRouter();
+  let id = params.id;
+  if (Array.isArray(id)) id = id[0];
+  id = String(id);
+  const numericId = Number(id);
+  const mission = missions[numericId as MissionKey];
+  const layoutType =
+    missionLayoutMap[numericId as keyof typeof missionLayoutMap] ||
+    "standardIntroLayout";
+
+  // State for mission header buttons
+
+  // BLE Connection states
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionType, setConnectionType] = useState<"bluetooth" | "serial" | "none">(
+    "bluetooth"
+  );
+  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [tryingToConnect, setTryingToConnect] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // BLE Connection refs
+  const portRef = useRef<SerialPort | null>(null);
+  const bluetoothDeviceRef = useRef<BluetoothDevice | null>(null);
+  const writeCharacteristicRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const server = useRef<BluetoothRemoteGATTServer | null>(null);
+  const keyStateRef = useRef<{ [key: string]: boolean }>({});
+  const [isRunning, setIsRunning] = useState(false);
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
+  const [showHeader, setShowHeader] = useState(false);
+  const [showFirmwareModal, setShowFirmwareModal] = useState(false);
+
+  // Listen for sidebar collapse state changes
   useEffect(() => {
     let alive = true;
 
@@ -53,10 +129,71 @@ export default function MissionPage({
           throw new Error(`Mission ${missionId} not found`);
         }
 
-        // 2) Fetch mission JSON from Storage
-        const json = await getMissionJsonPublic(
-          meta.json_bucket,
-          meta.object_path
+  const onConnectionTypeChange = (type: "bluetooth" | "serial" | "none") => {
+    if (isConnected) onConnectToggle(false);
+    setConnectionType(type);
+  };
+
+  useEffect(() => {
+    async function connect() {
+      if (tryingToConnect) {
+        await connectBluetooth();
+      }
+    }
+    connect();
+  }, [connectBluetooth, tryingToConnect]);
+
+  // Load mission state on mount
+  useEffect(() => {
+    const savedState = MissionStatePersistence.getMissionState(id);
+    if (savedState) {
+      console.log("🔄 Loading saved mission state:", savedState);
+      setShowHeader(savedState.showHeader);
+      setForceHideIntro(savedState.forceHideIntro);
+      setShowCountdown(savedState.showCountdown);
+      setFromNo(savedState.fromNo);
+      setCompletedMCQSteps(new Set(savedState.completedMCQSteps));
+
+      // If we're resuming a mission that was already started, resume the timer
+      if (savedState.showHeader && !savedState.showCountdown) {
+        // Wait for the timer component to be ready, then resume
+        setTimeout(() => {
+          if (
+            typeof window !== "undefined" &&
+            window.missionTimerControls
+          ) {
+            const savedTimerState = TimerPersistence.loadTimerState();
+            if (savedTimerState && savedTimerState.missionId === id) {
+              console.log("🔄 Resuming existing timer for mission", id);
+              window.missionTimerControls.resume();
+            }
+          }
+        }, 100);
+      }
+    }
+  }, [id]);
+
+  // Handle current step changes from layout components
+  const handleCurrentStepChange = (step: number) => {
+    console.log("🔄 Current step changed to:", step);
+    // Update mission state with new step
+    MissionStatePersistence.updateMissionState(id, {
+      currentStep: step,
+    });
+  };
+
+  // Function to stop timer and calculate time taken
+  const stopTimerAndCalculateTime = useCallback(() => {
+    if (typeof window !== "undefined" && window.missionTimerControls) {
+      // Pause the timer first
+      window.missionTimerControls.pause();
+
+      // Get the current timer state to calculate time taken
+      const savedTimerState = TimerPersistence.loadTimerState();
+      if (savedTimerState && savedTimerState.missionId === id) {
+        const allocatedTime = savedTimerState.allocatedTime;
+        const elapsed = Math.floor(
+          (Date.now() - savedTimerState.startTime) / 1000
         );
 
         // 3) Normalize (resolves steps[].text/image, layout, intro, etc.)
