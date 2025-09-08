@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 interface PlaygroundUnlockedProps {
   onClose?: () => void;
+  onNext?: () => void;
 }
 
 export default function PlaygroundUnlocked({
   onClose,
+  onNext,
 }: PlaygroundUnlockedProps) {
   const [showContent, setShowContent] = useState(false);
   const router = useRouter();
@@ -20,8 +22,12 @@ export default function PlaygroundUnlocked({
   }, []);
 
   const handleNext = () => {
-    // Navigate to existing playground
-    router.push("/playground");
+    if (onNext) {
+      onNext();
+    } else {
+      // Default behavior - navigate to existing playground
+      router.push("/playground");
+    }
   };
 
   const handleClose = () => {

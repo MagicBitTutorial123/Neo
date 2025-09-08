@@ -8,6 +8,7 @@ import LetsGoButton from "@/components/LetsGoButton";
 import TipOfTheDayCard from "@/components/TipOfTheDayCard";
 import { useUser } from "@/context/UserContext";
 import BasicAuthGuard from "@/components/BasicAuthGuard";
+import { getUserProgress } from "@/utils/queries";
 
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
@@ -35,31 +36,76 @@ export default function HomePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { userData } = useUser();
+  const { userData, updateUserData } = useUser();
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
   const [isNewUser, setIsNewUser] = useState(false);
 
-  // On mount, set hydrated state and check for new user query param
+  // On mount, set hydrated state
   useEffect(() => {
     setHydrated(true);
+  }, []);
 
-    // Check if this is a new user from signup
-    const isNewUserFromSignup = searchParams.get("newUser") === "true";
-    if (isNewUserFromSignup) {
-      router.replace("/home");
-      setIsNewUser(true);
+  // Update isNewUser based on mission progress
+  useEffect(() => {
+    if (userData?.missionProgress !== undefined) {
+      // Show new user content if mission progress < 2 (hasn't completed Mission 2)
+      const shouldShowNewUserContent = userData.missionProgress < 2;
+      console.log("🎯 Home Page Onboarding Logic:", {
+        missionProgress: userData.missionProgress,
+        shouldShowNewUserContent,
+        currentIsNewUser: isNewUser,
+      });
+      setIsNewUser(shouldShowNewUserContent);
     }
+  }, [userData?.missionProgress]);
 
-    // Also check if user is new based on mission progress
-    if (
-      userData?.isNewUser ||
-      (userData?.missionProgress !== undefined && userData?.missionProgress < 2)
-    ) {
-      setIsNewUser(true);
-    }
-  }, [searchParams, router, userData]);
+  // Listen for mission completion events to refresh user data
+  useEffect(() => {
+    const handleMissionCompleted = async (event: CustomEvent) => {
+      console.log("🎯 [Home] Mission completed event received:", event.detail);
+
+      if (userData?._id) {
+        try {
+          // Refresh user data from database
+          const freshUserData = await getUserProgress(userData._id);
+          if (freshUserData) {
+            console.log("🎯 [Home] Refreshing user data:", freshUserData);
+            updateUserData({
+              xp: freshUserData.xp || 0,
+              missionProgress: freshUserData.current_mission || 0,
+              hasCompletedMission2: (freshUserData.current_mission || 0) >= 2,
+            });
+
+            // Update isNewUser state based on mission progress
+            const newMissionProgress = freshUserData.current_mission || 0;
+            const shouldShowNewUserContent = newMissionProgress < 2;
+            console.log("🎯 Mission completed - updating onboarding state:", {
+              newMissionProgress,
+              shouldShowNewUserContent,
+              willShowNewUserContent: shouldShowNewUserContent ? "Yes" : "No",
+            });
+            setIsNewUser(shouldShowNewUserContent);
+          }
+        } catch (error) {
+          console.error("🎯 [Home] Failed to refresh user data:", error);
+        }
+      }
+    };
+
+    window.addEventListener(
+      "missionCompleted",
+      handleMissionCompleted as unknown as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "missionCompleted",
+        handleMissionCompleted as unknown as EventListener
+      );
+    };
+  }, [userData?._id, updateUserData]);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -131,6 +177,22 @@ export default function HomePage() {
 
   // Determine the next mission (assuming missionProgress is the last completed mission)
   const nextMission = (userData?.missionProgress ?? 0) + 1;
+  const nextMissionId = String(nextMission).padStart(2, "0");
+
+  // Debug continue mission button
+  console.log("🎯 Continue Mission Button Debug:", {
+    userData: userData
+      ? {
+          missionProgress: userData.missionProgress,
+          xp: userData.xp,
+          name: userData.name,
+        }
+      : null,
+    currentMission,
+    nextMission,
+    nextMissionId,
+    continueButtonUrl: `/missions/${nextMissionId}`,
+  });
 
   const newUserContent = useMemo(() => {
     return (
@@ -144,7 +206,7 @@ export default function HomePage() {
           </div>
           <LetsGoButton
             style={{ width: 200, height: 60 }}
-            onClick={() => router.push(`/missions/${nextMission}`)}
+            onClick={() => router.push(`/missions/${nextMissionId}`)}
           >
             Lets Go
           </LetsGoButton>
@@ -213,11 +275,7 @@ export default function HomePage() {
               className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
             />
             <button
-              onClick={() =>
-                router.push(
-                  `/missions/${String(currentMission + 1).padStart(2, "0")}`
-                )
-              }
+              onClick={() => router.push(`/missions/${nextMissionId}`)}
               className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition"
             >
               Continue mission{" "}
@@ -392,27 +450,25 @@ export default function HomePage() {
     return null; // Still loading
   }
 
-  // Get user data from context or localStorage fallback
+  // Simple onboarding logic based on mission progress
+  // New user content: missionProgress < 2 (hasn't completed Mission 2)
+  // Default content: missionProgress >= 2 (completed Mission 2)
+  const shouldShowNewUserContent = isNewUser;
 
-  // Check if user came from signup flow (newUser=true in URL)
-  const isFromSignup = searchParams.get("newUser") === "true";
-
-  // Show onboarding ONLY for new users who came from signup flow
-  // Existing users (from signin) should see dashboard directly
-  const shouldShowOnboarding = isNewUser && isFromSignup;
-
-  console.log("🔍 User data:", userData);
-  console.log("🔍 Is new user:", isNewUser);
-  console.log("🔍 Mission progress:", userData?.missionProgress);
-  console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
-  console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
-  console.log(
-    "🔍 UserData.missionProgress < 2:",
-    userData?.missionProgress !== undefined && userData?.missionProgress < 2
-  );
-  console.log("🔍 Final isNewUser calculation:", isNewUser);
-  console.log("🔍 isFromSignup:", isFromSignup);
-  console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
+  console.log("🎯 Home Page Rendering Logic:", {
+    userData: userData
+      ? {
+          missionProgress: userData.missionProgress,
+          xp: userData.xp,
+          name: userData.name,
+        }
+      : null,
+    isNewUser,
+    shouldShowNewUserContent,
+    contentType: shouldShowNewUserContent
+      ? "New User Content"
+      : "Default Content",
+  });
 
   return (
     <BasicAuthGuard>
@@ -426,7 +482,7 @@ export default function HomePage() {
             marginLeft: sidebarCollapsed ? "80px" : "260px",
           }}
         >
-          {shouldShowOnboarding ? newUserContent : defaultHomeContent}
+          {shouldShowNewUserContent ? newUserContent : defaultHomeContent}
         </main>
       </div>
     </BasicAuthGuard>
