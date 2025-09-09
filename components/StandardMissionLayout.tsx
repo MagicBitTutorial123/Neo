@@ -9,12 +9,12 @@ import HelpNeoOverlay from "@/components/HelpNeoOverlay";
 import HelpAcceptedOverlay from "@/components/HelpAcceptedOverlay";
 import CountdownTimer from "@/components/CountdownTimer";
 import StatusHeaderBar from "@/components/StatusHeaderBar";
+import PlaygroundUnlocked from "@/components/PlaygroundUnlocked";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { MissionStatePersistence } from "@/utils/missionStatePersistence";
 import { NormalizedMission } from "@/utils/normalizeMission";
 import { updateUserXP } from "@/utils/queries";
-import { getUserProgress } from "@/utils/queries";
 
 export default function StandardMissionLayout({
   mission,
@@ -60,8 +60,14 @@ export default function StandardMissionLayout({
   const [fromNo, setFromNo] = useState(false); // Track if user clicked "No" in step question
   const [isFirstCompletion, setIsFirstCompletion] = useState(true); // Track if this is first completion
   const [missionStartTime, setMissionStartTime] = useState<Date | null>(null); // Track when mission started
+  const [showPlaygroundUnlock, setShowPlaygroundUnlock] = useState(false); // Track if playground unlock should be shown
   const router = useRouter();
-  const { userData, updateUserData, setUserData } = useUser();
+  const { userData, updateUserData } = useUser();
+
+  // Debug playground unlock state changes
+  useEffect(() => {
+    console.log("🎯 showPlaygroundUnlock changed to:", showPlaygroundUnlock);
+  }, [showPlaygroundUnlock]);
 
   // Load saved state on mount
   useEffect(() => {
@@ -251,19 +257,47 @@ export default function StandardMissionLayout({
   const handleBack = () => {
     setShowCongrats(false);
 
-    // Only show HelpNeo overlay for first completion, not practice completion
-    if (isFirstCompletion) {
+    // Check if this is Mission 2 first completion - show playground unlock
+    const isMission2 =
+      mission.id === "M2" || mission.id === "02" || mission.id === "2";
+    if (isMission2 && isFirstCompletion) {
+      console.log("🎯 Mission 2 - showing playground unlock overlay on back");
+      setShowPlaygroundUnlock(true);
+    } else if (isFirstCompletion) {
+      // For other missions, show HelpNeo overlay for first completion
       setShowHelpNeo(true);
     } else {
       // For practice completion, just go back to missions list
       router.push("/missions");
     }
   };
+
+  // Playground unlock handlers
+  const handlePlaygroundUnlockClose = () => {
+    setShowPlaygroundUnlock(false);
+    // Navigate back to missions page
+    router.push("/missions");
+  };
+
+  const handlePlaygroundUnlockNext = () => {
+    setShowPlaygroundUnlock(false);
+    // Navigate to next mission (Mission 3)
+    const nextMissionId = String(Number(mission.id) + 1).padStart(2, "0");
+    router.push(`/missions/${nextMissionId}`);
+  };
   const handleNextMission = async () => {
     setShowCongrats(false);
 
-    if (isFirstCompletion) {
-      // Find the next mission id for first completion
+    // Check if this is Mission 2 first completion - show playground unlock
+    const isMission2 =
+      mission.id === "M2" || mission.id === "02" || mission.id === "2";
+    if (isMission2 && isFirstCompletion) {
+      console.log(
+        "🎯 Mission 2 - showing playground unlock overlay on next mission"
+      );
+      setShowPlaygroundUnlock(true);
+    } else if (isFirstCompletion) {
+      // For other missions, go to next mission
       const nextMissionId = String(Number(mission.id) + 1).padStart(2, "0");
       router.push(`/missions/${nextMissionId}`);
     } else {
@@ -324,14 +358,38 @@ export default function StandardMissionLayout({
           console.log(
             `🎯 Mission ${mission.id} completed successfully: ${result.message}`
           );
+          console.log(
+            "🎯 Setting isFirstCompletion to TRUE (first completion)"
+          );
           setIsFirstCompletion(true); // This is first completion
 
-          // Refresh user data
-          const updatedUserData = await getUserProgress(userData._id);
-          setUserData(updatedUserData);
+          // Update local user data
+          const isMission2 =
+            mission.id === "M2" || mission.id === "02" || mission.id === "2";
+          updateUserData({
+            xp: (userData.xp || 0) + result.xpAdded,
+            missionProgress: result.missionProgress,
+            hasCompletedMission2: isMission2
+              ? true
+              : userData.hasCompletedMission2,
+          });
+
+          // Trigger a custom event to refresh user data in parent components
+          window.dispatchEvent(
+            new CustomEvent("missionCompleted", {
+              detail: {
+                missionId: mission.id,
+                xpAdded: result.xpAdded,
+                newMissionProgress: result.missionProgress,
+              },
+            })
+          );
         } else {
           console.log(
             `🎯 Mission ${mission.id} already completed: ${result.message}`
+          );
+          console.log(
+            "🎯 Setting isFirstCompletion to FALSE (practice completion)"
           );
           setIsFirstCompletion(false); // This is practice completion
           // Still show congrats for practice completion
@@ -339,6 +397,8 @@ export default function StandardMissionLayout({
       }
 
       onFinish?.(); // Notify parent that finish was clicked
+
+      // Always show congrats card first
       setShowCongrats(true);
     } catch (error) {
       console.error("Error updating user XP:", error);
@@ -629,7 +689,8 @@ export default function StandardMissionLayout({
             <div className="bg-white rounded-lg p-6 max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4">Don&apos;t Worry!</h3>
               <p className="mb-4">
-                It&apos;s okay to make mistakes. Let&apos;s try the final step together.
+                It&apos;s okay to make mistakes. Let&apos;s try the final step
+                together.
               </p>
               <button
                 onClick={handleDontWorryContinue}
@@ -639,6 +700,17 @@ export default function StandardMissionLayout({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Playground Unlock overlay - only for Mission 2 first completion */}
+      {showPlaygroundUnlock && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-85" />
+          <PlaygroundUnlocked
+            onClose={handlePlaygroundUnlockClose}
+            onNext={handlePlaygroundUnlockNext}
+          />
         </div>
       )}
 

@@ -621,10 +621,26 @@ export default function BlocklySplitLayout({
         if (result.success) {
           console.log("✅ Mission completed successfully:", result);
           // Update local user data
+          const isMission2 =
+            mission.id === "M2" || mission.id === "02" || mission.id === "2";
           updateUserData({
             xp: (userData.xp || 0) + result.xpAdded,
             missionProgress: result.missionProgress,
+            hasCompletedMission2: isMission2
+              ? true
+              : userData.hasCompletedMission2,
           });
+
+          // Trigger a custom event to refresh user data in parent components
+          window.dispatchEvent(
+            new CustomEvent("missionCompleted", {
+              detail: {
+                missionId: mission.id,
+                xpAdded: result.xpAdded,
+                newMissionProgress: result.missionProgress,
+              },
+            })
+          );
         } else {
           console.log("⚠️ Mission completion result:", result);
         }
@@ -1029,7 +1045,7 @@ export default function BlocklySplitLayout({
               isPracticeCompletion
                 ? 0
                 : mission.steps.reduce(
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (sum: number, step: any) => sum + (step.points || 0),
                     0
                   )

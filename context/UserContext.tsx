@@ -91,8 +91,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
             isNewUser: true,
             missionProgress: userProgress?.current_mission || 0,
             xp: userProgress?.xp || 0,
-            hasCompletedMission2: false,
-            hasCompletedMission3: false,
+            hasCompletedMission2: (userProgress?.current_mission || 0) >= 2,
+            hasCompletedMission3: (userProgress?.current_mission || 0) >= 3,
             createdAt: new Date().toISOString(),
           };
 
