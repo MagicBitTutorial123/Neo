@@ -12,6 +12,9 @@ interface Mission {
   intro?: {
     timeAllocated: string;
   };
+  totalPoints?: number;
+  isUnlocked?: boolean;
+  completed?: boolean;
 }
 
 interface StepperMissionProgressBarProps {
@@ -72,7 +75,16 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
     controlledSetSelectedMissionIdx ?? setInternalSelectedMissionIdx;
   const router = useRouter();
   const maxStart = Math.max(0, missionList.length - visibleCount);
-  const selectedMission = missionList[selectedMissionIdx] || missionList[0];
+  const selectedMission = missionList[selectedMissionIdx] ||
+    missionList[0] || {
+      id: "01",
+      title: "Loading...",
+      missionPageImage: "/mission-dummy.png",
+      missionDescription: "Loading mission data...",
+      intro: { timeAllocated: "15 mins" },
+      totalPoints: 0,
+      isUnlocked: true,
+    };
 
   // Update responsive values on window resize and after mount
   useEffect(() => {
@@ -162,8 +174,8 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                     style={{ overflow: "visible" }}
                   >
                     <LetsGoButton
-                      locked={selectedMissionIdx > completed}
-                      disabled={selectedMissionIdx > completed}
+                      locked={!selectedMission.isUnlocked}
+                      disabled={!selectedMission.isUnlocked}
                       style={{
                         minWidth: 180,
                         width: 200,
@@ -174,12 +186,12 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                       }}
                       className="sm:min-w-[200px] sm:w-[240px] sm:text-[22px] sm:h-[60px] sm:min-h-[60px]"
                       onClick={
-                        selectedMissionIdx > completed
+                        !selectedMission.isUnlocked
                           ? undefined
                           : () => router.push(`/missions/${selectedMission.id}`)
                       }
                     >
-                      {selectedMissionIdx > completed ? (
+                      {!selectedMission.isUnlocked ? (
                         <span className="flex items-center justify-center w-full">
                           LOCKED
                           <span
@@ -224,7 +236,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
               {/* Mission Image - flush with top/edges, rounded top corners */}
               <div className="w-full sm:w-[370px] h-[200px] sm:h-[260px] rounded-t-2xl overflow-hidden max-w-full">
                 <Image
-                  src={getSafeImageSrc( 
+                  src={getSafeImageSrc(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (selectedMission as any).missionPageImage
                   )}
@@ -280,7 +292,8 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                 </div>
                 {/* XP */}
                 <div className="text-2xl sm:text-3xl font-extrabold text-[#222E3A] self-center">
-                  110<span className="text-sm sm:text-base font-bold">XP</span>
+                  {selectedMission.totalPoints || 0}
+                  <span className="text-sm sm:text-base font-bold"> XP</span>
                 </div>
               </div>
             </div>
@@ -361,14 +374,23 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                 >
                   {missionList.slice(0, 7).map((mission, idx) => {
                     const globalIdx = idx;
-                    const isLocked = globalIdx > completed;
+                    const isLocked = !mission.isUnlocked;
                     const isSelected = globalIdx === selectedMissionIdx;
+
+                    // Debug: Log mission completion status
+                    console.log(
+                      `🎯 [StepperMissionProgressBar] Mission ${mission.id}: completed=${mission.completed}, isUnlocked=${mission.isUnlocked}`
+                    );
                     return (
                       <div
                         key={mission.id}
                         className="flex flex-col items-center cursor-pointer group relative"
                         style={{ width: 160 }}
-                        onClick={() => setSelectedMissionIdx(globalIdx)}
+                        onClick={() => {
+                          if (!isLocked) {
+                            setSelectedMissionIdx(globalIdx);
+                          }
+                        }}
                       >
                         <div className="relative w-full h-[160px] rounded-2xl mb-2 border border-[#E0E6ED] hover:border-[#E0E6ED] bg-white transition-transform duration-200 focus:outline-none focus:ring-0">
                           {/* Mission image always in the background */}
@@ -437,7 +459,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                         {/* Dot below thumbnail, centered on stepper line */}
                         <div
                           className={`w-5 h-5 rounded-full border-2" ${
-                            globalIdx < completed
+                            mission.completed
                               ? "bg-[#FFB037] border-[#FFB037]"
                               : "bg-[#D9D9D9] border-[#D9D9D9]"
                           }`}
@@ -479,6 +501,22 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
     );
   }
 
+  // Add safety check for empty missionList
+  if (missionList.length === 0) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-lg font-semibold text-[#222E3A] mb-2">
+            Loading missions...
+          </div>
+          <div className="text-sm text-gray-500">
+            Please wait while we fetch your missions.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="w-full flex flex-col items-center select-none overflow-visible max-w-full"
@@ -507,8 +545,8 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                   style={{ overflow: "visible" }}
                 >
                   <LetsGoButton
-                    locked={selectedMissionIdx > completed}
-                    disabled={selectedMissionIdx > completed}
+                    locked={!selectedMission.isUnlocked}
+                    disabled={!selectedMission.isUnlocked}
                     style={{
                       minWidth: 180,
                       width: 200,
@@ -519,12 +557,12 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                     }}
                     className="sm:min-w-[200px] sm:w-[240px] sm:text-[22px] sm:h-[60px] sm:min-h-[60px]"
                     onClick={
-                      selectedMissionIdx > completed
+                      !selectedMission.isUnlocked
                         ? undefined
                         : () => router.push(`/missions/${selectedMission.id}`)
                     }
                   >
-                    {selectedMissionIdx > completed ? (
+                    {!selectedMission.isUnlocked ? (
                       <span className="flex items-center justify-center w-full">
                         LOCKED
                         <span
@@ -619,7 +657,8 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
               </div>
               {/* XP */}
               <div className="text-2xl sm:text-3xl font-extrabold text-[#222E3A] self-center">
-                110<span className="text-sm sm:text-base font-bold">XP</span>
+                {selectedMission.totalPoints || 0}
+                <span className="text-sm sm:text-base font-bold"> XP</span>
               </div>
             </div>
           </div>
@@ -710,9 +749,14 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
               >
                 {visibleMissions.map((mission, idx) => {
                   const globalIdx = startIdx + idx;
-                  const isLocked = globalIdx > completed;
+                  const isLocked = !mission.isUnlocked;
                   const isSelected = globalIdx === selectedMissionIdx;
                   const isHovered = hoveredIdx === globalIdx;
+
+                  // Debug: Log mission completion status
+                  console.log(
+                    `🎯 [StepperMissionProgressBar] Mission ${mission.id}: completed=${mission.completed}, isUnlocked=${mission.isUnlocked}`
+                  );
                   return (
                     <div
                       key={mission.id}
@@ -842,7 +886,7 @@ const StepperMissionProgressBar: React.FC<StepperMissionProgressBarProps> = ({
                       {/* Dot below thumbnail, centered on stepper line */}
                       <div
                         className={`w-5 h-5 rounded-full border-2" ${
-                          globalIdx < completed
+                          mission.completed
                             ? "bg-[#FFB037] border-[#FFB037]"
                             : "bg-[#D9D9D9] border-[#D9D9D9]"
                         }`}

@@ -20,7 +20,7 @@ interface HeaderProps {
   sidebarCollapsed?: boolean;
   enableTimerPersistence?: boolean;
   isPlayground?: boolean;
-  onConnectionTypeChange: (e:"bluetooth" | "serial" | "none") => void;
+  onConnectionTypeChange: (e: "bluetooth" | "serial" | "none") => void;
   setConnectionStatus: React.Dispatch<string>;
   connectionStatus: string;
   connectionType?: "bluetooth" | "serial" | "none";
@@ -57,7 +57,7 @@ export default function Header({
 
   // Parse timeAllocated string (e.g., "15 mins") to seconds
   const parseTimeAllocated = (str: string): number => {
-    if (str){
+    if (str) {
       const match = str.match(/(\d+)/);
       return match ? parseInt(match[1], 10) * 60 : 0;
     }
@@ -74,19 +74,21 @@ export default function Header({
 
   return (
     <div
-      className="w-full bg-[#181E2A] px-4 md:px-8 pb-0 relative"
-      style={{ height: "65px", pointerEvents: "auto" }}
+      className="fixed top-0 left-0 right-0 z-50 w-full bg-[#181E2A] px-4 md:px-8 pb-0"
+      style={{
+        height: "65px",
+        pointerEvents: "auto",
+        marginLeft: sidebarCollapsed ? "80px" : "260px",
+        width: `calc(100% - ${sidebarCollapsed ? "80px" : "260px"})`,
+      }}
     >
-      <div
-        className="flex items-center justify-between max-w-8xl mx-auto relative h-full transition-all duration-300 ease-in-out"
-        style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}
-      >
+      <div className="flex items-center justify-between max-w-8xl mx-auto relative h-full transition-all duration-300 ease-in-out">
         {/* Left: Mission number and title */}
         <div className="flex flex-col xl:flex-row xl:items-center gap-0 xl:gap-8 min-w-0 h-full justify-center xl:justify-start">
           <span className="text-lg sm:text-xl md:text-2xl font-extrabold text-white whitespace-nowrap leading-tight">
             {!isPlayground
-              ? `Your App Mission ${missionNumber.toString().padStart(2, "0")}`
-              : "Your App Playground"}
+              ? `Mission ${missionNumber.toString().padStart(2, "0")}`
+              : "Playground"}
           </span>
           {/* Vertical separator - Only visible on extra large screens */}
           {!isPlayground && (
@@ -203,7 +205,9 @@ export default function Header({
                     ? "bg-[#599CFF] opacity-60 cursor-not-allowed"
                     : "bg-[#599CFF] hover:bg-[#8ebbff]"
                 }`}
-                title={isUploading ? "Uploading..." : isRunning ? "Stop" : "Run"}
+                title={
+                  isUploading ? "Uploading..." : isRunning ? "Stop" : "Run"
+                }
               >
                 {isUploading ? (
                   <div
@@ -255,7 +259,7 @@ export default function Header({
         className="absolute bottom-0 h-1"
         style={{
           background: "#FF9C32",
-          left: sidebarCollapsed ? "80px" : "260px",
+          left: "0px",
           right: "0px",
         }}
       />

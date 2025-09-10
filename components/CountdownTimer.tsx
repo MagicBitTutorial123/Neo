@@ -74,26 +74,23 @@ export default function CountdownTimer({
 
   if (showGo) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] mt-65">
-        <Image
-          src="/count-go.png"
-          alt="GO!"
-          width={400}
-          height={400}
-          className="animate-pulse"
-        />
-      </div>
+      <Image
+        src="/count-go.png"
+        alt="GO!"
+        width={550}
+        height={550}
+        className="animate-pulse w-[250px] h-[250px] sm:w-[350px] sm:h-[350px] md:w-[450px] md:h-[450px] lg:w-[550px] lg:h-[550px] object-contain absolute bottom-0 left-1/2 transform -translate-x-1/2 z-[60]"
+      />
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[400px] mt-65">
-      <Image
-        src={`/count-0${count}.png`}
-        alt={`${count}`}
-        width={400}
-        height={400}
-      />
-    </div>
+    <Image
+      src={`/count-0${count}.png`}
+      alt={`${count}`}
+      width={550}
+      height={550}
+      className="w-[250px] h-[250px] sm:w-[350px] sm:h-[350px] md:w-[450px] md:h-[450px] lg:w-[550px] lg:h-[550px] object-contain absolute bottom-0 left-1/2 transform -translate-x-1/2 z-[60]"
+    />
   );
 }

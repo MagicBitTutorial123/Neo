@@ -53,7 +53,7 @@ export default function ProjectsPage() {
       <main
         className="flex-1 flex flex-col items-start py-7 lg:py-10 overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          marginLeft: sidebarCollapsed ? "80px" : "260px",
+          marginLeft: "0px",
           paddingLeft: sidebarCollapsed ? "24px" : "64px",
           paddingRight: sidebarCollapsed ? "24px" : "64px",
         }}

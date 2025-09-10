@@ -10,7 +10,6 @@ import { useUser } from "@/context/UserContext";
 import BasicAuthGuard from "@/components/BasicAuthGuard";
 import { supabase } from "@/lib/supabaseClient";
 
-
 function useTypingEffect(text: string, speed = 30) {
   const [displayed, setDisplayed] = useState("");
 
@@ -37,9 +36,10 @@ export default function HomePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { userData } = useUser();
+  const { userData, updateUserData } = useUser();
   const [isFirstTimeOAuth, setIsFirstTimeOAuth] = useState(false);
-  const [showProfileUpdateNotification, setShowProfileUpdateNotification] = useState(false);
+  const [showProfileUpdateNotification, setShowProfileUpdateNotification] =
+    useState(false);
   const [userName, setUserName] = useState<string>("");
   const [isNameLoaded, setIsNameLoaded] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
@@ -47,7 +47,7 @@ export default function HomePage() {
 
   const mainTextStep = useTypingEffect("I'm your Robot.");
   const subTextStep = useTypingEffect("Let's get things up!");
-  const [isNewUser,setIsNewUser] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // Get user name from Supabase user profiles (prioritize Supabase over Google account)
   useEffect(() => {
@@ -57,25 +57,25 @@ export default function HomePage() {
     const getUserName = async () => {
       try {
         console.log("🔍 Getting user name from Supabase user profiles...");
-        
+
         // First, check direct "name" key in localStorage (highest priority)
         const directName = localStorage.getItem("name");
         console.log("🔍 Direct name from localStorage:", directName);
         if (directName && directName.trim()) {
-          console.log("✅ Using direct name from localStorage:", directName.trim());
+          console.log(
+            "✅ Using direct name from localStorage:",
+            directName.trim()
+          );
           return directName.trim();
         }
 
         // Then check other localStorage keys for name
-        const possibleKeys = [
-          "userData",
-          "registrationData"
-        ];
-        
+        const possibleKeys = ["userData", "registrationData"];
+
         for (const key of possibleKeys) {
           const value = localStorage.getItem(key);
           console.log(`🔍 Checking ${key}:`, value);
-          
+
           if (value) {
             try {
               const parsed = JSON.parse(value);
@@ -92,17 +92,23 @@ export default function HomePage() {
 
         // Try to get name from Supabase user profiles
         try {
-          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          const {
+            data: { user },
+            error: authError,
+          } = await supabase.auth.getUser();
           if (!authError && user) {
             console.log("🔍 Fetching user profile from Supabase...");
             const { data: profile, error: profileError } = await supabase
-              .from('user_profiles')
-              .select('full_name')
-              .eq('user_id', user.id)
+              .from("user_profiles")
+              .select("full_name")
+              .eq("user_id", user.id)
               .single();
 
             if (!profileError && profile?.full_name) {
-              console.log("✅ Using name from Supabase user profile:", profile.full_name);
+              console.log(
+                "✅ Using name from Supabase user profile:",
+                profile.full_name
+              );
               return profile.full_name.trim();
             }
           }
@@ -112,7 +118,10 @@ export default function HomePage() {
 
         // Only use Google account name as last resort
         if (userData?.name && userData.name.trim()) {
-          console.log("✅ Using Google account name as fallback:", userData.name.trim());
+          console.log(
+            "✅ Using Google account name as fallback:",
+            userData.name.trim()
+          );
           return userData.name.trim();
         }
 
@@ -145,8 +154,8 @@ export default function HomePage() {
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   // Handle client-side mounting
@@ -158,23 +167,32 @@ export default function HomePage() {
     // Immediately try to get name from localStorage
     const directName = localStorage.getItem("name");
     if (directName && directName.trim()) {
-      console.log("🚀 Immediate name load from localStorage:", directName.trim());
+      console.log(
+        "🚀 Immediate name load from localStorage:",
+        directName.trim()
+      );
       setUserName(directName.trim());
       setIsNameLoaded(true);
     } else {
       // If no localStorage name, try to get from Supabase immediately
       const loadFromSupabase = async () => {
         try {
-          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          const {
+            data: { user },
+            error: authError,
+          } = await supabase.auth.getUser();
           if (!authError && user) {
             const { data: profile, error: profileError } = await supabase
-              .from('user_profiles')
-              .select('full_name')
-              .eq('user_id', user.id)
+              .from("user_profiles")
+              .select("full_name")
+              .eq("user_id", user.id)
               .single();
 
             if (!profileError && profile?.full_name) {
-              console.log("🚀 Immediate name load from Supabase:", profile.full_name);
+              console.log(
+                "🚀 Immediate name load from Supabase:",
+                profile.full_name
+              );
               setUserName(profile.full_name.trim());
               setIsNameLoaded(true);
             }
@@ -189,109 +207,125 @@ export default function HomePage() {
     // Check if this is a new user from signup process
     const isNewUserFromSignup = searchParams.get("newUser") === "true";
     const isOnboarding = searchParams.get("onboarding") === "true";
-    
+
     if (isNewUserFromSignup && isOnboarding) {
-      console.log('🆕 New user from signup process - showing onboarding');
+      console.log("🆕 New user from signup process - showing onboarding");
       router.replace("/home?newUser=true&onboarding=true");
       setIsNewUser(true);
     } else if (isNewUserFromSignup && !isOnboarding) {
       // User came from signup but no onboarding flag - redirect to onboarding
-      console.log('🔄 New user from signup - redirecting to onboarding');
+      console.log("🔄 New user from signup - redirecting to onboarding");
       router.replace("/home?newUser=true&onboarding=true");
       setIsNewUser(true);
     }
-    
+
     // Check if user returned from settings with profile update
     const profileUpdated = searchParams.get("profileUpdated") === "true";
     if (profileUpdated) {
-      console.log('🔄 User returned from settings, checking profile status...');
+      console.log("🔄 User returned from settings, checking profile status...");
       router.replace("/home"); // Clean up URL
       // Refresh profile status to check if notification should be hidden
       setTimeout(() => refreshProfileStatus(), 500); // Small delay to ensure settings page has saved
     }
-    
+
     // Check if user is new based on mission progress (for existing users who haven't completed missions)
-    if (userData?.isNewUser || (userData?.missionProgress !== undefined && userData?.missionProgress < 2)) {
+    if (
+      userData?.isNewUser ||
+      (userData?.missionProgress !== undefined && userData?.missionProgress < 2)
+    ) {
       // Only set as new user if they didn't come from signup (to avoid double onboarding)
       if (!isNewUserFromSignup) {
         setIsNewUser(true);
       }
     }
-    
+
     // Check if this is a first-time Google OAuth user
     const checkFirstTimeOAuth = async () => {
-      
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           // Check if user has a profile and get all profile details
           const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('user_id, created_at, full_name, phone, age, avatar')
-            .eq('user_id', user.id)
+            .from("user_profiles")
+            .select("user_id, created_at, full_name, phone, age, avatar")
+            .eq("user_id", user.id)
             .single();
-            
+
           if (profile) {
             // Check if this is a first-time OAuth user by looking at:
             // 1. No mission progress (missionProgress === 0 or undefined)
             // 2. Profile was created recently (within last 24 hours)
-            const isNewProfile = new Date(profile.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const hasNoMissionProgress = !userData?.missionProgress || userData.missionProgress === 0;
-            
+            const isNewProfile =
+              new Date(profile.created_at) >
+              new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const hasNoMissionProgress =
+              !userData?.missionProgress || userData.missionProgress === 0;
+
             // Check if profile is complete (has name, phone, age, and avatar)
-            const isProfileComplete = profile.full_name && profile.phone && profile.age && profile.avatar;
-            
+            const isProfileComplete =
+              profile.full_name &&
+              profile.phone &&
+              profile.age &&
+              profile.avatar;
+
             if (isNewProfile && hasNoMissionProgress && !isProfileComplete) {
               // Show notification only if profile is incomplete
               setIsFirstTimeOAuth(true);
               setShowProfileUpdateNotification(true);
-              console.log('🆕 First-time OAuth user detected - new profile and incomplete profile');
+              console.log(
+                "🆕 First-time OAuth user detected - new profile and incomplete profile"
+              );
             } else if (isProfileComplete) {
               // Profile is complete, hide notification
               setShowProfileUpdateNotification(false);
               setIsFirstTimeOAuth(false);
-              console.log('✅ Profile is complete, hiding notification');
+              console.log("✅ Profile is complete, hiding notification");
             } else {
               // Returning user but profile incomplete
               setShowProfileUpdateNotification(true);
-              console.log('⚠️ Returning OAuth user with incomplete profile');
+              console.log("⚠️ Returning OAuth user with incomplete profile");
             }
           }
         }
       } catch (error) {
-        console.log('🔍 Error checking first-time OAuth status:', error);
+        console.log("🔍 Error checking first-time OAuth status:", error);
       }
     };
-    
+
     checkFirstTimeOAuth();
   }, [searchParams, router, userData]);
 
   // Function to refresh profile status (can be called when returning from settings)
   const refreshProfileStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('full_name, phone, age, avatar')
-          .eq('user_id', user.id)
+          .from("user_profiles")
+          .select("full_name, phone, age, avatar")
+          .eq("user_id", user.id)
           .single();
-          
+
         if (profile) {
-          const isProfileComplete = profile.full_name && profile.phone && profile.age && profile.avatar;
-          
+          const isProfileComplete =
+            profile.full_name && profile.phone && profile.age && profile.avatar;
+
           if (isProfileComplete) {
             setShowProfileUpdateNotification(false);
             setIsFirstTimeOAuth(false);
-            console.log('✅ Profile completed, notification hidden');
+            console.log("✅ Profile completed, notification hidden");
           } else {
             setShowProfileUpdateNotification(true);
-            console.log('⚠️ Profile still incomplete, notification shown');
+            console.log("⚠️ Profile still incomplete, notification shown");
           }
         }
       }
     } catch (error) {
-      console.log('🔍 Error refreshing profile status:', error);
+      console.log("🔍 Error refreshing profile status:", error);
     }
   };
 
@@ -302,10 +336,10 @@ export default function HomePage() {
       refreshProfileStatus();
     };
 
-    window.addEventListener('focus', handleFocus);
-    
+    window.addEventListener("focus", handleFocus);
+
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 
@@ -315,10 +349,16 @@ export default function HomePage() {
       setSidebarCollapsed(event.detail.collapsed);
     };
 
-    window.addEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
-    
+    window.addEventListener(
+      "sidebarCollapsed",
+      handleSidebarCollapsed as EventListener
+    );
+
     return () => {
-      window.removeEventListener('sidebarCollapsed', handleSidebarCollapsed as EventListener);
+      window.removeEventListener(
+        "sidebarCollapsed",
+        handleSidebarCollapsed as EventListener
+      );
     };
   }, []);
 
@@ -330,12 +370,56 @@ export default function HomePage() {
     }
   }, [step, userData?.isNewUser]);
 
-  // Dummy data for mission progress
-  const totalSteps = 5;
-  const completedSteps = 3; // Change this to simulate progress
-  const xpPoints = 120;
-  const missionLabel = `Mission 02`;
-  const progressPercent = (completedSteps / totalSteps) * 100;
+  // Listen for mission completion events to update progress in real-time
+  useEffect(() => {
+    const handleMissionCompleted = async (event: CustomEvent) => {
+      console.log("🎯 [Home] Mission completed event received:", event.detail);
+
+      if (userData?._id) {
+        try {
+          // Import the getUserProgress function
+          const { getUserProgress } = await import("@/utils/queries");
+
+          // Refresh user data from database
+          const freshUserData = await getUserProgress(userData._id);
+          if (freshUserData) {
+            console.log("🎯 [Home] Refreshing user data:", freshUserData);
+
+            // Update the user data in context
+            updateUserData({
+              xp: freshUserData.xp || 0,
+              missionProgress: freshUserData.current_mission || 0,
+              hasCompletedMission2: (freshUserData.current_mission || 0) >= 2,
+            });
+          }
+        } catch (error) {
+          console.error("🎯 [Home] Failed to refresh user data:", error);
+        }
+      }
+    };
+
+    window.addEventListener(
+      "missionCompleted",
+      handleMissionCompleted as unknown as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "missionCompleted",
+        handleMissionCompleted as unknown as EventListener
+      );
+    };
+  }, [userData?._id, updateUserData]);
+
+  // Real user data for mission progress
+  const totalSteps = 5; // Total number of missions
+  const completedSteps = userData?.missionProgress || 0; // Current mission progress
+  const xpPoints = userData?.xp || 0; // User's XP points
+  const missionLabel = `Mission ${String(
+    (userData?.missionProgress || 0) + 1
+  ).padStart(2, "0")}`;
+  const progressPercent =
+    totalSteps > 0 ? ((userData?.missionProgress || 0) / totalSteps) * 100 : 0;
 
   // Dummy data for badges
   const badges = [
@@ -356,50 +440,44 @@ export default function HomePage() {
   const nextMission = (userData?.missionProgress ?? 0) + 1;
 
   const newUserContent = useMemo(() => {
-      return (
-        <div className="flex flex-1 w-full h-full relative animate-fade-in">
-
-          
-          <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
-            <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
-              {mainTextStep}
-            </div>
-            <div className="text-3xl text-[#555] font-poppins mb-18">
-              {subTextStep}
-            </div>
-            <LetsGoButton
-              style={{ width: 200, height: 60 }}
-              onClick={() => router.push(`/missions/${nextMission}`)}
-            >
-              Lets Go
-            </LetsGoButton>
+    return (
+      <div className="flex flex-1 w-full h-full relative animate-fade-in">
+        <div className="flex flex-col justify-center items-start min-w-[320px] px-32 pt-24 z-10  ml-40">
+          <div className="text-4xl md:text-5xl font-extrabold text-[#222E3A] mb-4">
+            {mainTextStep}
           </div>
-          <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 60, damping: 18 }}
-            className="absolute bottom-0 right-0 flex items-end justify-end"
-            style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
+          <div className="text-3xl text-[#555] font-poppins mb-18">
+            {subTextStep}
+          </div>
+          <LetsGoButton
+            style={{ width: 200, height: 60 }}
+            onClick={() => router.push(`/missions/${nextMission}`)}
           >
-            <Image
-              src="/welcome-robot.png"
-              alt="Robot"
-              width={450}
-              height={450}
-              style={{ maxWidth: "100%", maxHeight: "100%" }}
-            />
-          </motion.div>
+            Lets Go
+          </LetsGoButton>
         </div>
-      );
-    }
-  
-  , [router, mainTextStep, subTextStep, nextMission, userName]);
+        <motion.div
+          initial={{ x: 300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 60, damping: 18 }}
+          className="absolute bottom-0 right-0 flex items-end justify-end"
+          style={{ width: "min(60vw, 700px)", height: "min(90vh, 700px)" }}
+        >
+          <Image
+            src="/welcome-robot.png"
+            alt="Robot"
+            width={450}
+            height={450}
+            style={{ maxWidth: "100%", maxHeight: "100%" }}
+          />
+        </motion.div>
+      </div>
+    );
+  }, [router, mainTextStep, subTextStep, nextMission, userName]);
 
   // Default Home (after Mission 2)
   const defaultHomeContent = (
     <div className="flex flex-col w-full relative animate-fade-in px-4 sm:px-6 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 lg:pt-12 pb-20 sm:pb-24 md:pb-32 lg:pb-0">
-
-
       {/* Mobile Mission Progress Bar - Top of page */}
       <div className="lg:hidden w-full flex flex-col items-center mb-4">
         <div className="w-full flex flex-row items-center justify-between mb-2">
@@ -620,15 +698,15 @@ export default function HomePage() {
   }
 
   // Get user data from context or localStorage fallback
-  
+
   // Check if user came from signup flow (newUser=true in URL)
   const isFromSignup = searchParams.get("newUser") === "true";
   const isOnboarding = searchParams.get("onboarding") === "true";
-  
+
   // Show onboarding ONLY for new users who came from signup flow
   // Existing users (from signin) should see dashboard directly
   const shouldShowOnboarding = isNewUser && isFromSignup && isOnboarding;
-  
+
   // Check if user is coming from regular login (not signup)
   const isFromRegularLogin = !isFromSignup && !isOnboarding;
 
@@ -637,7 +715,10 @@ export default function HomePage() {
   console.log("🔍 Mission progress:", userData?.missionProgress);
   console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
   console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
-  console.log("🔍 UserData.missionProgress < 2:", userData?.missionProgress !== undefined && userData?.missionProgress < 2);
+  console.log(
+    "🔍 UserData.missionProgress < 2:",
+    userData?.missionProgress !== undefined && userData?.missionProgress < 2
+  );
   console.log("🔍 Final isNewUser calculation:", isNewUser);
   console.log("🔍 isFromSignup:", isFromSignup);
   console.log("🔍 isOnboarding:", isOnboarding);
@@ -645,7 +726,7 @@ export default function HomePage() {
   console.log("🔍 isFromRegularLogin:", isFromRegularLogin);
   console.log("🔍 Google OAuth Status:", {
     isFirstTimeOAuth,
-    showProfileUpdateNotification
+    showProfileUpdateNotification,
   });
 
   return (
@@ -656,27 +737,19 @@ export default function HomePage() {
         {/* Main Content */}
         <main
           className="flex-1 flex flex-col items-center relative transition-all duration-300 ease-in-out overflow-x-hidden min-h-screen"
-          style={{
-            marginLeft: sidebarCollapsed ? "80px" : "260px",
-          }}
-                 >
-           
-           
-           {/* Profile Update Notification for Google Users */}
-          
-           
-           
-                       {/* Smart Content Routing */}
-            {shouldShowOnboarding ? (
-              // New user from signup process - show onboarding (clean layout)
+          style={{ marginLeft: "0px" }}
+        >
+          {/* Profile Update Notification for Google Users */}
+
+          {/* Smart Content Routing */}
+          {shouldShowOnboarding
+            ? // New user from signup process - show onboarding (clean layout)
               newUserContent
-                       ) : isFromRegularLogin ? (
-              // Existing user from regular login - show clean dashboard
+            : isFromRegularLogin
+            ? // Existing user from regular login - show clean dashboard
               defaultHomeContent
-           ) : (
-             // Default case - show appropriate content based on user state
-             defaultHomeContent
-           )}
+            : // Default case - show appropriate content based on user state
+              defaultHomeContent}
         </main>
       </div>
     </BasicAuthGuard>

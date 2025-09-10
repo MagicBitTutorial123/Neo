@@ -27,6 +27,7 @@ interface CongratsCardProps {
   robotImageSrc?: string;
   backText?: string;
   nextMissionText?: string;
+  isPracticeCompletion?: boolean;
 }
 
 export default function CongratsCard({
@@ -39,6 +40,7 @@ export default function CongratsCard({
   robotImageSrc = "/aww-robot-new.png",
   backText = "Back",
   nextMissionText = "Mission 2",
+  isPracticeCompletion = false,
 }: CongratsCardProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [showContent, setShowContent] = useState(false);
@@ -59,7 +61,7 @@ export default function CongratsCard({
   }, []);
 
   useEffect(() => {
-    if (showContent) {
+    if (showContent && !isPracticeCompletion) {
       // Delay slightly so the card appears first
       const timer = setTimeout(() => {
         setFlyCoins(true);
@@ -67,7 +69,7 @@ export default function CongratsCard({
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [showContent]);
+  }, [showContent, isPracticeCompletion]);
 
   return (
     <>
@@ -79,7 +81,7 @@ export default function CongratsCard({
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
       >
         {/* Floating Coins Animation */}
-        {flyCoins && (
+        {flyCoins && !isPracticeCompletion && (
           <>
             {[...Array(12)].map((_, i) => (
               <motion.div
@@ -236,21 +238,27 @@ export default function CongratsCard({
             </div>
 
             {/* Stats */}
-            <div className="flex gap-6 mb-6">
-              <div className="flex flex-col items-center">
-                <motion.div
-                  className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1"
-                  initial={{ scale: 0 }}
-                  animate={showContent ? { scale: 1 } : {}}
-                  transition={{ duration: 0.6, delay: 1.2, type: "spring" }}
-                >
-                  {points}
-                  <span className="text-sm">XP</span>
-                </motion.div>
-                <div className="text-[#A1A6B0] text-xs font-semibold">
-                  Points
+            <div
+              className={`flex gap-6 mb-6 ${
+                isPracticeCompletion ? "justify-center" : ""
+              }`}
+            >
+              {!isPracticeCompletion && (
+                <div className="flex flex-col items-center">
+                  <motion.div
+                    className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-2xl font-extrabold text-[#232733] mb-1"
+                    initial={{ scale: 0 }}
+                    animate={showContent ? { scale: 1 } : {}}
+                    transition={{ duration: 0.6, delay: 1.2, type: "spring" }}
+                  >
+                    {points}
+                    <span className="text-sm">XP</span>
+                  </motion.div>
+                  <div className="text-[#A1A6B0] text-xs font-semibold">
+                    Points
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex flex-col items-center">
                 <motion.div
                   className="w-12 h-12 rounded-full bg-[#F5F6F8] flex items-center justify-center text-lg font-extrabold text-[#232733] mb-1"
@@ -268,18 +276,29 @@ export default function CongratsCard({
 
             {/* Buttons */}
             <div className="flex gap-4 w-full justify-center">
-              <button
-                onClick={onBack}
-                className="w-40 px-4 py-2 rounded-full font-medium bg-[#E6F6FF] text-[#232733] hover:bg-[#D0D6DD] transition-colors focus:outline-none focus:ring-2 focus:ring-[#B3E6FF]"
-              >
-                {backText}
-              </button>
-              <button
-                onClick={onNextMission}
-                className="w-40 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                {nextMissionText}
-              </button>
+              {isPracticeCompletion ? (
+                <button
+                  onClick={onBack}
+                  className="w-40 px-4 py-2 rounded-full font-medium bg-[#E6F6FF] text-[#232733] hover:bg-[#D0D6DD] transition-colors focus:outline-none focus:ring-2 focus:ring-[#B3E6FF]"
+                >
+                  Back to Missions
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={onBack}
+                    className="w-40 px-4 py-2 rounded-full font-medium bg-[#E6F6FF] text-[#232733] hover:bg-[#D0D6DD] transition-colors focus:outline-none focus:ring-2 focus:ring-[#B3E6FF]"
+                  >
+                    {backText}
+                  </button>
+                  <button
+                    onClick={onNextMission}
+                    className="w-40 px-4 py-2 rounded-full font-medium bg-black text-white hover:bg-[#222E3A] transition-colors focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    {nextMissionText}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </motion.div>

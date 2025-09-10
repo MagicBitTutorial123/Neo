@@ -27,23 +27,21 @@ const avatars = [
   "/Avatar05.png",
 ];
 
-
-
 export default function SettingsPage() {
   // const { registrationData, userData, updateUserData } = useUser();
   const { sidebarCollapsed } = useSidebar();
   const searchParams = useSearchParams();
-  
+
   // Check if this is a first-time OAuth user
-  const isFirstTimeOAuth = searchParams.get('firstTime') === 'true';
-  const isOAuthSuccess = searchParams.get('oauth') === 'success';
-  
+  const isFirstTimeOAuth = searchParams.get("firstTime") === "true";
+  const isOAuthSuccess = searchParams.get("oauth") === "success";
+
   // Debug logging
-  console.log('🔍 Settings page URL params:', {
-    firstTime: searchParams.get('firstTime'),
-    oauth: searchParams.get('oauth'),
+  console.log("🔍 Settings page URL params:", {
+    firstTime: searchParams.get("firstTime"),
+    oauth: searchParams.get("oauth"),
     isFirstTimeOAuth,
-    isOAuthSuccess
+    isOAuthSuccess,
   });
 
   // Form fields
@@ -60,7 +58,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'subscription' | 'firmware'>('profile');
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "security" | "subscription" | "firmware"
+  >("profile");
   const [avatarChanged, setAvatarChanged] = useState(false);
 
   // Supabase user data
@@ -77,156 +77,184 @@ export default function SettingsPage() {
   // const [lsAvatar, setLsAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-    // Create user profile manually if it doesn't exist
+  // Create user profile manually if it doesn't exist
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const createUserProfileManually = useCallback(async (user: any) => {
     try {
-      console.log('🔧 Creating user profile manually...');
+      console.log("🔧 Creating user profile manually...");
 
       // Get data from user metadata
       const userMetadata = user.user_metadata;
       const profileData = {
         user_id: user.id, // Use 'user_id' column name as this is standard
         email: user.email,
-        full_name: userMetadata?.full_name || userMetadata?.name || userMetadata?.display_name || 'User',
-        phone: userMetadata?.phone || '',
+        full_name:
+          userMetadata?.full_name ||
+          userMetadata?.name ||
+          userMetadata?.display_name ||
+          "User",
+        phone: userMetadata?.phone || "",
         age: userMetadata?.age ? parseInt(userMetadata.age) : null,
-        avatar: userMetadata?.avatar || '/Avatar01.png',
-        bio: '',
+        avatar: userMetadata?.avatar || "/Avatar01.png",
+        bio: "",
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
-      console.log('📝 Profile data to insert:', profileData);
-      console.log('🔍 Google user metadata:', userMetadata);
-      console.log('🔍 Full name extracted:', profileData.full_name);
+      console.log("📝 Profile data to insert:", profileData);
+      console.log("🔍 Google user metadata:", userMetadata);
+      console.log("🔍 Full name extracted:", profileData.full_name);
 
       // Insert profile into user_profiles table
       const { data: newProfile, error: insertError } = await supabase
-        .from('user_profiles')
+        .from("user_profiles")
         .insert([profileData])
         .select()
         .single();
 
       if (insertError) {
-        console.error('❌ Error creating profile manually:', insertError);
+        console.error("❌ Error creating profile manually:", insertError);
         // Even if profile creation fails, try to use metadata
         const fallbackProfile = {
-          full_name: userMetadata?.full_name || 'User',
-          avatar: userMetadata?.avatar || '/Avatar01.png',
-          email: user.email || '',
-          phone: userMetadata?.phone || '',
-          bio: '',
-          age: userMetadata?.age ? parseInt(userMetadata.age) : null
+          full_name: userMetadata?.full_name || "User",
+          avatar: userMetadata?.avatar || "/Avatar01.png",
+          email: user.email || "",
+          phone: userMetadata?.phone || "",
+          bio: "",
+          age: userMetadata?.age ? parseInt(userMetadata.age) : null,
         };
         populateFormFields(fallbackProfile);
-        console.log('✅ Using fallback data after failed profile creation:', fallbackProfile);
+        console.log(
+          "✅ Using fallback data after failed profile creation:",
+          fallbackProfile
+        );
         return;
       }
 
       if (newProfile) {
         populateFormFields(newProfile);
-        console.log('✅ User profile created manually:', newProfile);
+        console.log("✅ User profile created manually:", newProfile);
       }
     } catch (error) {
-      console.error('❌ Error creating profile manually:', error);
+      console.error("❌ Error creating profile manually:", error);
       // Last resort: use whatever data we can get
       const userMetadata = user.user_metadata;
       const fallbackProfile = {
-        full_name: userMetadata?.full_name || 'User',
-        avatar: userMetadata?.avatar || '/Avatar01.png',
-        email: user.email || '',
-        phone: userMetadata?.phone || '',
-        bio: '',
-        age: userMetadata?.age ? parseInt(userMetadata.age) : null
+        full_name: userMetadata?.full_name || "User",
+        avatar: userMetadata?.avatar || "/Avatar01.png",
+        email: user.email || "",
+        phone: userMetadata?.phone || "",
+        bio: "",
+        age: userMetadata?.age ? parseInt(userMetadata.age) : null,
       };
       populateFormFields(fallbackProfile);
-      console.log('✅ Using last resort fallback data:', fallbackProfile);
+      console.log("✅ Using last resort fallback data:", fallbackProfile);
     }
   }, []);
-  
+
   // Fetch user data from Supabase
   const fetchUserDataFromSupabase = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Fetching user data from Supabase...');
+      console.log("🔍 Fetching user data from Supabase...");
 
       // Get current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.log('❌ No authenticated user found in Supabase Auth');
+        console.log("❌ No authenticated user found in Supabase Auth");
         setError("No authenticated user found. Please log in again.");
         return;
       }
 
-      console.log('✅ Found authenticated user:', user.id);
-      console.log('🔍 User metadata:', user.user_metadata);
+      console.log("✅ Found authenticated user:", user.id);
+      console.log("🔍 User metadata:", user.user_metadata);
 
       // Fetch user profile from user_profiles table - now including bio column
       const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('full_name, avatar, email, phone, bio, age')
-        .eq('user_id', user.id) // Use 'user_id' column name as this is standard
+        .from("user_profiles")
+        .select("full_name, avatar, email, phone, bio, age")
+        .eq("user_id", user.id) // Use 'user_id' column name as this is standard
         .single();
 
       if (profileError) {
-        console.error('❌ Error fetching user profile:', profileError);
+        console.error("❌ Error fetching user profile:", profileError);
 
         // If profile doesn't exist, try to get user metadata from auth
-        if (profileError.code === 'PGRST116') {
-          console.log('🔄 Profile not found, trying to get user metadata from auth...');
+        if (profileError.code === "PGRST116") {
+          console.log(
+            "🔄 Profile not found, trying to get user metadata from auth..."
+          );
 
           const userMetadata = user.user_metadata;
-          if (userMetadata && (userMetadata.full_name || userMetadata.name || userMetadata.display_name || userMetadata.avatar || userMetadata.phone || userMetadata.age)) {
+          if (
+            userMetadata &&
+            (userMetadata.full_name ||
+              userMetadata.name ||
+              userMetadata.display_name ||
+              userMetadata.avatar ||
+              userMetadata.phone ||
+              userMetadata.age)
+          ) {
             const fallbackProfile = {
-              full_name: userMetadata.full_name || userMetadata.name || userMetadata.display_name || undefined,
+              full_name:
+                userMetadata.full_name ||
+                userMetadata.name ||
+                userMetadata.display_name ||
+                undefined,
               avatar: userMetadata.avatar || undefined,
               email: user.email || undefined,
               phone: userMetadata.phone || undefined,
-              bio: '',
-              age: userMetadata.age ? parseInt(userMetadata.age) : null
+              bio: "",
+              age: userMetadata.age ? parseInt(userMetadata.age) : null,
             };
-            console.log('🔍 Google user metadata found:', userMetadata);
-            console.log('🔍 Fallback profile created:', fallbackProfile);
+            console.log("🔍 Google user metadata found:", userMetadata);
+            console.log("🔍 Fallback profile created:", fallbackProfile);
             populateFormFields(fallbackProfile);
-            console.log('✅ Using fallback data from auth metadata:', fallbackProfile);
+            console.log(
+              "✅ Using fallback data from auth metadata:",
+              fallbackProfile
+            );
             return;
           }
         }
 
         // If we still don't have data, try to create a profile manually
-        console.log('🔄 Attempting to create user profile manually...');
+        console.log("🔄 Attempting to create user profile manually...");
         await createUserProfileManually(user);
         return;
       }
 
       if (profile) {
         populateFormFields(profile);
-        console.log('✅ User profile fetched from Supabase:', profile);
+        console.log("✅ User profile fetched from Supabase:", profile);
       } else {
-        console.log('❌ No profile found for user');
+        console.log("❌ No profile found for user");
         setError("No user profile found.");
       }
     } catch (error) {
-      console.error('❌ Error fetching user data from Supabase:', error);
+      console.error("❌ Error fetching user data from Supabase:", error);
       setError("Failed to load user data. Please try again.");
     } finally {
       setLoading(false);
     }
   }, [createUserProfileManually]);
 
-
-
-
-
   // Populate form fields with user data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const populateFormFields = (profile: any) => {
-    console.log('🔍 Populating form fields with profile:', profile);
-    console.log('🔍 Current form state before population:', { firstName, lastName, email, avatar });
-    
+    console.log("🔍 Populating form fields with profile:", profile);
+    console.log("🔍 Current form state before population:", {
+      firstName,
+      lastName,
+      email,
+      avatar,
+    });
+
     // Set avatar
     if (profile.avatar) {
       const avatarPath = profile.avatar.startsWith("/")
@@ -238,76 +266,98 @@ export default function SettingsPage() {
     // Set name fields - prioritize Google account data
     if (profile.full_name) {
       const { first, last } = splitName(profile.full_name);
-      console.log('🔍 Splitting full_name:', profile.full_name, 'into first:', first, 'last:', last);
+      console.log(
+        "🔍 Splitting full_name:",
+        profile.full_name,
+        "into first:",
+        first,
+        "last:",
+        last
+      );
       setFirstName(first);
       setLastName(last);
-      console.log('✅ Name fields populated from profile:', { first, last, full: profile.full_name });
+      console.log("✅ Name fields populated from profile:", {
+        first,
+        last,
+        full: profile.full_name,
+      });
     } else {
-      console.log('⚠️ No full_name found in profile');
+      console.log("⚠️ No full_name found in profile");
     }
 
     // Set other fields
     if (profile.email) {
       setEmail(profile.email);
-      console.log('✅ Email set to:', profile.email);
+      console.log("✅ Email set to:", profile.email);
     }
     if (profile.phone) {
       setPhone(profile.phone);
-      console.log('✅ Phone set to:', profile.phone);
+      console.log("✅ Phone set to:", profile.phone);
     }
     if (profile.bio !== undefined) {
-      setBio(profile.bio || '');
-      console.log('✅ Bio set to:', profile.bio || '');
+      setBio(profile.bio || "");
+      console.log("✅ Bio set to:", profile.bio || "");
     }
     if (profile.age !== undefined) {
       setAge(profile.age);
-      console.log('✅ Age set to:', profile.age);
+      console.log("✅ Age set to:", profile.age);
     }
-    
-    console.log('🔍 Form state after population:', { 
-      firstName: profile.full_name ? splitName(profile.full_name).first : firstName,
-      lastName: profile.full_name ? splitName(profile.full_name).last : lastName,
+
+    console.log("🔍 Form state after population:", {
+      firstName: profile.full_name
+        ? splitName(profile.full_name).first
+        : firstName,
+      lastName: profile.full_name
+        ? splitName(profile.full_name).last
+        : lastName,
       email: profile.email || email,
-      avatar: profile.avatar ? (profile.avatar.startsWith("/") ? profile.avatar : `/${profile.avatar}`) : avatar
+      avatar: profile.avatar
+        ? profile.avatar.startsWith("/")
+          ? profile.avatar
+          : `/${profile.avatar}`
+        : avatar,
     });
   };
 
   // Manual refresh function for debugging
   const refreshUserData = useCallback(async () => {
-    console.log('🔄 Manually refreshing user data...');
+    console.log("🔄 Manually refreshing user data...");
     await fetchUserDataFromSupabase();
   }, [fetchUserDataFromSupabase]);
 
   // Force refresh from database for Google users
   const forceRefreshFromDatabase = useCallback(async () => {
     try {
-      console.log('🔄 Force refreshing user data from database...');
+      console.log("🔄 Force refreshing user data from database...");
       setLoading(true);
-      
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
       if (authError || !user) {
-        console.log('❌ No authenticated user found');
+        console.log("❌ No authenticated user found");
         return;
       }
 
       // Force fetch from database
       const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('full_name, avatar, email, phone, bio, age')
-        .eq('user_id', user.id)
+        .from("user_profiles")
+        .select("full_name, avatar, email, phone, bio, age")
+        .eq("user_id", user.id)
         .single();
 
       if (profileError) {
-        console.error('❌ Error fetching profile:', profileError);
+        console.error("❌ Error fetching profile:", profileError);
         return;
       }
 
       if (profile) {
-        console.log('✅ Force refreshed profile from database:', profile);
+        console.log("✅ Force refreshed profile from database:", profile);
         populateFormFields(profile);
       }
     } catch (error) {
-      console.error('❌ Error force refreshing:', error);
+      console.error("❌ Error force refreshing:", error);
     } finally {
       setLoading(false);
     }
@@ -316,62 +366,72 @@ export default function SettingsPage() {
   // Check database directly for a specific user
   const checkDatabaseDirectly = useCallback(async () => {
     try {
-      console.log('🔄 Checking database directly for user:', supabase.auth.getUser());
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log(
+        "🔄 Checking database directly for user:",
+        supabase.auth.getUser()
+      );
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        console.log('❌ No authenticated user found.');
+        console.log("❌ No authenticated user found.");
         return;
       }
 
-      console.log('🔍 User ID:', user.id);
+      console.log("🔍 User ID:", user.id);
       const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
       if (profileError) {
-        console.error('❌ Error fetching profile directly:', profileError);
-        console.error('❌ Error details:', profileError.details);
-        console.error('❌ Error hint:', profileError.hint);
+        console.error("❌ Error fetching profile directly:", profileError);
+        console.error("❌ Error details:", profileError.details);
+        console.error("❌ Error hint:", profileError.hint);
         return;
       }
 
       if (profile) {
-        console.log('✅ Profile found in database directly:', profile);
+        console.log("✅ Profile found in database directly:", profile);
         populateFormFields(profile);
       } else {
-        console.log('❌ Profile not found in database directly.');
+        console.log("❌ Profile not found in database directly.");
       }
     } catch (error) {
-      console.error('❌ Error checking database directly:', error);
+      console.error("❌ Error checking database directly:", error);
     }
   }, []);
 
   // Fix Google user profile by updating with Google metadata
   const fixGoogleUserProfile = useCallback(async () => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
       if (authError || !user) {
         return;
       }
 
       // Extract full name from Google metadata
-      const googleFullName = user.user_metadata?.full_name || 
-                            user.user_metadata?.name || 
-                            user.user_metadata?.display_name ||
-                            (user.user_metadata?.given_name && user.user_metadata?.family_name ? 
-                             `${user.user_metadata.given_name} ${user.user_metadata.family_name}` : null);
+      const googleFullName =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.user_metadata?.display_name ||
+        (user.user_metadata?.given_name && user.user_metadata?.family_name
+          ? `${user.user_metadata.given_name} ${user.user_metadata.family_name}`
+          : null);
 
-      if (googleFullName && googleFullName !== 'undefined undefined') {
+      if (googleFullName && googleFullName !== "undefined undefined") {
         // Update the profile with the Google full name
         const { data: updatedProfile, error: updateError } = await supabase
-          .from('user_profiles')
-          .update({ 
+          .from("user_profiles")
+          .update({
             full_name: googleFullName,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
-          .eq('user_id', user.id)
+          .eq("user_id", user.id)
           .select()
           .single();
 
@@ -385,8 +445,6 @@ export default function SettingsPage() {
     }
   }, []);
 
-
-
   // Fetch user data when component mounts
   useEffect(() => {
     fetchUserDataFromSupabase();
@@ -396,41 +454,64 @@ export default function SettingsPage() {
   // Auto-populate Google user data if this is their first time
   useEffect(() => {
     if (isFirstTimeOAuth && !loading) {
-      console.log('🆕 First-time OAuth user detected, auto-populating form fields...');
-      
+      console.log(
+        "🆕 First-time OAuth user detected, auto-populating form fields..."
+      );
+
       const autoPopulateFromGoogle = async () => {
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (user && user.user_metadata) {
             const userMetadata = user.user_metadata;
-            console.log('🔍 Google user metadata for auto-population:', userMetadata);
-            
+            console.log(
+              "🔍 Google user metadata for auto-population:",
+              userMetadata
+            );
+
             // Auto-populate name fields if they're empty
-            if (!firstName && !lastName && (userMetadata.full_name || userMetadata.name || userMetadata.display_name)) {
-              const fullName = userMetadata.full_name || userMetadata.name || userMetadata.display_name;
+            if (
+              !firstName &&
+              !lastName &&
+              (userMetadata.full_name ||
+                userMetadata.name ||
+                userMetadata.display_name)
+            ) {
+              const fullName =
+                userMetadata.full_name ||
+                userMetadata.name ||
+                userMetadata.display_name;
               const { first, last } = splitName(fullName);
               setFirstName(first);
               setLastName(last);
-              console.log('✅ Auto-populated name fields from Google:', { first, last, full: fullName });
+              console.log("✅ Auto-populated name fields from Google:", {
+                first,
+                last,
+                full: fullName,
+              });
             }
-            
+
             // Auto-populate email if empty
             if (!email && user.email) {
               setEmail(user.email);
-              console.log('✅ Auto-populated email from Google:', user.email);
+              console.log("✅ Auto-populated email from Google:", user.email);
             }
-            
+
             // Auto-populate avatar if it's the default
-            if (avatar === '/Avatar01.png' && userMetadata.avatar) {
+            if (avatar === "/Avatar01.png" && userMetadata.avatar) {
               setAvatar(userMetadata.avatar);
-              console.log('✅ Auto-populated avatar from Google:', userMetadata.avatar);
+              console.log(
+                "✅ Auto-populated avatar from Google:",
+                userMetadata.avatar
+              );
             }
           }
         } catch (error) {
-          console.log('🔍 Error auto-populating from Google:', error);
+          console.log("🔍 Error auto-populating from Google:", error);
         }
       };
-      
+
       autoPopulateFromGoogle();
     }
   }, [isFirstTimeOAuth, loading, firstName, lastName, email, avatar]);
@@ -441,7 +522,7 @@ export default function SettingsPage() {
   // Load data from localStorage as fallback
   useEffect(() => {
     try {
-      const storedAge = localStorage.getItem('age');
+      const storedAge = localStorage.getItem("age");
       if (storedAge && storedAge.trim()) {
         const ageValue = parseInt(storedAge.trim());
         if (!isNaN(ageValue)) {
@@ -449,7 +530,7 @@ export default function SettingsPage() {
         }
       }
     } catch (error) {
-      console.error('❌ Error reading age from localStorage:', error);
+      console.error("❌ Error reading age from localStorage:", error);
     }
   }, []);
 
@@ -458,10 +539,7 @@ export default function SettingsPage() {
     [firstName, lastName]
   );
 
-  const phoneValid = useMemo(
-    () => /^[0-9+\s-]{10}$/.test(phone),
-    [phone]
-  );
+  const phoneValid = useMemo(() => /^[0-9+\s-]{10}$/.test(phone), [phone]);
 
   const ageValid = useMemo(
     () => age === null || (age >= 5 && age <= 120),
@@ -480,13 +558,16 @@ export default function SettingsPage() {
   // Handle immediate avatar save
   const handleAvatarSave = async () => {
     if (!avatarChanged) return;
-    
+
     setSaving(true);
     setError(null);
-    
+
     try {
       // Get current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
       if (authError || !user) {
         setError("No authenticated user found. Please log in again.");
@@ -495,15 +576,15 @@ export default function SettingsPage() {
 
       // Update avatar in user_profiles table
       const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({ 
-          avatar: avatar.startsWith('/') ? avatar.substring(1) : avatar,
-          updated_at: new Date().toISOString()
+        .from("user_profiles")
+        .update({
+          avatar: avatar.startsWith("/") ? avatar.substring(1) : avatar,
+          updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id);
+        .eq("user_id", user.id);
 
       if (profileError) {
-        console.error('❌ Error updating avatar:', profileError);
+        console.error("❌ Error updating avatar:", profileError);
         setError(`Failed to update avatar: ${profileError.message}`);
         return;
       }
@@ -511,31 +592,34 @@ export default function SettingsPage() {
       // Update user metadata in auth
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
-          avatar: avatar.replace('/', '')
-        }
+          avatar: avatar.replace("/", ""),
+        },
       });
 
       if (updateError) {
-        console.error('❌ Error updating user metadata:', updateError);
+        console.error("❌ Error updating user metadata:", updateError);
         // Don't fail the whole operation for metadata update
       }
 
       // Update localStorage
-      localStorage.setItem("avatar", avatar.replace('/', ''));
+      localStorage.setItem("avatar", avatar.replace("/", ""));
 
       // Dispatch events to notify sidebar
-      window.dispatchEvent(new CustomEvent('avatarUpdated', { 
-        detail: { avatar: avatar.replace('/', '') } 
-      }));
-      window.dispatchEvent(new CustomEvent('avatarChanged', { 
-        detail: { avatar: avatar.replace('/', '') } 
-      }));
+      window.dispatchEvent(
+        new CustomEvent("avatarUpdated", {
+          detail: { avatar: avatar.replace("/", "") },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent("avatarChanged", {
+          detail: { avatar: avatar.replace("/", "") },
+        })
+      );
 
       setOk("Avatar updated successfully!");
       setAvatarChanged(false);
-      
     } catch (error) {
-      console.error('❌ Error saving avatar:', error);
+      console.error("❌ Error saving avatar:", error);
       setError("Failed to update avatar. Please try again.");
     } finally {
       setSaving(false);
@@ -550,15 +634,25 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       // Get current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
       if (authError || !user) {
         setError("No authenticated user found. Please log in again.");
         return;
       }
 
-      console.log('🔄 Updating profile for user:', user.id);
-      console.log('📝 New data:', { fullName, email, phone, age, bio, currentAvatar: avatar });
+      console.log("🔄 Updating profile for user:", user.id);
+      console.log("📝 New data:", {
+        fullName,
+        email,
+        phone,
+        age,
+        bio,
+        currentAvatar: avatar,
+      });
 
       // Prepare the data for upsert
       const upsertData = {
@@ -567,89 +661,93 @@ export default function SettingsPage() {
         full_name: fullName.trim(),
         phone: phone.trim() || null,
         age: age, // Preserve existing age
-        avatar: avatar.startsWith('/') ? avatar.substring(1) : avatar,
-        bio: bio.trim() || '',
-        updated_at: new Date().toISOString()
+        avatar: avatar.startsWith("/") ? avatar.substring(1) : avatar,
+        bio: bio.trim() || "",
+        updated_at: new Date().toISOString(),
       };
 
-      console.log('📤 Data being sent to Supabase:', upsertData);
+      console.log("📤 Data being sent to Supabase:", upsertData);
 
       // First, let's check what's currently in the database
-      console.log('🔍 Checking current profile in database...');
+      console.log("🔍 Checking current profile in database...");
       const { data: currentProfile, error: checkError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
       if (checkError) {
-        console.log('⚠️ No existing profile found, will create new one');
+        console.log("⚠️ No existing profile found, will create new one");
       } else {
-        console.log('✅ Found existing profile:', currentProfile);
+        console.log("✅ Found existing profile:", currentProfile);
       }
 
       // Update user profile in Supabase
       const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
+        .from("user_profiles")
         .upsert(upsertData, {
-          onConflict: 'user_id'
+          onConflict: "user_id",
         })
         .select()
         .single();
 
       if (profileError) {
-        console.error('❌ Error updating profile:', profileError);
-        console.error('❌ Error details:', {
+        console.error("❌ Error updating profile:", profileError);
+        console.error("❌ Error details:", {
           code: profileError.code,
           message: profileError.message,
           details: profileError.details,
-          hint: profileError.hint
+          hint: profileError.hint,
         });
         setError(`Failed to update profile: ${profileError.message}`);
         return;
       }
 
-      console.log('✅ Profile updated in Supabase:', profile);
+      console.log("✅ Profile updated in Supabase:", profile);
 
       // Update user metadata in auth for name and avatar changes
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           full_name: fullName.trim(),
-          avatar: avatar.replace('/', '') // Remove leading slash for storage
-        }
+          avatar: avatar.replace("/", ""), // Remove leading slash for storage
+        },
       });
 
       if (updateError) {
-        console.error('❌ Error updating user metadata:', updateError);
+        console.error("❌ Error updating user metadata:", updateError);
         // Don't fail the whole operation for metadata update
       } else {
-        console.log('✅ User metadata updated in auth');
+        console.log("✅ User metadata updated in auth");
       }
 
       // Sync localStorage as backup
       localStorage.setItem("name", fullName.trim());
       localStorage.setItem("email", email.trim());
       localStorage.setItem("phone", phone.trim());
-      localStorage.setItem("age", age ? age.toString() : '');
+      localStorage.setItem("age", age ? age.toString() : "");
       localStorage.setItem("bio", bio.trim());
-      localStorage.setItem("avatar", avatar.replace('/', '')); // Store without leading slash
+      localStorage.setItem("avatar", avatar.replace("/", "")); // Store without leading slash
 
       setOk("Profile updated successfully!");
       setAvatarChanged(false);
 
       // Dispatch custom events to notify sidebar to refresh
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
-      window.dispatchEvent(new CustomEvent('avatarUpdated', { 
-        detail: { avatar: avatar.replace('/', '') } 
-      }));
-      window.dispatchEvent(new CustomEvent('avatarChanged', { 
-        detail: { avatar: avatar.replace('/', '') } 
-      }));
+      window.dispatchEvent(new CustomEvent("profileUpdated"));
+      window.dispatchEvent(
+        new CustomEvent("avatarUpdated", {
+          detail: { avatar: avatar.replace("/", "") },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent("avatarChanged", {
+          detail: { avatar: avatar.replace("/", "") },
+        })
+      );
 
       // Refresh data to ensure consistency
       await fetchUserDataFromSupabase();
     } catch (error) {
-      console.error('❌ Error saving profile:', error);
+      console.error("❌ Error saving profile:", error);
       setError("Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
@@ -663,7 +761,7 @@ export default function SettingsPage() {
         <main
           className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
           style={{
-            marginLeft: sidebarCollapsed ? "80px" : "260px",
+            marginLeft: "0px",
           }}
         >
           <div className="flex items-center justify-center h-64">
@@ -681,7 +779,7 @@ export default function SettingsPage() {
         <main
           className="flex-1 px-6 lg:px-8 xl:px-10 py-8 transition-all duration-300 ease-in-out"
           style={{
-            marginLeft: sidebarCollapsed ? "80px" : "260px",
+            marginLeft: "0px",
           }}
         >
           <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -693,7 +791,8 @@ export default function SettingsPage() {
               Retry Loading Profile
             </button>
             <div className="text-sm text-gray-500">
-              If the problem persists, try refreshing the page or contact support.
+              If the problem persists, try refreshing the page or contact
+              support.
             </div>
           </div>
         </main>
@@ -716,38 +815,42 @@ export default function SettingsPage() {
             <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6 min-h-[560px]">
               <nav className="flex flex-col gap-2 h-full">
                 <button
-                  onClick={() => setActiveTab('profile')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'profile'
-                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
-                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                    }`}
+                  onClick={() => setActiveTab("profile")}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === "profile"
+                      ? "bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]"
+                      : "hover:bg-[#F8FAFC] text-[#0F172A]/70"
+                  }`}
                 >
                   My Profile
                 </button>
                 <button
-                  onClick={() => setActiveTab('security')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'security'
-                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
-                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                    }`}
+                  onClick={() => setActiveTab("security")}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === "security"
+                      ? "bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]"
+                      : "hover:bg-[#F8FAFC] text-[#0F172A]/70"
+                  }`}
                 >
                   Security
                 </button>
                 <button
-                  onClick={() => setActiveTab('subscription')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'subscription'
-                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
-                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                    }`}
+                  onClick={() => setActiveTab("subscription")}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === "subscription"
+                      ? "bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]"
+                      : "hover:bg-[#F8FAFC] text-[#0F172A]/70"
+                  }`}
                 >
                   Subscription
                 </button>
                 <button
-                  onClick={() => setActiveTab('firmware')}
-                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${activeTab === 'firmware'
-                      ? 'bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]'
-                      : 'hover:bg-[#F8FAFC] text-[#0F172A]/70'
-                    }`}
+                  onClick={() => setActiveTab("firmware")}
+                  className={`w-full text-left px-5 py-5 rounded-[14px] transition-colors ${
+                    activeTab === "firmware"
+                      ? "bg-[#F3F8FF] text-[#00AEEF] font-semibold border border-[#CFE2FF]"
+                      : "hover:bg-[#F8FAFC] text-[#0F172A]/70"
+                  }`}
                 >
                   Firmware
                 </button>
@@ -758,41 +861,51 @@ export default function SettingsPage() {
           </aside>
 
           {/* Right pane */}
-            <section className="flex-1 flex flex-col gap-6">
+          <section className="flex-1 flex flex-col gap-6">
             {/* Profile Tab */}
-            {activeTab === 'profile' && (
+            {activeTab === "profile" && (
               <>
-                                 {/* Welcome message for first-time OAuth users */}
-                 {isFirstTimeOAuth && (
-                   <div className="rounded-[24px] bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6">
-                     <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                         <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                         </svg>
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="text-lg font-bold text-blue-900 mb-1">
-                           Welcome! 🎉
-                         </h3>
-                         <p className="text-blue-700 text-sm mb-2">
-                           {isOAuthSuccess 
-                             ? "You've successfully signed in with Google! Your profile has been automatically populated with your Google account information."
-                             : "Please complete your profile below to get started."
-                           }
-                         </p>
-                         {isOAuthSuccess && (
-                           <p className="text-blue-600 text-xs">
-                             💡 You can review and edit the auto-populated information below, then click &quot;Save&quot; to complete your profile.
-                           </p>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-                 )}
-               
-                 
-                 {/* Header card */}
+                {/* Welcome message for first-time OAuth users */}
+                {isFirstTimeOAuth && (
+                  <div className="rounded-[24px] bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-6 h-6 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-blue-900 mb-1">
+                          Welcome! 🎉
+                        </h3>
+                        <p className="text-blue-700 text-sm mb-2">
+                          {isOAuthSuccess
+                            ? "You've successfully signed in with Google! Your profile has been automatically populated with your Google account information."
+                            : "Please complete your profile below to get started."}
+                        </p>
+                        {isOAuthSuccess && (
+                          <p className="text-blue-600 text-xs">
+                            💡 You can review and edit the auto-populated
+                            information below, then click &quot;Save&quot; to
+                            complete your profile.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Header card */}
                 <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] px-6 md:px-10 py-6 md:py-7">
                   <div className="flex items-center gap-4 md:gap-6">
                     <div className="w-[82px] h-[82px] relative">
@@ -823,306 +936,331 @@ export default function SettingsPage() {
                     )}
                   </div>
                 </div>
-         
-            {/* Editable form */}
-            <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-5 md:p-7">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[18px] md:text-[20px] font-extrabold text-[#0F172A]">
-                  Personal Information
-                </h2>
-                <button
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${canSave
-                      ? "border-[#E5E7EB] hover:bg-[#F8FAFC]"
-                      : "border-[#E5E7EB] opacity-60 cursor-not-allowed"
-                    } text-[14px] text-[#0F172A]`}
-                  onClick={handleSave}
-                  disabled={!canSave}
-                >
-                  {saving ? "Saving..." : avatarChanged ? "Save Changes" : "Save"}
-                </button>
-              </div>
 
-              {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-              {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
-
-              {/* Avatar Selection Section */}
-              <div className="mb-8">
-                <label className="block text-sm text-[#6B7280] mb-3 flex items-center gap-2">
-                  Profile Avatar
-                  {isFirstTimeOAuth && avatar !== '/Avatar01.png' && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      From Google
-                    </span>
-                  )}
-                </label>
-                <div className="flex flex-wrap gap-4">
-                  {avatars.map((avatarSrc, idx) => (
+                {/* Editable form */}
+                <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-5 md:p-7">
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-[18px] md:text-[20px] font-extrabold text-[#0F172A]">
+                      Personal Information
+                    </h2>
                     <button
-                      key={avatarSrc}
-                      type="button"
-                      className={`relative rounded-full p-2 transition-all border-4 ${
-                        avatar === avatarSrc
-                          ? "border-[#00AEEF] bg-[#F3F8FF]"
-                          : "border-transparent bg-[#F8FAFC] hover:bg-[#F1F5F9]"
-                      } focus:outline-none focus:ring-2 focus:ring-[#CFE2FF]`}
-                      style={{
-                        width: 80,
-                        height: 80,
-                      }}
-                      onClick={() => handleAvatarChange(avatarSrc)}
-                      tabIndex={0}
-                      aria-label={`Select avatar ${idx + 1}`}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
+                        canSave
+                          ? "border-[#E5E7EB] hover:bg-[#F8FAFC]"
+                          : "border-[#E5E7EB] opacity-60 cursor-not-allowed"
+                      } text-[14px] text-[#0F172A]`}
+                      onClick={handleSave}
+                      disabled={!canSave}
                     >
-                      <Image
-                        src={avatarSrc}
-                        alt={`Avatar ${idx + 1}`}
-                        width={64}
-                        height={64}
-                        className="rounded-full object-cover"
-                      />
-                      {avatar === avatarSrc && (
-                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#00AEEF] rounded-full flex items-center justify-center">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                            <path
-                              d="M5 12l4 4L19 6"
-                              stroke="white"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </div>
+                      {saving
+                        ? "Saving..."
+                        : avatarChanged
+                        ? "Save Changes"
+                        : "Save"}
+                    </button>
+                  </div>
+
+                  {error && (
+                    <p className="mb-4 text-sm text-red-600">{error}</p>
+                  )}
+                  {ok && <p className="mb-4 text-sm text-green-600">{ok}</p>}
+
+                  {/* Avatar Selection Section */}
+                  <div className="mb-8">
+                    <label className="block text-sm text-[#6B7280] mb-3 flex items-center gap-2">
+                      Profile Avatar
+                      {isFirstTimeOAuth && avatar !== "/Avatar01.png" && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                          From Google
+                        </span>
                       )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs text-[#6B7280]">
-                    Click on an avatar to select it. Your selection will be saved when you click the Save button.
-                    {avatarChanged && (
-                      <span className="ml-2 text-[#00AEEF] font-medium">
-                        • Changes pending
-                      </span>
-                    )}
-                  </p>
-                  {avatarChanged && (
-                    <button
-                      onClick={handleAvatarSave}
-                      disabled={saving}
-                      className="px-3 py-1.5 text-xs bg-[#00AEEF] text-white rounded-lg hover:bg-[#0098D4] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? "Saving..." : "Save Avatar"}
-                    </button>
-                  )}
-                </div>
-              </div>
+                    </label>
+                    <div className="flex flex-wrap gap-4">
+                      {avatars.map((avatarSrc, idx) => (
+                        <button
+                          key={avatarSrc}
+                          type="button"
+                          className={`relative rounded-full p-2 transition-all border-4 ${
+                            avatar === avatarSrc
+                              ? "border-[#00AEEF] bg-[#F3F8FF]"
+                              : "border-transparent bg-[#F8FAFC] hover:bg-[#F1F5F9]"
+                          } focus:outline-none focus:ring-2 focus:ring-[#CFE2FF]`}
+                          style={{
+                            width: 80,
+                            height: 80,
+                          }}
+                          onClick={() => handleAvatarChange(avatarSrc)}
+                          tabIndex={0}
+                          aria-label={`Select avatar ${idx + 1}`}
+                        >
+                          <Image
+                            src={avatarSrc}
+                            alt={`Avatar ${idx + 1}`}
+                            width={64}
+                            height={64}
+                            className="rounded-full object-cover"
+                          />
+                          {avatar === avatarSrc && (
+                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#00AEEF] rounded-full flex items-center justify-center">
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                              >
+                                <path
+                                  d="M5 12l4 4L19 6"
+                                  stroke="white"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-[#6B7280]">
+                        Click on an avatar to select it. Your selection will be
+                        saved when you click the Save button.
+                        {avatarChanged && (
+                          <span className="ml-2 text-[#00AEEF] font-medium">
+                            • Changes pending
+                          </span>
+                        )}
+                      </p>
+                      {avatarChanged && (
+                        <button
+                          onClick={handleAvatarSave}
+                          disabled={saving}
+                          className="px-3 py-1.5 text-xs bg-[#00AEEF] text-white rounded-lg hover:bg-[#0098D4] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {saving ? "Saving..." : "Save Avatar"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280] flex items-center gap-2">
-                    First Name
-                    {isFirstTimeOAuth && firstName && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        From Google
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type="text"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={firstName}
-                    onChange={(ev) => setFirstName(ev.target.value)}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280] flex items-center gap-2">
+                        First Name
+                        {isFirstTimeOAuth && firstName && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                            From Google
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={firstName}
+                        onChange={(ev) => setFirstName(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280] flex items-center gap-2">
+                        Last Name
+                        {isFirstTimeOAuth && lastName && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                            From Google
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={lastName}
+                        onChange={(ev) => setLastName(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280] flex items-center gap-2">
+                        Email
+                        {isFirstTimeOAuth && email && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                            From Google
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="email"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={email}
+                        onChange={(ev) => setEmail(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Phone</label>
+                      <input
+                        type="tel"
+                        className={`rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black ${
+                          phone && !phoneValid
+                            ? "border-red-500 focus:ring-red-200"
+                            : phone && phoneValid
+                            ? "border-green-500 focus:ring-green-200"
+                            : "border-[#E5E7EB]"
+                        }`}
+                        value={phone}
+                        onChange={(ev) => setPhone(ev.target.value)}
+                        placeholder="Enter phone number"
+                      />
+                      {phone && !phoneValid && (
+                        <p className="text-xs text-red-500 mt-1">
+                          Phone number must be exactly 10 digits and can contain
+                          +, -, and spaces
+                        </p>
+                      )}
+                      {phone && phoneValid && (
+                        <p className="text-xs text-green-500 mt-1">
+                          ✓ Valid phone number format (10 digits)
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Age</label>
+                      <input
+                        type="number"
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                        value={age || ""}
+                        onChange={(ev) =>
+                          setAge(
+                            ev.target.value ? parseInt(ev.target.value) : null
+                          )
+                        }
+                        placeholder="Enter age"
+                      />
+                    </div>
+                    <div className="md:col-span-2 flex flex-col gap-1">
+                      <label className="text-sm text-[#6B7280]">Bio</label>
+                      <textarea
+                        className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
+                        value={bio}
+                        onChange={(ev) => setBio(ev.target.value)}
+                        placeholder="Tell us about yourself..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280] flex items-center gap-2">
-                    Last Name
-                    {isFirstTimeOAuth && lastName && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        From Google
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type="text"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={lastName}
-                    onChange={(ev) => setLastName(ev.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280] flex items-center gap-2">
-                    Email
-                    {isFirstTimeOAuth && email && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        From Google
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type="email"
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                    value={email}
-                    onChange={(ev) => setEmail(ev.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-[#6B7280]">Phone</label>
-                  <input
-                    type="tel"
-                    className={`rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black ${
-                      phone && !phoneValid 
-                        ? 'border-red-500 focus:ring-red-200' 
-                        : phone && phoneValid 
-                        ? 'border-green-500 focus:ring-green-200' 
-                        : 'border-[#E5E7EB]'
-                    }`}
-                    value={phone}
-                    onChange={(ev) => setPhone(ev.target.value)}
-                    placeholder="Enter phone number"
-                  />
-                  {phone && !phoneValid && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Phone number must be exactly 10 digits and can contain +, -, and spaces
-                    </p>
-                  )}
-                                     {phone && phoneValid && (
-                     <p className="text-xs text-green-500 mt-1">
-                       ✓ Valid phone number format (10 digits)
-                     </p>
-                   )}
-                 </div>
-                 <div className="flex flex-col gap-1">
-                   <label className="text-sm text-[#6B7280]">Age</label>
-                   <input
-                     type="number"
-                     className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                     value={age || ''}
-                     onChange={(ev) => setAge(ev.target.value ? parseInt(ev.target.value) : null)}
-                     placeholder="Enter age"
-                   />
-                 </div>
-                 <div className="md:col-span-2 flex flex-col gap-1">
-                   <label className="text-sm text-[#6B7280]">Bio</label>
-                  <textarea
-                    className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
-                    value={bio}
-                    onChange={(ev) => setBio(ev.target.value)}
-                    placeholder="Tell us about yourself..."
-                  />
-                </div>
-              </div>
-            </div>
-                 
-            </>
+              </>
             )}
 
-          
+            {/* Firmware Tab */}
+            {activeTab === "firmware" && <FirmwareInstaller />}
 
-        {/* Firmware Tab */}
-        {activeTab === 'firmware' && (
-          <FirmwareInstaller />
-        )}
+            {/* Security Tab */}
+            {activeTab === "security" && (
+              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">
+                  Security Settings
+                </h2>
+                <p className="text-[14px] text-[#6B7280]">
+                  Security settings will be available soon.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-[#6B7280]">First Name</label>
+                    <input
+                      type="text"
+                      className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                      value={firstName}
+                      onChange={(ev) => setFirstName(ev.target.value)}
+                      placeholder="Enter first name"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-[#6B7280]">Last Name</label>
+                    <input
+                      type="text"
+                      className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                      value={lastName}
+                      onChange={(ev) => setLastName(ev.target.value)}
+                      placeholder="Enter last name"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-[#6B7280]">
+                      Email{" "}
+                      <span className="text-xs text-gray-500">(Read-only)</span>
+                    </label>
+                    <input
+                      type="email"
+                      className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none bg-gray-50 text-gray-600 cursor-not-allowed"
+                      value={email}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-[#6B7280]">Phone</label>
+                    <input
+                      type="tel"
+                      className={`rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black ${
+                        phone && !phoneValid
+                          ? "border-red-500 focus:ring-red-200"
+                          : phone && phoneValid
+                          ? "border-green-500 focus:ring-green-200"
+                          : "border-[#E5E7EB]"
+                      }`}
+                      value={phone}
+                      onChange={(ev) => setPhone(ev.target.value)}
+                      placeholder="Enter phone number"
+                    />
+                    {phone && !phoneValid && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Phone number must be exactly 10 digits and can contain
+                        +, -, and spaces
+                      </p>
+                    )}
+                    {phone && phoneValid && (
+                      <p className="text-xs text-green-500 mt-1">
+                        ✓ Valid phone number format (10 digits)
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-[#6B7280]">Age</label>
+                    <input
+                      type="number"
+                      className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
+                      value={age || ""}
+                      onChange={(ev) =>
+                        setAge(
+                          ev.target.value ? parseInt(ev.target.value) : null
+                        )
+                      }
+                      placeholder="Enter age"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex flex-col gap-1">
+                    <label className="text-sm text-[#6B7280]">Bio</label>
+                    <textarea
+                      className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
+                      value={bio}
+                      onChange={(ev) => setBio(ev.target.value)}
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-        {/* Security Tab */}
-        {activeTab === 'security' && (
-          <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
-            <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Security Settings</h2>
-            <p className="text-[14px] text-[#6B7280]">Security settings will be available soon.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-10">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-[#6B7280]">First Name</label>
-                <input
-                  type="text"
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                  value={firstName}
-                  onChange={(ev) => setFirstName(ev.target.value)}
-                  placeholder="Enter first name"
-                />
+            {/* Subscription Tab */}
+            {activeTab === "subscription" && (
+              <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
+                <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">
+                  Subscription
+                </h2>
+                <p className="text-[14px] text-[#6B7280]">
+                  Subscription management will be available soon.
+                </p>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-[#6B7280]">Last Name</label>
-                <input
-                  type="text"
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                  value={lastName}
-                  onChange={(ev) => setLastName(ev.target.value)}
-                  placeholder="Enter last name"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-[#6B7280]">Email <span className="text-xs text-gray-500">(Read-only)</span></label>
-                <input
-                  type="email"
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none bg-gray-50 text-gray-600 cursor-not-allowed"
-                  value={email}
-                  readOnly
-                  disabled
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-[#6B7280]">Phone</label>
-                <input
-                  type="tel"
-                  className={`rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black ${
-                    phone && !phoneValid 
-                      ? 'border-red-500 focus:ring-red-200' 
-                      : phone && phoneValid 
-                      ? 'border-green-500 focus:ring-green-200' 
-                      : 'border-[#E5E7EB]'
-                  }`}
-                  value={phone}
-                  onChange={(ev) => setPhone(ev.target.value)}
-                  placeholder="Enter phone number"
-                />
-                {phone && !phoneValid && (
-                  <p className="text-xs text-red-500 mt-1">
-                    Phone number must be exactly 10 digits and can contain +, -, and spaces
-                  </p>
-                )}
-                {phone && phoneValid && (
-                  <p className="text-xs text-green-500 mt-1">
-                    ✓ Valid phone number format (10 digits)
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-[#6B7280]">Age</label>
-                <input
-                  type="number"
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] text-black"
-                  value={age || ''}
-                  onChange={(ev) => setAge(ev.target.value ? parseInt(ev.target.value) : null)}
-                  placeholder="Enter age"
-                />
-              </div>
-              <div className="md:col-span-2 flex flex-col gap-1">
-                <label className="text-sm text-[#6B7280]">Bio</label>
-                <textarea
-                  className="rounded-xl border border-[#E5E7EB] px-4 py-3 outline-none focus:ring-2 focus:ring-[#CFE2FF] focus:border-[#93C5FD] min-h-[90px] text-black"
-                  value={bio}
-                  onChange={(ev) => setBio(ev.target.value)}
-                  placeholder="Tell us about yourself..."
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subscription Tab */}
-        {activeTab === 'subscription' && (
-          <div className="rounded-[24px] bg-white shadow-sm border border-[#EEF2F7] p-6">
-            <h2 className="text-[20px] font-extrabold text-[#0F172A] mb-4">Subscription</h2>
-            <p className="text-[14px] text-[#6B7280]">Subscription management will be available soon.</p>
-          </div>
-        )}
-
-
-        </section>
+            )}
+          </section>
         </div>
       </main>
-
-
     </div>
   );
 }

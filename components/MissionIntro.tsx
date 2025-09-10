@@ -55,7 +55,7 @@ export default function MissionIntro({
     <main
       className="flex-1 flex flex-col items-center justify-center relative bg-white px-8"
       style={{
-        marginLeft: sidebarCollapsed ? "80px" : "260px",
+        marginLeft: "0px",
         marginRight: "0px",
         paddingTop: "60px", // Move content down to account for header
       }}

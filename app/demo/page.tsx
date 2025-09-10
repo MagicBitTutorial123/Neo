@@ -11,11 +11,9 @@ export default function DemoPage() {
   return (
     <div className="flex h-screen bg-[#F8F9FC]">
       <SideNavbar playgroundActive={showOverlay} />
-      <div 
+      <div
         className="flex-1 flex items-center justify-center transition-all duration-300 ease-in-out"
-        style={{
-          marginLeft: sidebarCollapsed ? "80px" : "260px",
-        }}
+        style={{ marginLeft: "0px" }}
       >
         <div className="text-center">
           <h1 className="text-4xl font-bold text-[#222E3A] mb-4">Demo</h1>

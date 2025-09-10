@@ -39,15 +39,10 @@ export default function ProfilePage() {
 
   return (
     <div className="flex h-screen bg-white overflow-x-hidden">
-      <SideNavbar
-        avatar={userData.avatar}
-        name={userData.name}
-      />
+      <SideNavbar avatar={userData.avatar} name={userData.name} />
       <main
         className="flex-1 flex flex-col items-center px-4 lg:px-8 py-3 lg:py-6 overflow-hidden transition-all duration-300 ease-in-out"
-        style={{
-          marginLeft: sidebarCollapsed ? "80px" : "260px",
-        }}
+        style={{ marginLeft: "0px" }}
       >
         {/* Profile Card - Fixed at top */}
         <div className="w-full max-w-5xl rounded-2xl lg:rounded-3xl bg-[#F7F8FA] border border-[#E0E6ED] flex flex-col lg:flex-row items-center px-4 sm:px-6 lg:px-12 py-6 sm:py-8 lg:py-10 mb-6 sm:mb-8 lg:mb-12 shadow-sm flex-shrink-0">
