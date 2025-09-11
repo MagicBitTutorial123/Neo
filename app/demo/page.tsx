@@ -1,16 +1,13 @@
 "use client";
-import { useState } from "react";
 import SideNavbar from "@/components/SideNavbar";
-import PlaygroundUnlocked from "@/components/PlaygroundUnlocked";
 import { useSidebar } from "@/context/SidebarContext";
 
 export default function DemoPage() {
-  const [showOverlay, setShowOverlay] = useState(false);
   const { sidebarCollapsed } = useSidebar();
 
   return (
     <div className="flex h-screen bg-[#F8F9FC]">
-      <SideNavbar playgroundActive={showOverlay} />
+      <SideNavbar />
       <div
         className="flex-1 flex items-center justify-center transition-all duration-300 ease-in-out"
         style={{ marginLeft: "0px" }}
@@ -21,27 +18,14 @@ export default function DemoPage() {
             Demo page for testing components!
           </p>
 
-          {/* Demo Buttons */}
+          {/* Demo Content */}
           <div className="space-y-4">
-            <button
-              onClick={() => setShowOverlay(true)}
-              className="px-6 py-3 bg-[#00AEEF] text-white rounded-full font-semibold hover:bg-[#0098D4] transition-colors shadow-lg hover:shadow-xl"
-            >
-              Show Playground Unlocked Overlay
-            </button>
-
             <div className="text-sm text-gray-500 mt-4">
-              Click the button above to see the playground unlocked celebration
-              overlay
+              Demo page is ready for testing components
             </div>
           </div>
         </div>
       </div>
-
-      {/* Playground Unlocked Overlay */}
-      {showOverlay && (
-        <PlaygroundUnlocked onClose={() => setShowOverlay(false)} />
-      )}
     </div>
   );
 }

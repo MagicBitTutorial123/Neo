@@ -28,6 +28,7 @@ interface CongratsCardProps {
   backText?: string;
   nextMissionText?: string;
   isPracticeCompletion?: boolean;
+  hideNextMissionButton?: boolean;
 }
 
 export default function CongratsCard({
@@ -41,6 +42,7 @@ export default function CongratsCard({
   backText = "Back",
   nextMissionText = "Mission 2",
   isPracticeCompletion = false,
+  hideNextMissionButton = false,
 }: CongratsCardProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [showContent, setShowContent] = useState(false);
@@ -77,8 +79,11 @@ export default function CongratsCard({
       <audio ref={audioRef} src="/congrats.mp3" preload="auto" />
       <audio ref={coinAudioRef} src="/coins.wav" preload="auto" />
       <div
-        className="fixed inset-0 flex items-center justify-center z-50"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+        className="fixed inset-0 flex items-center justify-center"
+        style={{
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          zIndex: 70,
+        }}
       >
         {/* Floating Coins Animation */}
         {flyCoins && !isPracticeCompletion && (
@@ -105,7 +110,7 @@ export default function CongratsCard({
                   left: window.innerWidth < 768 ? "35%" : "44%", // start more left on mobile
                   width: 100, // increased from 64 to 96
                   height: 100, // increased from 64 to 96
-                  zIndex: 50,
+                  zIndex: 75,
                 }}
               >
                 {/* Lottie coin animation */}
@@ -164,7 +169,7 @@ export default function CongratsCard({
           animate={showContent ? { scale: 1, opacity: 1 } : {}}
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           className="bg-white rounded-[40px] shadow-lg flex flex-col items-center min-w-[280px] max-w-[90vw] px-0 py-0 overflow-visible"
-          style={{ width: 460, position: "relative" }}
+          style={{ width: 460, position: "relative", zIndex: 80 }}
         >
           {/* Curved dark background with robot + animation */}
           <div className="w-full relative" style={{ height: 120 }}>
@@ -277,6 +282,13 @@ export default function CongratsCard({
             {/* Buttons */}
             <div className="flex gap-4 w-full justify-center">
               {isPracticeCompletion ? (
+                <button
+                  onClick={onBack}
+                  className="w-40 px-4 py-2 rounded-full font-medium bg-[#E6F6FF] text-[#232733] hover:bg-[#D0D6DD] transition-colors focus:outline-none focus:ring-2 focus:ring-[#B3E6FF]"
+                >
+                  Back to Missions
+                </button>
+              ) : hideNextMissionButton ? (
                 <button
                   onClick={onBack}
                   className="w-40 px-4 py-2 rounded-full font-medium bg-[#E6F6FF] text-[#232733] hover:bg-[#D0D6DD] transition-colors focus:outline-none focus:ring-2 focus:ring-[#B3E6FF]"

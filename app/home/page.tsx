@@ -229,6 +229,7 @@ export default function HomePage() {
     }
 
     // Check if user is new based on mission progress (for existing users who haven't completed missions)
+    // User is considered "new" until Mission 2 is completed
     if (
       userData?.isNewUser ||
       (userData?.missionProgress !== undefined && userData?.missionProgress < 2)
@@ -237,6 +238,9 @@ export default function HomePage() {
       if (!isNewUserFromSignup) {
         setIsNewUser(true);
       }
+    } else {
+      // User has completed Mission 2, they are no longer "new"
+      setIsNewUser(false);
     }
 
     // Check if this is a first-time Google OAuth user
@@ -415,9 +419,13 @@ export default function HomePage() {
   const totalSteps = 5; // Total number of missions
   const completedSteps = userData?.missionProgress || 0; // Current mission progress
   const xpPoints = userData?.xp || 0; // User's XP points
-  const missionLabel = `Mission ${String(
-    (userData?.missionProgress || 0) + 1
-  ).padStart(2, "0")}`;
+
+  // Determine the next mission (assuming missionProgress is the last completed mission)
+  // Mission UIDs are strings like "01", "02", etc.
+  const nextMissionNumber = (userData?.missionProgress ?? 0) + 1;
+  const nextMission = String(nextMissionNumber).padStart(2, "0");
+  const missionLabel = `Mission ${nextMission}`;
+
   const progressPercent =
     totalSteps > 0 ? ((userData?.missionProgress || 0) / totalSteps) * 100 : 0;
 
@@ -435,9 +443,6 @@ export default function HomePage() {
 
   // Dummy battery level (0-100)
   const batteryLevel = 68;
-
-  // Determine the next mission (assuming missionProgress is the last completed mission)
-  const nextMission = (userData?.missionProgress ?? 0) + 1;
 
   const newUserContent = useMemo(() => {
     return (
@@ -524,7 +529,10 @@ export default function HomePage() {
               height={300}
               className="object-cover w-full h-[200px] sm:h-[250px] md:h-[300px]"
             />
-            <button className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition">
+            <button
+              onClick={() => router.push(`/missions/${nextMission}`)}
+              className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 bg-black text-white font-bold rounded-full px-4 sm:px-6 md:px-8 py-2 sm:py-3 flex items-center gap-2 text-sm sm:text-base md:text-lg shadow-lg hover:bg-[#222] transition"
+            >
               Continue mission{" "}
               <span className="inline-block">
                 <svg
@@ -703,27 +711,21 @@ export default function HomePage() {
   const isFromSignup = searchParams.get("newUser") === "true";
   const isOnboarding = searchParams.get("onboarding") === "true";
 
+  // Simple transition logic: Show new user home until Mission 2 is completed
+  // Mission progress 0 = Mission 1 not started, 1 = Mission 1 completed, 2 = Mission 2 completed
+  const shouldShowNewUserHome = (userData?.missionProgress ?? 0) < 2;
+  const shouldShowDefaultHome = (userData?.missionProgress ?? 0) >= 2;
+
   // Show onboarding ONLY for new users who came from signup flow
-  // Existing users (from signin) should see dashboard directly
   const shouldShowOnboarding = isNewUser && isFromSignup && isOnboarding;
 
-  // Check if user is coming from regular login (not signup)
-  const isFromRegularLogin = !isFromSignup && !isOnboarding;
-
   console.log("🔍 User data:", userData);
-  console.log("🔍 Is new user:", isNewUser);
   console.log("🔍 Mission progress:", userData?.missionProgress);
-  console.log("🔍 UserData.isNewUser:", userData?.isNewUser);
-  console.log("🔍 UserData.missionProgress:", userData?.missionProgress);
-  console.log(
-    "🔍 UserData.missionProgress < 2:",
-    userData?.missionProgress !== undefined && userData?.missionProgress < 2
-  );
-  console.log("🔍 Final isNewUser calculation:", isNewUser);
+  console.log("🔍 shouldShowNewUserHome:", shouldShowNewUserHome);
+  console.log("🔍 shouldShowDefaultHome:", shouldShowDefaultHome);
   console.log("🔍 isFromSignup:", isFromSignup);
   console.log("🔍 isOnboarding:", isOnboarding);
   console.log("🔍 shouldShowOnboarding:", shouldShowOnboarding);
-  console.log("🔍 isFromRegularLogin:", isFromRegularLogin);
   console.log("🔍 Google OAuth Status:", {
     isFirstTimeOAuth,
     showProfileUpdateNotification,
@@ -745,10 +747,10 @@ export default function HomePage() {
           {shouldShowOnboarding
             ? // New user from signup process - show onboarding (clean layout)
               newUserContent
-            : isFromRegularLogin
-            ? // Existing user from regular login - show clean dashboard
-              defaultHomeContent
-            : // Default case - show appropriate content based on user state
+            : shouldShowNewUserHome
+            ? // Show new user home until Mission 2 is completed
+              newUserContent
+            : // Show default home once Mission 2 is completed
               defaultHomeContent}
         </main>
       </div>

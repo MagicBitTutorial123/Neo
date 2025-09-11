@@ -400,10 +400,24 @@ export default function StandardMissionLayout({
 
       onFinish?.(); // Notify parent that finish was clicked
 
+      // Stop the mission timer
+      if (
+        typeof window !== "undefined" &&
+        (window as any).missionTimerControls
+      ) {
+        (window as any).missionTimerControls.pause();
+      }
       // Always show congrats card first
       setShowCongrats(true);
     } catch (error) {
       console.error("Error updating user XP:", error);
+      // Stop the mission timer
+      if (
+        typeof window !== "undefined" &&
+        (window as any).missionTimerControls
+      ) {
+        (window as any).missionTimerControls.pause();
+      }
       // Still show congrats even if XP update fails
       onFinish?.();
       setShowCongrats(true);
@@ -710,10 +724,7 @@ export default function StandardMissionLayout({
       {showPlaygroundUnlock && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black opacity-85" />
-          <PlaygroundUnlocked
-            onClose={handlePlaygroundUnlockClose}
-            onNext={handlePlaygroundUnlockNext}
-          />
+          <PlaygroundUnlocked onClose={handlePlaygroundUnlockClose} />
         </div>
       )}
 

@@ -1275,10 +1275,10 @@ const BlocklyComponent = (
 
   // Calculate dynamic margin based on sidebar state
   const sidebarWidth = sidebarCollapsed
-    ? 65
+    ? 80
     : window.location.href.includes("missions")
-    ? 65
-    : 235;
+    ? 80
+    : 260;
   const instructionColumnWidth = window.location.href.includes("missions")
     ? -50
     : window.location.href.includes("playground")
@@ -1291,7 +1291,7 @@ const BlocklyComponent = (
   return (
     <div className="h-full bg-white flex flex-col">
       <div
-        className="relative gap-3px my-2 rounded-3xl border border-blue-200 bg-white overflow-hidden flex h-full"
+        className="relative gap-3px my-2 rounded-3xl border border-blue-200 bg-white flex h-full"
         style={{
           borderRadius: "48px",
           marginLeft: `${containerMarginLeft}px`,

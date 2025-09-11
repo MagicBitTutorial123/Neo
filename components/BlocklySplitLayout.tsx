@@ -137,6 +137,13 @@ export default function BlocklySplitLayout({
     onCongratsChange?.(showCongrats);
   }, [showCongrats, onCongratsChange]);
 
+  // Call handleMissionComplete when CongratsCard is shown
+  useEffect(() => {
+    if (showCongrats) {
+      handleMissionComplete();
+    }
+  }, [showCongrats]);
+
   // Notify parent when showHelpAccepted changes
   useEffect(() => {
     onHelpAcceptedChange?.(showHelpAccepted);
@@ -304,9 +311,6 @@ export default function BlocklySplitLayout({
       "/happy-robot-correct-1.png",
       "/happy-robot-correct-2.png",
       "/happy-robot-correct-3.png",
-      "/aww-robot-new.png",
-      "/aww-robot.png",
-      "/welcome-robot.png",
     ];
     return correctImages[Math.floor(Math.random() * correctImages.length)];
   };
@@ -316,7 +320,6 @@ export default function BlocklySplitLayout({
     const wrongImages = [
       "/sad-robot-wrong-answer-1.png",
       "/sad-robot-wrong-answer-2.png",
-      "/crying-bot.png",
     ];
     return wrongImages[Math.floor(Math.random() * wrongImages.length)];
   };
@@ -344,14 +347,45 @@ export default function BlocklySplitLayout({
       });
 
       if (stepData?.mcq) {
-        console.log("🎯 MCQ data found, showing MCQ");
-        setShowMCQ(true);
-        return;
+        // Check if this MCQ has already been answered correctly
+        if (answeredMCQs.has(currentStep)) {
+          console.log(
+            "🎯 MCQ already answered correctly, skipping to next step"
+          );
+          // Skip MCQ and go to next step
+          if (currentStep === mission.steps.length - 1) {
+            console.log("🎯 Final step already answered, showing congrats");
+            // Stop the mission timer
+            if (
+              typeof window !== "undefined" &&
+              (window as any).missionTimerControls
+            ) {
+              (window as any).missionTimerControls.pause();
+            }
+            setShowCongrats(true);
+            return;
+          } else {
+            // Not final step - advance to next step
+            setCurrentStep((s: number) => s + 1);
+            return;
+          }
+        } else {
+          console.log("🎯 MCQ data found, showing MCQ");
+          setShowMCQ(true);
+          return;
+        }
       } else {
         console.log("🎯 No MCQ data found for this step, showing fallback");
         // For final step without MCQ, show congrats directly
         if (currentStep === mission.steps.length - 1) {
           console.log("🎯 Final step without MCQ, showing congrats");
+          // Stop the mission timer
+          if (
+            typeof window !== "undefined" &&
+            (window as any).missionTimerControls
+          ) {
+            (window as any).missionTimerControls.pause();
+          }
           setShowCongrats(true);
           return;
         }
@@ -387,10 +421,8 @@ export default function BlocklySplitLayout({
 
   const handleBack = () => {
     setShowCongrats(false);
-    if (mission.id === 1) {
-      setShowHelpNeo(true);
-      return;
-    }
+    // Navigate to missions main page
+    window.location.href = "/missions";
   };
 
   // Overlay handlers
@@ -417,6 +449,8 @@ export default function BlocklySplitLayout({
     });
 
     if (isCorrect) {
+      // Add this step to answered MCQs
+      setAnsweredMCQs((prev) => new Set([...prev, currentStep]));
       setShowNice(true); // This will show StepSuccessCard
     } else {
       setShowDontWorry(true); // This will show StepRetryCard
@@ -433,6 +467,13 @@ export default function BlocklySplitLayout({
       if (currentStep === mission.steps.length - 1) {
         // Final step - show congrats
         console.log("🎯 Final step completed, showing congrats");
+        // Stop the mission timer
+        if (
+          typeof window !== "undefined" &&
+          (window as any).missionTimerControls
+        ) {
+          (window as any).missionTimerControls.pause();
+        }
         setShowCongrats(true);
       } else {
         // Not final step - advance to next step
@@ -931,6 +972,11 @@ export default function BlocklySplitLayout({
                         ? "Finish"
                         : "Next"
                     }
+                    buttonColor={
+                      currentStep === mission.steps.length - 1
+                        ? "blue"
+                        : "black"
+                    }
                   />
                 );
               })()}
@@ -974,8 +1020,16 @@ export default function BlocklySplitLayout({
             onBack={handleBack}
             onNextMission={() => {
               setShowCongrats(false);
-              // Navigate to next mission or back to missions list
-              window.location.href = "/missions";
+              // Navigate to next mission
+              const currentMissionNumber =
+                parseInt(mission.id.replace(/\D/g, "")) || 0;
+              const nextMissionNumber = currentMissionNumber + 1;
+              if (nextMissionNumber <= 6) {
+                window.location.href = `/missions/${nextMissionNumber}`;
+              } else {
+                // If it's the last mission, go back to missions list
+                window.location.href = "/missions";
+              }
             }}
             headline={
               isPracticeCompletion ? "Great Practice!" : "Congratulations!"
@@ -989,10 +1043,20 @@ export default function BlocklySplitLayout({
             timeSpent={calculateTimeSpent()}
             robotImageSrc="/confettiBot.png"
             backText="Back"
-            nextMissionText={
-              mission.id < 6 ? `Mission ${mission.id + 1}` : "Missions"
-            }
+            nextMissionText={(() => {
+              const currentMissionNumber =
+                parseInt(mission.id.replace(/\D/g, "")) || 0;
+              const nextMissionNumber = currentMissionNumber + 1;
+              return nextMissionNumber <= 6
+                ? `Mission ${nextMissionNumber}`
+                : "Missions";
+            })()}
             isPracticeCompletion={isPracticeCompletion}
+            hideNextMissionButton={(() => {
+              const currentMissionNumber =
+                parseInt(mission.id.replace(/\D/g, "")) || 0;
+              return currentMissionNumber >= 6;
+            })()}
           />
         )}
 

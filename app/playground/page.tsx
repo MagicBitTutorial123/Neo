@@ -69,16 +69,7 @@ Blockly.setLocale(En);
 
 export default function Playground() {
   // User context for personalization
-  const { userData, refreshUserData } = useUser();
-
-  // User data management
-  useEffect(() => {
-    if (userData?.name) {
-      // User data is available
-    } else {
-      refreshUserData();
-    }
-  }, [userData, refreshUserData]);
+  const { userData } = useUser();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blocklyRef = useRef<{
     getCurrentCode: () => string;
@@ -1077,7 +1068,7 @@ export default function Playground() {
               ) : (
                 <div className="flex flex-col h-full">
                   {/* Blockly Component */}
-                  <div className="flex-1">
+                  <div className="flex-1 pt-16">
                     <BlocklyComponent
                       ref={blocklyRef}
                       generatedCode={generatedCode}

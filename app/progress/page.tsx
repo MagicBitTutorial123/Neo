@@ -290,9 +290,7 @@ export default function ProgressPage() {
         <SideNavbar />
         <main
           className="flex-1 flex flex-col transition-all duration-300 ease-in-out"
-          style={{
-            marginLeft: sidebarCollapsed ? "80px" : "260px",
-          }}
+          style={{ marginLeft: "0px" }}
         >
           {/* Top Badge Card */}
           <div className="p-8">
@@ -332,7 +330,13 @@ export default function ProgressPage() {
                     Summary of Learnings
                   </h2>
                   <SummaryOfLearnings
-                    completedMissions={completedMissions}
+                    completedMissions={completedMissions.map((mission) => ({
+                      ...mission,
+                      steps: mission.steps.map((step) => ({
+                        ...step,
+                        title: step.title || "Untitled Step",
+                      })),
+                    }))}
                     currentProgress={currentMissionProgress}
                   />
                 </div>
@@ -370,7 +374,23 @@ export default function ProgressPage() {
                   </div>
 
                   <MissionListView
-                    missions={showAllMissions ? missions : missions.slice(0, 3)}
+                    missions={
+                      showAllMissions
+                        ? missions.map((mission) => ({
+                            ...mission,
+                            steps: mission.steps.map((step) => ({
+                              ...step,
+                              title: step.title || "Untitled Step",
+                            })),
+                          }))
+                        : missions.slice(0, 3).map((mission) => ({
+                            ...mission,
+                            steps: mission.steps.map((step) => ({
+                              ...step,
+                              title: step.title || "Untitled Step",
+                            })),
+                          }))
+                    }
                     completedCount={currentMissionProgress}
                     onMissionSelect={setSelectedMission}
                     selectedMission={selectedMission}

@@ -148,10 +148,17 @@ export async function updateUserXP(userId: string, missionId: string, xpToAdd: n
 
     // Calculate new values
     const newXP = (currentData.xp || 0) + xpToAdd;
-    const missionNumber = parseInt(missionId);
+    // Handle different mission ID formats (e.g., "01", "1", "M1")
+    let missionNumber: number;
+    if (missionId.startsWith('M')) {
+      missionNumber = parseInt(missionId.substring(1));
+    } else {
+      missionNumber = parseInt(missionId);
+    }
     const currentMission = currentData.current_mission || 0;
     
     // Validate mission completion order - only allow completing the next mission in sequence
+    console.log(`🎯 [updateUserXP] Mission validation: missionId=${missionId}, missionNumber=${missionNumber}, currentMission=${currentMission}, expected=${currentMission + 1}`);
     if (missionNumber !== (currentMission + 1)) {
       console.warn(`🎯 [updateUserXP] Mission ${missionId} is not the next mission in sequence (current: ${currentMission}, attempting: ${missionNumber})`);
       return { 
