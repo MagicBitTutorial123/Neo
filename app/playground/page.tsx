@@ -787,299 +787,292 @@ export default function Playground() {
   return (
     <>
       <div className="app-wrapper">
-        <div>
-          <div className="h-screen bg-white flex flex-row w-screen">
-            <SideNavbar
-              onDashboardClick={() => setDashboardActive((v) => !v)}
-              dashboardActive={dashboardActive}
+        <div className="flex min-h-screen bg-white">
+          <SideNavbar
+            onDashboardClick={() => setDashboardActive((v) => !v)}
+            dashboardActive={dashboardActive}
+          />
+          <main className="flex-1 flex flex-col" style={{ marginLeft: "0px" }}>
+            <Header
+              missionNumber={0}
+              title="Neo Playground"
+              liveUsers={17}
+              isPlayground={true}
+              onRun={uploadCode}
+              timeAllocated="100"
+              isConnected={isConnected}
+              setIsConnected={setIsConnected}
+              onConnectToggle={onConnectToggle}
+              connectionStatus={connectionStatus}
+              setConnectionStatus={setConnectionStatus}
+              onErase={clearWorkspace}
+              onConnectionTypeChange={onConnectionTypeChange}
+              connectionType={connectionType}
+              isUploading={isUploading}
+              onPowerUp={() => setShowConnectionTypePopup(true)}
             />
-            <div className="flex flex-col w-full h-full">
-              <Header
-                missionNumber={0}
-                title="Neo Playground"
-                liveUsers={17}
-                isPlayground={true}
-                onRun={uploadCode}
-                timeAllocated="100"
-                isConnected={isConnected}
-                setIsConnected={setIsConnected}
-                onConnectToggle={onConnectToggle}
-                connectionStatus={connectionStatus}
-                setConnectionStatus={setConnectionStatus}
-                onErase={clearWorkspace}
-                onConnectionTypeChange={onConnectionTypeChange}
-                connectionType={connectionType}
-                isUploading={isUploading}
-                onPowerUp={() => setShowConnectionTypePopup(true)}
-              />
 
-              {dashboardActive ? (
-                <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]">
-                  <div className="max-w-4xl mx-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <button
-                        onClick={() => setShowAddMenu(true)}
-                        className="px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-sm font-medium text-[#222E3A]"
-                      >
-                        + Add widget
-                      </button>
-                    </div>
+            {dashboardActive ? (
+              <div className="flex-1 overflow-auto p-6 bg-[#F7FAFC]">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      onClick={() => setShowAddMenu(true)}
+                      className="px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-sm font-medium text-[#222E3A]"
+                    >
+                      + Add widget
+                    </button>
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {widgets.map((widget) => {
-                        // Analog Widget
-                        if (widget.type === "analog") {
-                          const pin = widget.props.pin as number;
-                          const widgetInfo = widgetData[`pin_${pin}`];
-                          const value =
-                            (widgetInfo?.value as number) ??
-                            (latestAnalogByPin[pin] as number) ??
-                            0;
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {widgets.map((widget) => {
+                      // Analog Widget
+                      if (widget.type === "analog") {
+                        const pin = widget.props.pin as number;
+                        const widgetInfo = widgetData[`pin_${pin}`];
+                        const value =
+                          (widgetInfo?.value as number) ??
+                          (latestAnalogByPin[pin] as number) ??
+                          0;
 
-                          return (
-                            <div
-                              key={widget.id}
-                              className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="text-sm font-medium text-[#222E3A] opacity-80">
-                                  Analog
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    value={pin}
-                                    onChange={(e) =>
-                                      updateWidgetProps(
-                                        widget.id,
-                                        "pin",
-                                        parseInt(e.target.value)
-                                      )
-                                    }
-                                    className="text-xs text-black border border-gray-200 rounded px-2 py-1"
-                                  >
-                                    {[
-                                      0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18,
-                                      19, 21, 22, 23, 25, 26, 27, 32, 33, 34,
-                                      35, 36, 39,
-                                    ].map((pinNum) => (
-                                      <option key={pinNum} value={pinNum}>
-                                        Pin {pinNum}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    onClick={() => removeWidget(widget.id)}
-                                    aria-label="Remove widget"
-                                    className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              </div>
-                              <div className="text-2xl font-bold text-[#222E3A]">
-                                {isConnected ? value : "—"}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        // Graph Widget
-                        if (widget.type === "graph") {
-                          const pin = (widget.props.pin as number) || 32;
-                          const widgetInfo = widgetData[`pin_${pin}`];
-                          const series =
-                            (widgetInfo?.history as number[]) || [];
-                          const currentValue = widgetInfo?.value as number;
-
-                          return (
-                            <div
-                              key={widget.id}
-                              className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:col-span-1 lg:col-span-2"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="text-sm font-medium text-[#222E3A] opacity-80">
-                                  Analog Graph
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    value={pin}
-                                    onChange={(e) => {
-                                      const nextPin = parseInt(
-                                        e.target.value,
-                                        10
-                                      );
-                                      updateWidgetProps(
-                                        widget.id,
-                                        "pin",
-                                        nextPin
-                                      );
-                                      setWidgetData((prev) => ({
-                                        ...prev,
-                                        [`pin_${nextPin}`]: {
-                                          ...prev[`pin_${nextPin}`],
-                                          history: [],
-                                        },
-                                      }));
-                                    }}
-                                    className="px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white text-[#222E3A] text-sm hover:bg-gray-50 focus:outline-none shadow-sm"
-                                  >
-                                    {[
-                                      0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18,
-                                      19, 21, 22, 23, 25, 26, 27, 32, 33, 34,
-                                      35, 36, 39,
-                                    ].map((pinNum) => (
-                                      <option key={pinNum} value={pinNum}>
-                                        Pin {pinNum}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    onClick={() => removeWidget(widget.id)}
-                                    aria-label="Remove widget"
-                                    className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Simple SVG Graph */}
-                              <div className="w-full h-48 bg-gray-50 rounded-lg p-4">
-                                {series.length > 0 ? (
-                                  <svg
-                                    width="100%"
-                                    height="100%"
-                                    viewBox="0 0 400 200"
-                                  >
-                                    <g>
-                                      {/* Grid lines */}
-                                      {[0, 50, 100, 150, 200].map((y) => (
-                                        <line
-                                          key={y}
-                                          x1="0"
-                                          y1={y}
-                                          x2="400"
-                                          y2={y}
-                                          stroke="#E5E7EB"
-                                          strokeWidth="1"
-                                          strokeDasharray="2,2"
-                                        />
-                                      ))}
-                                      {/* Data line */}
-                                      <path
-                                        d={series
-                                          .map(
-                                            (value: number, index: number) => {
-                                              const x =
-                                                (index / (series.length - 1)) *
-                                                400;
-                                              const y =
-                                                200 - (value / 4095) * 200;
-                                              return `${
-                                                index === 0 ? "M" : "L"
-                                              } ${x} ${y}`;
-                                            }
-                                          )
-                                          .join(" ")}
-                                        fill="none"
-                                        stroke="#2563EB"
-                                        strokeWidth="2"
-                                      />
-                                    </g>
-                                  </svg>
-                                ) : (
-                                  <div className="flex items-center justify-center h-full text-gray-400">
-                                    No data yet
-                                  </div>
-                                )}
-                              </div>
-                              <div className="mt-2 text-xs text-gray-500">
-                                {isConnected
-                                  ? `Latest: ${
-                                      currentValue != null
-                                        ? Math.round(currentValue)
-                                        : "—"
-                                    }`
-                                  : "—"}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return null;
-                      })}
-                    </div>
-
-                    {/* Add Widget Menu */}
-                    {showAddMenu && (
-                      <div
-                        className="fixed inset-0 z-30 flex items-center justify-center"
-                        onClick={() => setShowAddMenu(false)}
-                      >
-                        <div className="absolute inset-0 bg-black/20" />
-                        <div
-                          className="relative w-[320px] rounded-xl shadow-2xl overflow-hidden"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="bg-white px-4 py-3 border-b border-gray-200 text-[#222E3A] text-sm font-semibold">
-                            Add a widget
-                          </div>
-                          <div className="bg-white p-3">
-                            <div className="flex flex-col gap-2">
-                              <button
-                                onClick={() => {
-                                  setWidgets((prev) => [
-                                    ...prev,
-                                    {
-                                      id: `${Date.now()}-analog`,
-                                      type: "analog",
-                                      props: { pin: 36 },
-                                    },
-                                  ]);
-                                  setShowAddMenu(false);
-                                }}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
-                              >
+                        return (
+                          <div
+                            key={widget.id}
+                            className="bg-white border border-gray-100 rounded-2xl shadow-md p-5"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-sm font-medium text-[#222E3A] opacity-80">
                                 Analog
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setWidgets((prev) => [
-                                    ...prev,
-                                    {
-                                      id: `${Date.now()}-graph`,
-                                      type: "graph",
-                                      props: { pin: 32 },
-                                    },
-                                  ]);
-                                  setShowAddMenu(false);
-                                }}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
-                              >
-                                Graph
-                              </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={pin}
+                                  onChange={(e) =>
+                                    updateWidgetProps(
+                                      widget.id,
+                                      "pin",
+                                      parseInt(e.target.value)
+                                    )
+                                  }
+                                  className="text-xs text-black border border-gray-200 rounded px-2 py-1"
+                                >
+                                  {[
+                                    0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19,
+                                    21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36,
+                                    39,
+                                  ].map((pinNum) => (
+                                    <option key={pinNum} value={pinNum}>
+                                      Pin {pinNum}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => removeWidget(widget.id)}
+                                  aria-label="Remove widget"
+                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
+                                >
+                                  ×
+                                </button>
+                              </div>
                             </div>
+                            <div className="text-2xl font-bold text-[#222E3A]">
+                              {isConnected ? value : "—"}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Graph Widget
+                      if (widget.type === "graph") {
+                        const pin = (widget.props.pin as number) || 32;
+                        const widgetInfo = widgetData[`pin_${pin}`];
+                        const series = (widgetInfo?.history as number[]) || [];
+                        const currentValue = widgetInfo?.value as number;
+
+                        return (
+                          <div
+                            key={widget.id}
+                            className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:col-span-1 lg:col-span-2"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-sm font-medium text-[#222E3A] opacity-80">
+                                Analog Graph
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={pin}
+                                  onChange={(e) => {
+                                    const nextPin = parseInt(
+                                      e.target.value,
+                                      10
+                                    );
+                                    updateWidgetProps(
+                                      widget.id,
+                                      "pin",
+                                      nextPin
+                                    );
+                                    setWidgetData((prev) => ({
+                                      ...prev,
+                                      [`pin_${nextPin}`]: {
+                                        ...prev[`pin_${nextPin}`],
+                                        history: [],
+                                      },
+                                    }));
+                                  }}
+                                  className="px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white text-[#222E3A] text-sm hover:bg-gray-50 focus:outline-none shadow-sm"
+                                >
+                                  {[
+                                    0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19,
+                                    21, 22, 23, 25, 26, 27, 32, 33, 34, 35, 36,
+                                    39,
+                                  ].map((pinNum) => (
+                                    <option key={pinNum} value={pinNum}>
+                                      Pin {pinNum}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => removeWidget(widget.id)}
+                                  aria-label="Remove widget"
+                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Simple SVG Graph */}
+                            <div className="w-full h-48 bg-gray-50 rounded-lg p-4">
+                              {series.length > 0 ? (
+                                <svg
+                                  width="100%"
+                                  height="100%"
+                                  viewBox="0 0 400 200"
+                                >
+                                  <g>
+                                    {/* Grid lines */}
+                                    {[0, 50, 100, 150, 200].map((y) => (
+                                      <line
+                                        key={y}
+                                        x1="0"
+                                        y1={y}
+                                        x2="400"
+                                        y2={y}
+                                        stroke="#E5E7EB"
+                                        strokeWidth="1"
+                                        strokeDasharray="2,2"
+                                      />
+                                    ))}
+                                    {/* Data line */}
+                                    <path
+                                      d={series
+                                        .map((value: number, index: number) => {
+                                          const x =
+                                            (index / (series.length - 1)) * 400;
+                                          const y = 200 - (value / 4095) * 200;
+                                          return `${
+                                            index === 0 ? "M" : "L"
+                                          } ${x} ${y}`;
+                                        })
+                                        .join(" ")}
+                                      fill="none"
+                                      stroke="#2563EB"
+                                      strokeWidth="2"
+                                    />
+                                  </g>
+                                </svg>
+                              ) : (
+                                <div className="flex items-center justify-center h-full text-gray-400">
+                                  No data yet
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-2 text-xs text-gray-500">
+                              {isConnected
+                                ? `Latest: ${
+                                    currentValue != null
+                                      ? Math.round(currentValue)
+                                      : "—"
+                                  }`
+                                : "—"}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })}
+                  </div>
+
+                  {/* Add Widget Menu */}
+                  {showAddMenu && (
+                    <div
+                      className="fixed inset-0 z-30 flex items-center justify-center"
+                      onClick={() => setShowAddMenu(false)}
+                    >
+                      <div className="absolute inset-0 bg-black/20" />
+                      <div
+                        className="relative w-[320px] rounded-xl shadow-2xl overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="bg-white px-4 py-3 border-b border-gray-200 text-[#222E3A] text-sm font-semibold">
+                          Add a widget
+                        </div>
+                        <div className="bg-white p-3">
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => {
+                                setWidgets((prev) => [
+                                  ...prev,
+                                  {
+                                    id: `${Date.now()}-analog`,
+                                    type: "analog",
+                                    props: { pin: 36 },
+                                  },
+                                ]);
+                                setShowAddMenu(false);
+                              }}
+                              className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
+                            >
+                              Analog
+                            </button>
+                            <button
+                              onClick={() => {
+                                setWidgets((prev) => [
+                                  ...prev,
+                                  {
+                                    id: `${Date.now()}-graph`,
+                                    type: "graph",
+                                    props: { pin: 32 },
+                                  },
+                                ]);
+                                setShowAddMenu(false);
+                              }}
+                              className="w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-sm text-left hover:bg-gray-50 text-[#222E3A]"
+                            >
+                              Graph
+                            </button>
                           </div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col h-full">
-                  {/* Blockly Component */}
-                  <div className="flex-1 pt-16">
-                    <BlocklyComponent
-                      ref={blocklyRef}
-                      generatedCode={generatedCode}
-                      setGeneratedCode={setGeneratedCode}
-                      onWorkspaceChange={checkForKeyboardBlocks}
-                    />
-                  </div>
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                {/* Blockly Component */}
+                <div className="flex-1 pt-16">
+                  <BlocklyComponent
+                    ref={blocklyRef}
+                    generatedCode={generatedCode}
+                    setGeneratedCode={setGeneratedCode}
+                    onWorkspaceChange={checkForKeyboardBlocks}
+                  />
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
+          </main>
         </div>
         <FirmwareInstallModal
           open={showFirmwareModal}
